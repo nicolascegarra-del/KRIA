@@ -1,10 +1,17 @@
 # ═══════════════════════════════════════════════════════════════════
 #  AGAMUR — Docker Compose para Coolify
-#  - Sin bindings de puerto al host (Coolify/Traefik los gestiona)
-#  - Build de producción (gunicorn + nginx SPA)
-#  - SSL gestionado externamente por Traefik de Coolify
+#
+#  Arquitectura:
+#  - frontend (nginx): puerto 80, sirve la SPA React Y hace proxy
+#    de /api/ y /admin/ al backend internamente.
+#    Coolify/Traefik enruta agamur.klyp.es y admin-agamur.klyp.es
+#    a este servicio.
+#  - backend (gunicorn): interno, sin puerto expuesto al host.
+#  - celery / celery-beat: workers internos.
+#  - db / redis / minio: servicios internos.
 #
 #  En Coolify: Docker Compose Location → docker-compose.coolify.yml
+#  Servicio principal para Traefik → frontend, puerto 80
 # ═══════════════════════════════════════════════════════════════════
 
 version: "3.9"
@@ -56,7 +63,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # ── Backend (Gunicorn) ─────────────────────────────────────────
+  # ── Backend (Gunicorn) — interno, sin puerto expuesto ──────────
   backend:
     build:
       context: ./backend
@@ -82,7 +89,7 @@ services:
       EMAIL_USE_TLS: ${EMAIL_USE_TLS:-true}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-AGAMUR <noreply@agamur.es>}
       FRONTEND_URL: ${FRONTEND_URL}
-      TENANT_DOMAIN_SUFFIX: ${TENANT_DOMAIN_SUFFIX:-.agamur.es}
+      TENANT_DOMAIN_SUFFIX: ${TENANT_DOMAIN_SUFFIX:-.klyp.es}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       ACCESS_TOKEN_LIFETIME_MINUTES: ${ACCESS_TOKEN_LIFETIME_MINUTES:-15}
       REFRESH_TOKEN_LIFETIME_DAYS: ${REFRESH_TOKEN_LIFETIME_DAYS:-7}
@@ -154,20 +161,19 @@ services:
         condition: service_healthy
     command: celery -A config beat -l warning --scheduler django_celery_beat.schedulers:DatabaseScheduler
 
-  # ── Frontend (Nginx SPA) ───────────────────────────────────────
+  # ── Frontend: nginx SPA + proxy API ───────────────────────────
+  # Coolify/Traefik enruta aquí AMBOS dominios:
+  #   agamur.klyp.es       → SPA React
+  #   admin-agamur.klyp.es → /admin/ (Django admin) + /api/
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       target: production
       args:
-        VITE_API_URL: ${VITE_API_URL:-https://admin-agamur.klyp.es}
-    restart: unless-stopped
-
-  # ── Nginx Reverse Proxy (sin SSL — Traefik de Coolify lo gestiona)
-  nginx:
-    build:
-      context: ./nginx
+        # VITE_API_URL vacío → llamadas relativas /api/v1/...
+        # nginx las proxea internamente a backend:8000
+        VITE_API_URL: ""
     restart: unless-stopped
     ports:
       - "80:80"
@@ -175,7 +181,6 @@ services:
       - static_files:/app/staticfiles:ro
     depends_on:
       - backend
-      - frontend
 
 volumes:
   postgres_data:
