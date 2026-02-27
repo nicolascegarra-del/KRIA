@@ -159,8 +159,6 @@ services:
       dockerfile: Dockerfile
       target: production
     restart: unless-stopped
-    ports:
-      - "80:80"
     volumes:
       - static_files:/app/staticfiles:ro
     depends_on:
