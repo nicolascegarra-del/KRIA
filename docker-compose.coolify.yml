@@ -168,7 +168,6 @@ services:
   nginx:
     build:
       context: ./nginx
-      dockerfile: Dockerfile.coolify
     restart: unless-stopped
     ports:
       - "80:80"
