@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @page {
+      size: A4;
+      margin: 2cm;
+      @bottom-center {
+        content: "Página " counter(page) " de " counter(pages);
+        font-size: 9pt;
+        color: #666;
+      }
+    }
+
+    body {
+      font-family: "Liberation Sans", Arial, sans-serif;
+      font-size: 10pt;
+      color: #1a1a1a;
+      line-height: 1.4;
+    }
+
+    h1 { font-size: 18pt; color: {{ tenant.primary_color }}; margin-bottom: 0.5em; }
+    h2 { font-size: 14pt; color: {{ tenant.primary_color }}; }
+    h3 { font-size: 11pt; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.5em 0;
+    }
+    th {
+      background: {{ tenant.primary_color }};
+      color: white;
+      padding: 6px 8px;
+      text-align: left;
+      font-size: 9pt;
+    }
+    td {
+      padding: 5px 8px;
+      border-bottom: 1px solid #e0e0e0;
+      font-size: 9pt;
+    }
+    tr:nth-child(even) td { background: #f5f5f5; }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 3px solid {{ tenant.primary_color }};
+      padding-bottom: 0.5em;
+      margin-bottom: 1em;
+    }
+
+    .tenant-name {
+      font-size: 14pt;
+      font-weight: bold;
+      color: {{ tenant.primary_color }};
+    }
+
+    .report-date {
+      font-size: 8pt;
+      color: #666;
+    }
+
+    {% if watermark %}
+    .watermark {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      font-size: 80pt;
+      color: rgba(0,0,0,0.06);
+      font-weight: bold;
+      white-space: nowrap;
+      z-index: -1;
+    }
+    {% endif %}
+
+    .chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 8pt;
+      font-weight: bold;
+      color: white;
+    }
+    .chip-AÑADIDO { background: #FBC02D; color: #333; }
+    .chip-APROBADO { background: #2E7D32; }
+    .chip-EVALUADO { background: #FFC107; color: #333; }
+    .chip-RECHAZADO { background: #D32F2F; }
+    .chip-SOCIO_EN_BAJA { background: #757575; }
+
+    .page-break { page-break-after: always; }
+  </style>
+</head>
+<body>
+  {% if watermark %}
+  <div class="watermark">{{ watermark }}</div>
+  {% endif %}
+
+  <div class="header-bar">
+    <div class="tenant-name">{{ tenant.name }}</div>
+    <div class="report-date">Generado: {% now "d/m/Y H:i" %}</div>
+  </div>
+
+  {% block content %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,58 @@
+{% extends "reports/base_report.html" %}
+
+{% block content %}
+<h1>Ficha Individual</h1>
+
+<h2>{{ animal.numero_anilla }} / {{ animal.anio_nacimiento }}</h2>
+
+<table style="width:50%">
+  <tr><th>Campo</th><th>Valor</th></tr>
+  <tr><td>Sexo</td><td>{{ animal.get_sexo_display }}</td></tr>
+  <tr><td>Variedad</td><td>{{ animal.get_variedad_display }}</td></tr>
+  <tr><td>Estado</td><td><span class="chip chip-{{ animal.estado }}">{{ animal.get_estado_display }}</span></td></tr>
+  <tr><td>Socio</td><td>{{ animal.socio.nombre_razon_social }}</td></tr>
+  <tr><td>DNI/NIF Socio</td><td>{{ animal.socio.dni_nif }}</td></tr>
+  <tr><td>Cód. REGA</td><td>{{ animal.socio.codigo_rega }}</td></tr>
+</table>
+
+<h3>Genealogía</h3>
+<table style="width:60%">
+  <tr><th>Relación</th><th>Anilla</th><th>Año</th><th>Variedad</th></tr>
+  <tr>
+    <td>Padre</td>
+    <td>{{ animal.padre.numero_anilla|default:"—" }}</td>
+    <td>{{ animal.padre.anio_nacimiento|default:"—" }}</td>
+    <td>{{ animal.padre.get_variedad_display|default:"—" }}</td>
+  </tr>
+  <tr>
+    <td>Madre</td>
+    <td>{{ animal.madre_animal.numero_anilla|default:"—" }}</td>
+    <td>{{ animal.madre_animal.anio_nacimiento|default:"—" }}</td>
+    <td>{{ animal.madre_animal.get_variedad_display|default:"—" }}</td>
+  </tr>
+</table>
+
+{% if animal.evaluacion %}
+<h3>Evaluación Morfológica</h3>
+<table style="width:60%">
+  <tr><th>Criterio</th><th>Puntuación</th></tr>
+  <tr><td>Cabeza</td><td>{{ animal.evaluacion.cabeza }}/10</td></tr>
+  <tr><td>Cola</td><td>{{ animal.evaluacion.cola }}/10</td></tr>
+  <tr><td>Pecho/Abdomen</td><td>{{ animal.evaluacion.pecho_abdomen }}/10</td></tr>
+  <tr><td>Muslos/Tarsos</td><td>{{ animal.evaluacion.muslos_tarsos }}/10</td></tr>
+  <tr><td>Cresta/Babilla</td><td>{{ animal.evaluacion.cresta_babilla }}/10</td></tr>
+  <tr><td>Color</td><td>{{ animal.evaluacion.color }}/10</td></tr>
+  <tr><td><strong>Media</strong></td><td><strong>{{ animal.evaluacion.puntuacion_media }}/10</strong></td></tr>
+</table>
+{% endif %}
+
+{% if animal.historico_pesos %}
+<h3>Histórico de Pesos</h3>
+<table style="width:40%">
+  <tr><th>Fecha</th><th>Peso (g)</th></tr>
+  {% for p in animal.historico_pesos %}
+  <tr><td>{{ p.fecha }}</td><td>{{ p.peso }}</td></tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

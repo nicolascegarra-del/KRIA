@@ -1,0 +1,46 @@
+{% extends "reports/base_report.html" %}
+
+{% block content %}
+<h1>Catálogo de Reproductores</h1>
+<p style="color:#666">{{ tenant.name }} — Temporada {{ "now"|date:"Y" }}</p>
+
+{% for page in pages %}
+{% with animal=page.animal %}
+<div class="page-break">
+  <h2>{{ animal.numero_anilla }} / {{ animal.anio_nacimiento }}</h2>
+
+  <table style="width:55%; float:left; margin-right:2em;">
+    <tr><th>Campo</th><th>Valor</th></tr>
+    <tr><td>Sexo</td><td>{{ animal.get_sexo_display }}</td></tr>
+    <tr><td>Variedad</td><td>{{ animal.get_variedad_display }}</td></tr>
+    <tr><td>Socio</td><td>{{ animal.socio.nombre_razon_social }}</td></tr>
+    <tr><td>REGA</td><td>{{ animal.socio.codigo_rega }}</td></tr>
+    {% if animal.evaluacion %}
+    <tr><td><strong>Puntuación Media</strong></td><td><strong>{{ animal.evaluacion.puntuacion_media }}/10</strong></td></tr>
+    {% endif %}
+  </table>
+
+  {% if page.radar_b64 %}
+  <div style="float:right; width:40%;">
+    <img src="data:image/png;base64,{{ page.radar_b64 }}"
+         style="width:100%; max-width:300px;" alt="Gráfico de puntuaciones" />
+  </div>
+  {% endif %}
+
+  <div style="clear:both;"></div>
+
+  {% if animal.evaluacion %}
+  <table style="width:55%; margin-top:1em;">
+    <tr><th>Criterio</th><th>Punt.</th></tr>
+    <tr><td>Cabeza</td><td>{{ animal.evaluacion.cabeza }}</td></tr>
+    <tr><td>Cola</td><td>{{ animal.evaluacion.cola }}</td></tr>
+    <tr><td>Pecho/Abdomen</td><td>{{ animal.evaluacion.pecho_abdomen }}</td></tr>
+    <tr><td>Muslos/Tarsos</td><td>{{ animal.evaluacion.muslos_tarsos }}</td></tr>
+    <tr><td>Cresta/Babilla</td><td>{{ animal.evaluacion.cresta_babilla }}</td></tr>
+    <tr><td>Color</td><td>{{ animal.evaluacion.color }}</td></tr>
+  </table>
+  {% endif %}
+</div>
+{% endwith %}
+{% endfor %}
+{% endblock %}

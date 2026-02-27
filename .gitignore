@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+.mypy_cache/
+.pytest_cache/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+staticfiles/
+media/
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Docker volumes
+postgres_data/
+redis_data/
+minio_data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# SSL certs (generated locally)
+nginx/ssl/
+
+# Backups
+*.dump
+*.sql.gz
+
+# SSL / certs (se generan en el VPS)
+nginx/ssl/
+nginx/certbot-webroot/
+
+# Archivos de deploy generados
+/tmp/agamur-deploy.log

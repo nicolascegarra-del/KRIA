@@ -1,0 +1,120 @@
+"""
+Custom User + Socio models for AGAMUR.
+
+User: email-based auth, tenant-scoped, dual role (socio / gestión).
+Socio: profile attached to User, carries ARCA/Ministerio fields.
+"""
+import uuid
+
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.db import models
+
+from core.managers import TenantManager
+from core.models import UUIDModel
+
+
+class UserManager(BaseUserManager):
+    def create_user(self, email, tenant, password=None, **extra):
+        if not email:
+            raise ValueError("Email is required")
+        email = self.normalize_email(email)
+        user = self.model(email=email, tenant=tenant, **extra)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra):
+        """Creates a platform-level superadmin (no tenant scoping)."""
+        from apps.tenants.models import Tenant
+
+        # Get or create a system tenant for superadmins
+        tenant, _ = Tenant.objects.get_or_create(
+            slug="system",
+            defaults={"name": "System", "is_active": True},
+        )
+        extra.setdefault("is_gestion", True)
+        extra.setdefault("is_superadmin", True)
+        extra.setdefault("is_staff", True)
+        extra.setdefault("is_superuser", True)
+        return self.create_user(email, tenant=tenant, password=password, **extra)
+
+
+class User(AbstractBaseUser, PermissionsMixin, UUIDModel):
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="users",
+        db_index=True,
+    )
+    email = models.EmailField()
+    first_name = models.CharField(max_length=150, blank=True)
+    last_name = models.CharField(max_length=150, blank=True)
+    is_gestion = models.BooleanField(default=False)
+    is_superadmin = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    date_joined = models.DateTimeField(auto_now_add=True)
+
+    # Password reset token (simple approach — one active token per user)
+    reset_token = models.UUIDField(null=True, blank=True)
+    reset_token_created = models.DateTimeField(null=True, blank=True)
+
+    objects = UserManager()
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = []
+
+    class Meta:
+        db_table = "accounts_user"
+        unique_together = [("tenant", "email")]
+        verbose_name = "User"
+        verbose_name_plural = "Users"
+
+    def __str__(self):
+        return f"{self.email} ({self.tenant.slug})"
+
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}".strip() or self.email
+
+
+class Socio(UUIDModel):
+    class Estado(models.TextChoices):
+        ALTA = "ALTA", "Alta"
+        BAJA = "BAJA", "Baja"
+
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="socios",
+        db_index=True,
+    )
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="socio",
+    )
+    nombre_razon_social = models.CharField(max_length=300)
+    dni_nif = models.CharField(max_length=20)
+    telefono = models.CharField(max_length=20, blank=True, default="")
+    direccion = models.TextField(blank=True, default="")
+    numero_socio = models.CharField(max_length=50, blank=True, default="")
+    codigo_rega = models.CharField(max_length=50, blank=True, default="")
+    estado = models.CharField(max_length=10, choices=Estado.choices, default=Estado.ALTA)
+    razon_baja = models.TextField(blank=True, default="")
+    fecha_baja = models.DateField(null=True, blank=True)
+
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        db_table = "accounts_socio"
+        unique_together = [
+            ("tenant", "dni_nif"),
+            ("tenant", "numero_socio"),
+        ]
+        verbose_name = "Socio"
+        verbose_name_plural = "Socios"
+
+    def __str__(self):
+        return f"{self.nombre_razon_social} [{self.numero_socio}]"

@@ -1,0 +1,118 @@
+{% extends "reports/base_report.html" %}
+
+{% block content %}
+<h1>Certificado Genealógico</h1>
+
+<h2>{{ animal.numero_anilla }} / {{ animal.anio_nacimiento }}</h2>
+<p>
+  <strong>Socio:</strong> {{ animal.socio.nombre_razon_social }} |
+  <strong>NIF:</strong> {{ animal.socio.dni_nif }} |
+  <strong>REGA:</strong> {{ animal.socio.codigo_rega }}
+</p>
+
+<p>
+  <strong>Sexo:</strong> {{ animal.get_sexo_display }} |
+  <strong>Variedad:</strong> {{ animal.get_variedad_display }} |
+  <strong>Estado:</strong> <span class="chip chip-{{ animal.estado }}">{{ animal.get_estado_display }}</span>
+</p>
+
+<h3>Árbol Genealógico (3 generaciones)</h3>
+
+<style>
+  .tree { display: flex; justify-content: center; margin: 1em 0; }
+  .tree-level { display: flex; flex-direction: column; justify-content: space-around; }
+  .tree-node {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin: 4px;
+    font-size: 8pt;
+    min-width: 80px;
+    text-align: center;
+  }
+  .tree-node.root { background: #E3F2FD; border-color: #1565C0; }
+  .tree-node.gen1 { background: #F1F8E9; }
+  .tree-node.gen2 { background: #FFF8E1; }
+</style>
+
+{% with node=tree %}
+<div style="overflow-x: auto;">
+  <table style="border-collapse:separate; border-spacing:10px;">
+    <tr>
+      <!-- Gen 2 (grandparents) -->
+      <td style="vertical-align:middle;">
+        {% if node.padre.padre %}
+        <div class="tree-node gen2">
+          <div>{{ node.padre.padre.anilla }}</div>
+          <div style="color:#999">{{ node.padre.padre.anio }}</div>
+        </div>
+        {% else %}<div class="tree-node gen2" style="opacity:0.3">—</div>{% endif %}
+      </td>
+      <td rowspan="2" style="vertical-align:middle;">
+        <!-- Gen 1 (parents) -->
+        {% if node.padre %}
+        <div class="tree-node gen1">
+          <div><strong>{{ node.padre.anilla }}</strong></div>
+          <div>{{ node.padre.anio }} · {{ node.padre.sexo }}</div>
+          <div style="color:#1565C0">{{ node.padre.variedad }}</div>
+        </div>
+        {% else %}<div class="tree-node gen1" style="opacity:0.3">—</div>{% endif %}
+      </td>
+      <td rowspan="4" style="vertical-align:middle; text-align:center;">
+        <!-- Root -->
+        <div class="tree-node root">
+          <div style="font-size:11pt;"><strong>{{ node.anilla }}</strong></div>
+          <div>{{ node.anio }}</div>
+          <div>{{ node.sexo }} · {{ node.variedad }}</div>
+          <div><span class="chip chip-{{ node.estado }}">{{ node.estado }}</span></div>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align:middle;">
+        {% if node.padre.madre %}
+        <div class="tree-node gen2">
+          <div>{{ node.padre.madre.anilla }}</div>
+          <div style="color:#999">{{ node.padre.madre.anio }}</div>
+        </div>
+        {% else %}<div class="tree-node gen2" style="opacity:0.3">—</div>{% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align:middle;">
+        {% if node.madre.padre %}
+        <div class="tree-node gen2">
+          <div>{{ node.madre.padre.anilla }}</div>
+          <div style="color:#999">{{ node.madre.padre.anio }}</div>
+        </div>
+        {% else %}<div class="tree-node gen2" style="opacity:0.3">—</div>{% endif %}
+      </td>
+      <td rowspan="2" style="vertical-align:middle;">
+        {% if node.madre %}
+        <div class="tree-node gen1">
+          <div><strong>{{ node.madre.anilla }}</strong></div>
+          <div>{{ node.madre.anio }} · {{ node.madre.sexo }}</div>
+          <div style="color:#1565C0">{{ node.madre.variedad }}</div>
+        </div>
+        {% else %}<div class="tree-node gen1" style="opacity:0.3">—</div>{% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align:middle;">
+        {% if node.madre.madre %}
+        <div class="tree-node gen2">
+          <div>{{ node.madre.madre.anilla }}</div>
+          <div style="color:#999">{{ node.madre.madre.anio }}</div>
+        </div>
+        {% else %}<div class="tree-node gen2" style="opacity:0.3">—</div>{% endif %}
+      </td>
+    </tr>
+  </table>
+</div>
+{% endwith %}
+
+<p style="font-size:8pt; color:#666; margin-top:2em; border-top:1px solid #ccc; padding-top:0.5em;">
+  Este certificado ha sido generado automáticamente por {{ tenant.name }} — AGAMUR.
+  Documento con carácter oficial para la identificación de aves según normativa ARCA/Ministerio.
+</p>
+{% endblock %}
