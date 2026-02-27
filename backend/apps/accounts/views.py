@@ -108,6 +108,7 @@ class MeView(APIView):
 
 class SocioListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsGestion]
+    ordering = ["nombre_razon_social"]
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -115,7 +116,7 @@ class SocioListCreateView(generics.ListCreateAPIView):
         return SocioSerializer
 
     def get_queryset(self):
-        return Socio.objects.select_related("user").all()
+        return Socio.objects.select_related("user").order_by("nombre_razon_social")
 
 
 class SocioDetailView(generics.RetrieveUpdateAPIView):
