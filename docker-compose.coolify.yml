@@ -27,7 +27,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-agamur}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_v2:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agamur}"]
       interval: 10s
@@ -171,7 +171,7 @@ services:
       - backend
 
 volumes:
-  postgres_data:
+  postgres_data_v2:
   redis_data:
   minio_data:
   static_files:
