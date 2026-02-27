@@ -166,12 +166,13 @@ services:
 
   # ── Nginx Reverse Proxy (sin SSL — Traefik de Coolify lo gestiona)
   nginx:
-    image: nginx:1.27-alpine
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile.coolify
     restart: unless-stopped
     ports:
       - "80:80"
     volumes:
-      - ./nginx/nginx.coolify.conf:/etc/nginx/nginx.conf:ro
       - static_files:/app/staticfiles:ro
     depends_on:
       - backend
