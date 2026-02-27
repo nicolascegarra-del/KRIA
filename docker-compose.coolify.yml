@@ -161,7 +161,7 @@ services:
       dockerfile: Dockerfile
       target: production
       args:
-        VITE_API_URL: ""
+        VITE_API_URL: ${VITE_API_URL:-https://admin-agamur.klyp.es}
     restart: unless-stopped
 
   # ── Nginx Reverse Proxy (sin SSL — Traefik de Coolify lo gestiona)
