@@ -1,6 +1,10 @@
 """
 Animal API views including smart registration and state machine actions.
 """
+import os
+from datetime import datetime, timezone as dt_timezone
+from uuid import uuid4
+
 from django.db import IntegrityError
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
@@ -224,3 +228,74 @@ class AnimalGlobalSearchView(APIView):
             "tenant_slug": animal.tenant.slug,
             "estado": animal.estado,
         })
+
+
+class AnimalFotoUploadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def _get_animal_and_check_perms(self, request, pk):
+        try:
+            animal = Animal.objects.get(pk=pk)
+        except Animal.DoesNotExist:
+            return None, Response({"detail": "Not found."}, status=404)
+
+        is_gestion = get_effective_is_gestion(request)
+        if not is_gestion:
+            try:
+                if animal.socio != request.user.socio:
+                    return None, Response({"detail": "Permission denied."}, status=403)
+            except Exception:
+                return None, Response({"detail": "Permission denied."}, status=403)
+
+        return animal, None
+
+    def post(self, request, pk):
+        from apps.reports.storage import upload_bytes, get_presigned_download_url
+
+        animal, err = self._get_animal_and_check_perms(request, pk)
+        if err:
+            return err
+
+        foto = request.FILES.get("foto")
+        if not foto:
+            return Response({"detail": "No file provided."}, status=400)
+
+        ext = os.path.splitext(foto.name)[1].lstrip(".").lower() or "jpg"
+        object_key = f"animals/{animal.tenant_id}/{animal.id}/{uuid4()}.{ext}"
+
+        upload_bytes(object_key, foto.read(), content_type=foto.content_type or "image/jpeg")
+        url = get_presigned_download_url(object_key, expiry_hours=8760)
+
+        fotos = list(animal.fotos or [])
+        fotos.append({
+            "url": url,
+            "key": object_key,
+            "uploaded_at": datetime.now(dt_timezone.utc).isoformat(),
+        })
+        animal.fotos = fotos
+        animal.save(update_fields=["fotos"])
+
+        return Response(AnimalDetailSerializer(animal).data, status=201)
+
+    def delete(self, request, pk):
+        from apps.reports.storage import get_minio_client, ensure_bucket
+        from django.conf import settings
+
+        animal, err = self._get_animal_and_check_perms(request, pk)
+        if err:
+            return err
+
+        key = request.data.get("key")
+        if not key:
+            return Response({"detail": "key is required."}, status=400)
+
+        try:
+            client = get_minio_client()
+            client.remove_object(settings.MINIO_BUCKET_NAME, key)
+        except Exception:
+            pass  # If already deleted in MinIO, continue anyway
+
+        animal.fotos = [f for f in (animal.fotos or []) if f.get("key") != key]
+        animal.save(update_fields=["fotos"])
+
+        return Response(AnimalDetailSerializer(animal).data)

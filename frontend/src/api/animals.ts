@@ -51,4 +51,18 @@ export const animalsApi = {
     });
     return data;
   },
+
+  uploadFoto: async (id: string, file: File): Promise<Animal> => {
+    const form = new FormData();
+    form.append("foto", file);
+    const { data } = await apiClient.post(`/animals/${id}/foto/`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data;
+  },
+
+  deleteFoto: async (id: string, key: string): Promise<Animal> => {
+    const { data } = await apiClient.delete(`/animals/${id}/foto/`, { data: { key } });
+    return data;
+  },
 };

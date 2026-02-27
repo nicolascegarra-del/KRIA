@@ -1,14 +1,211 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
 import { sociosApi } from "../../api/socios";
-import { Search, UserX, Loader2, Users } from "lucide-react";
+import { Search, UserX, Loader2, Users, Plus, Pencil, X } from "lucide-react";
 import type { Socio } from "../../types";
+
+interface SocioFormData {
+  nombre_razon_social: string;
+  dni_nif: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  telefono: string;
+  numero_socio: string;
+  codigo_rega: string;
+  direccion: string;
+}
+
+type ModalMode = "create" | "edit";
+
+interface SocioModalProps {
+  mode: ModalMode;
+  socio?: Socio | null;
+  onClose: () => void;
+}
+
+function SocioModal({ mode, socio, onClose }: SocioModalProps) {
+  const qc = useQueryClient();
+  const { register, handleSubmit, formState: { errors } } = useForm<SocioFormData>({
+    defaultValues: mode === "edit" && socio ? {
+      nombre_razon_social: socio.nombre_razon_social ?? "",
+      dni_nif: socio.dni_nif ?? "",
+      email: socio.email ?? "",
+      first_name: "",
+      last_name: "",
+      telefono: socio.telefono ?? "",
+      numero_socio: socio.numero_socio ?? "",
+      codigo_rega: socio.codigo_rega ?? "",
+      direccion: socio.direccion ?? "",
+    } : {},
+  });
+
+  const [serverError, setServerError] = useState("");
+
+  const createMutation = useMutation({
+    mutationFn: (data: Partial<Socio>) => sociosApi.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["socios"] });
+      onClose();
+    },
+    onError: (err: any) => {
+      const d = err?.response?.data;
+      setServerError(
+        d?.detail ?? (typeof d === "object" ? Object.entries(d).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join(" | ") : "Error al guardar.")
+      );
+    },
+  });
+
+  const editMutation = useMutation({
+    mutationFn: (data: Partial<Socio>) => sociosApi.update(socio!.id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["socios"] });
+      onClose();
+    },
+    onError: (err: any) => {
+      const d = err?.response?.data;
+      setServerError(
+        d?.detail ?? (typeof d === "object" ? Object.entries(d).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join(" | ") : "Error al guardar.")
+      );
+    },
+  });
+
+  const isPending = createMutation.isPending || editMutation.isPending;
+
+  const onSubmit = (data: SocioFormData) => {
+    setServerError("");
+    const payload: any = {
+      nombre_razon_social: data.nombre_razon_social,
+      dni_nif: data.dni_nif,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      telefono: data.telefono || undefined,
+      numero_socio: data.numero_socio || undefined,
+      codigo_rega: data.codigo_rega || undefined,
+      direccion: data.direccion || undefined,
+    };
+    if (mode === "create") {
+      payload.email = data.email;
+      createMutation.mutate(payload);
+    } else {
+      editMutation.mutate(payload);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-gray-900">
+            {mode === "create" ? "Nuevo Socio" : "Editar Socio"}
+          </h2>
+          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100">
+            <X size={18} />
+          </button>
+        </div>
+
+        {mode === "create" && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+            Se generará una contraseña automática y se enviará al email del socio.
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nombre / Razón Social *
+              </label>
+              <input
+                className="input-field"
+                {...register("nombre_razon_social", { required: true })}
+              />
+              {errors.nombre_razon_social && <p className="text-xs text-red-600 mt-1">Requerido</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">DNI / NIF *</label>
+              <input className="input-field" {...register("dni_nif", { required: true })} />
+              {errors.dni_nif && <p className="text-xs text-red-600 mt-1">Requerido</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email {mode === "create" ? "*" : "(no editable)"}
+              </label>
+              <input
+                type="email"
+                className="input-field"
+                disabled={mode === "edit"}
+                {...register("email", { required: mode === "create" })}
+              />
+              {errors.email && <p className="text-xs text-red-600 mt-1">Requerido</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+              <input className="input-field" {...register("first_name")} />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Apellidos</label>
+              <input className="input-field" {...register("last_name")} />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+              <input className="input-field" {...register("telefono")} />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nº Socio</label>
+              <input className="input-field" {...register("numero_socio")} />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Código REGA</label>
+              <input className="input-field" {...register("codigo_rega")} />
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+              <input className="input-field" {...register("direccion")} />
+            </div>
+          </div>
+
+          {serverError && (
+            <div className="bg-red-50 border border-red-300 rounded-lg p-3 text-sm text-red-700">
+              {serverError}
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="btn-secondary flex-1">
+              Cancelar
+            </button>
+            <button type="submit" disabled={isPending} className="btn-primary flex-1">
+              {isPending ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : mode === "create" ? (
+                "Crear Socio"
+              ) : (
+                "Guardar cambios"
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export default function SociosPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [bajaModal, setBajaModal] = useState<Socio | null>(null);
   const [razonBaja, setRazonBaja] = useState("");
+  const [socioModal, setSocioModal] = useState<{ mode: ModalMode; socio?: Socio } | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["socios", search],
@@ -28,9 +225,18 @@ export default function SociosPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Socios</h1>
-        <p className="text-sm text-gray-500">{data?.count ?? 0} socios</p>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Socios</h1>
+          <p className="text-sm text-gray-500">{data?.count ?? 0} socios</p>
+        </div>
+        <button
+          onClick={() => setSocioModal({ mode: "create" })}
+          className="btn-primary flex items-center gap-2"
+        >
+          <Plus size={16} />
+          Nuevo Socio
+        </button>
       </div>
 
       <div className="relative">
@@ -78,19 +284,36 @@ export default function SociosPage() {
                     <span>{socio.email}</span>
                   </div>
                 </div>
-                {socio.estado === "ALTA" && (
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => { setBajaModal(socio); setRazonBaja(""); }}
-                    className="p-2 rounded-lg bg-red-700 text-white hover:bg-red-800 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                    title="Dar de baja"
+                    onClick={() => setSocioModal({ mode: "edit", socio })}
+                    className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                    title="Editar socio"
                   >
-                    <UserX size={18} />
+                    <Pencil size={16} />
                   </button>
-                )}
+                  {socio.estado === "ALTA" && (
+                    <button
+                      onClick={() => { setBajaModal(socio); setRazonBaja(""); }}
+                      className="p-2 rounded-lg bg-red-700 text-white hover:bg-red-800 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                      title="Dar de baja"
+                    >
+                      <UserX size={18} />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {socioModal && (
+        <SocioModal
+          mode={socioModal.mode}
+          socio={socioModal.socio}
+          onClose={() => setSocioModal(null)}
+        />
       )}
 
       {bajaModal && (

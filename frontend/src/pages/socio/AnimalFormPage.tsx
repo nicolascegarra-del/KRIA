@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -6,7 +6,7 @@ import { animalsApi } from "../../api/animals";
 import { granjasApi } from "../../api/granjas";
 import AnimalStateChip from "../../components/AnimalStateChip";
 import GenealogyTooltip from "../../components/GenealogyTooltip";
-import { Loader2, ArrowLeft, Info } from "lucide-react";
+import { Loader2, ArrowLeft, Info, Camera, X } from "lucide-react";
 import type { Animal } from "../../types";
 
 interface FormData {
@@ -28,6 +28,7 @@ export default function AnimalFormPage() {
   const [showGenealogia, setShowGenealogia] = useState(false);
   const [conflictError, setConflictError] = useState("");
   const [serverError, setServerError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: animal, isLoading } = useQuery({
     queryKey: ["animal", id],
@@ -62,6 +63,16 @@ export default function AnimalFormPage() {
       });
     }
   }, [animal, reset]);
+
+  const uploadFotoMutation = useMutation({
+    mutationFn: (file: File) => animalsApi.uploadFoto(id!, file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["animal", id] }),
+  });
+
+  const deleteFotoMutation = useMutation({
+    mutationFn: (key: string) => animalsApi.deleteFoto(id!, key),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["animal", id] }),
+  });
 
   const mutation = useMutation({
     mutationFn: (data: Partial<Animal>) =>
@@ -283,6 +294,66 @@ export default function AnimalFormPage() {
           </div>
         )}
       </div>
+
+      {/* Photos section — only in edit mode */}
+      {isEdit && (
+        <div className="card mt-4 space-y-3">
+          <h3 className="text-sm font-semibold text-gray-700">Fotos</h3>
+          <div className="flex flex-wrap gap-3">
+            {(animal?.fotos ?? []).map((foto) => (
+              <div key={foto.key} className="relative w-20 h-20">
+                <img
+                  src={foto.url}
+                  alt="Foto animal"
+                  className="w-full h-full object-cover rounded-lg"
+                />
+                <button
+                  onClick={() => deleteFotoMutation.mutate(foto.key)}
+                  disabled={deleteFotoMutation.isPending}
+                  className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-700"
+                  title="Eliminar foto"
+                >
+                  {deleteFotoMutation.isPending ? (
+                    <Loader2 size={10} className="animate-spin" />
+                  ) : (
+                    <X size={10} />
+                  )}
+                </button>
+              </div>
+            ))}
+
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploadFotoMutation.isPending}
+              className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors"
+              title="Añadir foto"
+            >
+              {uploadFotoMutation.isPending ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <>
+                  <Camera size={20} />
+                  <span className="text-xs mt-1">Añadir</span>
+                </>
+              )}
+            </button>
+
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  uploadFotoMutation.mutate(file);
+                  e.target.value = "";
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

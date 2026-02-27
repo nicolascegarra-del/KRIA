@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     AnimalApproveView,
     AnimalDetailView,
+    AnimalFotoUploadView,
     AnimalGenealogyView,
     AnimalGlobalSearchView,
     AnimalListCreateView,
@@ -15,4 +16,5 @@ urlpatterns = [
     path("<uuid:pk>/approve/", AnimalApproveView.as_view(), name="animals-approve"),
     path("<uuid:pk>/reject/", AnimalRejectView.as_view(), name="animals-reject"),
     path("<uuid:pk>/genealogy/", AnimalGenealogyView.as_view(), name="animals-genealogy"),
+    path("<uuid:pk>/foto/", AnimalFotoUploadView.as_view(), name="animals-foto"),
 ]

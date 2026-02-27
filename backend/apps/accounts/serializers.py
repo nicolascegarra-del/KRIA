@@ -1,7 +1,10 @@
 """
 Serializers for accounts app: JWT customisation, User, Socio.
 """
+import secrets
+
 from django.conf import settings
+from django.core.mail import send_mail
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -91,6 +94,25 @@ class SocioSerializer(serializers.ModelSerializer):
             user.first_name = first_name
             user.last_name = last_name
             user.save(update_fields=["first_name", "last_name"])
+        else:
+            password = secrets.token_urlsafe(12)
+            user.set_password(password)
+            user.save(update_fields=["password"])
+            send_mail(
+                subject="Bienvenido a AGAMUR — tus credenciales de acceso",
+                message=(
+                    f"Hola {first_name or email},\n\n"
+                    f"Tu cuenta en AGAMUR ha sido creada.\n\n"
+                    f"Email: {email}\n"
+                    f"Contraseña: {password}\n\n"
+                    f"Accede en: {settings.FRONTEND_URL}\n\n"
+                    f"Te recomendamos cambiar la contraseña tras el primer acceso.\n\n"
+                    f"Un saludo,\nEquipo AGAMUR"
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=True,
+            )
 
         socio = Socio.objects.create(
             tenant=tenant, user=user, **validated_data
