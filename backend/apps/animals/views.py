@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 import django_filters
 
-from core.permissions import IsGestion, IsSocioOrGestion, IsSocioOwner
+from core.permissions import IsGestion, IsSocioOrGestion, IsSocioOwner, get_effective_is_gestion
 from .models import Animal
 from .serializers import (
     AnimalDetailSerializer,
@@ -45,7 +45,7 @@ class AnimalListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
         qs = Animal.objects.select_related("socio", "padre", "madre_animal")
-        if not (user.is_gestion or user.is_superadmin):
+        if not get_effective_is_gestion(self.request):
             # Socios only see their own animals
             try:
                 qs = qs.filter(socio=user.socio)
@@ -59,7 +59,7 @@ class AnimalListCreateView(generics.ListCreateAPIView):
         user = request.user
 
         # Determine socio
-        if user.is_gestion or user.is_superadmin:
+        if get_effective_is_gestion(request):
             socio_id = request.data.get("socio")
             if not socio_id:
                 return Response({"socio": "Required for gestión users."}, status=400)

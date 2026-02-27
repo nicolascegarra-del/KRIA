@@ -6,6 +6,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
+from corsheaders.defaults import default_headers
 from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -39,6 +40,7 @@ INSTALLED_APPS = [
     "apps.imports",
     "apps.reports",
     "apps.reproductores",
+    "apps.granjas",
 ]
 
 MIDDLEWARE = [
@@ -86,6 +88,11 @@ DATABASES = {
 
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 AUTH_USER_MODEL = "accounts.User"
+
+# Multi-tenant: email is unique per tenant (unique_together), not globally unique.
+# Django auth.E003 requires global unique=True on USERNAME_FIELD, which would break
+# multi-tenancy, so we silence it intentionally.
+SILENCED_SYSTEM_CHECKS = ["auth.E003"]
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -143,6 +150,11 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ─── CORS ─────────────────────────────────────────────────────────────────────
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "x-tenant-slug",
+]
 
 # ─── MinIO / S3 Storage ───────────────────────────────────────────────────────
 MINIO_ENDPOINT = config("MINIO_ENDPOINT", default="minio:9000")

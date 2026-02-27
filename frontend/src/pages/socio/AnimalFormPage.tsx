@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { animalsApi } from "../../api/animals";
+import { granjasApi } from "../../api/granjas";
 import AnimalStateChip from "../../components/AnimalStateChip";
 import GenealogyTooltip from "../../components/GenealogyTooltip";
 import { Loader2, ArrowLeft, Info } from "lucide-react";
@@ -16,6 +17,7 @@ interface FormData {
   padre: string;
   madre_animal: string;
   candidato_reproductor: boolean;
+  granja: string;
 }
 
 export default function AnimalFormPage() {
@@ -25,6 +27,7 @@ export default function AnimalFormPage() {
   const qc = useQueryClient();
   const [showGenealogia, setShowGenealogia] = useState(false);
   const [conflictError, setConflictError] = useState("");
+  const [serverError, setServerError] = useState("");
 
   const { data: animal, isLoading } = useQuery({
     queryKey: ["animal", id],
@@ -36,6 +39,11 @@ export default function AnimalFormPage() {
     queryKey: ["genealogy", id],
     queryFn: () => animalsApi.genealogy(id!),
     enabled: isEdit && showGenealogia,
+  });
+
+  const { data: granjasData } = useQuery({
+    queryKey: ["granjas"],
+    queryFn: () => granjasApi.list(),
   });
 
   const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm<FormData>();
@@ -50,6 +58,7 @@ export default function AnimalFormPage() {
         padre: animal.padre ?? "",
         madre_animal: animal.madre_animal ?? "",
         candidato_reproductor: animal.candidato_reproductor,
+        granja: animal.granja ?? "",
       });
     }
   }, [animal, reset]);
@@ -66,16 +75,31 @@ export default function AnimalFormPage() {
         setConflictError(
           err?.response?.data?.detail ?? "Conflicto de titularidad — animal pertenece a otro socio activo."
         );
+      } else {
+        const data = err?.response?.data;
+        let msg = "Error al guardar el animal. Comprueba los datos e inténtalo de nuevo.";
+        if (data?.detail) {
+          msg = data.detail;
+        } else if (data && typeof data === "object") {
+          msg = Object.entries(data)
+            .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : String(v)}`)
+            .join(" | ");
+        } else if (err?.message) {
+          msg = err.message;
+        }
+        setServerError(msg);
       }
     },
   });
 
   const onSubmit = (data: FormData) => {
     setConflictError("");
+    setServerError("");
     const payload: Partial<Animal> = {
       ...data,
       padre: data.padre || null,
       madre_animal: data.madre_animal || null,
+      granja: data.granja || null,
     } as any;
     mutation.mutate(payload);
   };
@@ -188,6 +212,16 @@ export default function AnimalFormPage() {
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Granja</label>
+            <select className="input-field" {...register("granja")}>
+              <option value="">Sin asignar</option>
+              {granjasData?.results.map((g) => (
+                <option key={g.id} value={g.id}>{g.nombre}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -201,6 +235,12 @@ export default function AnimalFormPage() {
           {conflictError && (
             <div className="bg-red-50 border border-red-300 rounded-lg p-3 text-sm text-red-700">
               <strong>Conflicto de titularidad:</strong> {conflictError}
+            </div>
+          )}
+
+          {serverError && (
+            <div className="bg-red-50 border border-red-300 rounded-lg p-3 text-sm text-red-700">
+              {serverError}
             </div>
           )}
 

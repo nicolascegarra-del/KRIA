@@ -79,6 +79,14 @@ class Animal(UUIDModel):
     candidato_reproductor = models.BooleanField(default=False)
     reproductor_aprobado = models.BooleanField(default=False)
 
+    # Farm
+    granja = models.ForeignKey(
+        "granjas.Granja",
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="animales",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

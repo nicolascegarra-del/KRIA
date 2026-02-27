@@ -10,7 +10,8 @@ import {
   AlertTriangle,
   Upload,
   FileText,
-  Star,
+  Building,
+  Building2,
   LogOut,
   Menu,
   X,
@@ -22,16 +23,19 @@ interface NavItem {
   label: string;
   icon: React.ReactNode;
   gestionOnly?: boolean;
+  socioOnly?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: "/dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} />, gestionOnly: true },
-  { to: "/validaciones", label: "Validaciones", icon: <CheckSquare size={18} />, gestionOnly: true },
-  { to: "/conflictos", label: "Conflictos", icon: <AlertTriangle size={18} />, gestionOnly: true },
-  { to: "/socios", label: "Socios", icon: <Users size={18} />, gestionOnly: true },
-  { to: "/importar", label: "Importar", icon: <Upload size={18} />, gestionOnly: true },
-  { to: "/reportes", label: "Reportes", icon: <FileText size={18} />, gestionOnly: true },
-  { to: "/mis-animales", label: "Mis Animales", icon: <Bird size={18} />, gestionOnly: false },
+  { to: "/dashboard",   label: "Dashboard",   icon: <LayoutDashboard size={18} />, gestionOnly: true },
+  { to: "/validaciones",label: "Validaciones",icon: <CheckSquare size={18} />,     gestionOnly: true },
+  { to: "/conflictos",  label: "Conflictos",  icon: <AlertTriangle size={18} />,   gestionOnly: true },
+  { to: "/socios",      label: "Socios",      icon: <Users size={18} />,            gestionOnly: true },
+  { to: "/granjas",     label: "Granjas",     icon: <Building2 size={18} />,        gestionOnly: true },
+  { to: "/importar",    label: "Importar",    icon: <Upload size={18} />,           gestionOnly: true },
+  { to: "/reportes",    label: "Reportes",    icon: <FileText size={18} />,         gestionOnly: true },
+  { to: "/mis-animales",label: "Mis Animales",icon: <Bird size={18} />,             socioOnly: true },
+  { to: "/mis-granjas", label: "Mis Granjas", icon: <Building size={18} />,         socioOnly: true },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -41,9 +45,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const visibleItems = NAV_ITEMS.filter(
-    (item) => !item.gestionOnly || (user?.is_gestion ?? false)
-  );
+  const isGestion = user?.is_gestion ?? false;
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.gestionOnly && !isGestion) return false;
+    if (item.socioOnly && isGestion) return false;
+    return true;
+  });
 
   const handleLogout = () => {
     clearAuth();

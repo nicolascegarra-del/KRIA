@@ -7,13 +7,14 @@ from .models import Animal
 
 class AnimalListSerializer(serializers.ModelSerializer):
     socio_nombre = serializers.CharField(source="socio.nombre_razon_social", read_only=True)
+    granja_nombre = serializers.CharField(source="granja.nombre", read_only=True, allow_null=True)
 
     class Meta:
         model = Animal
         fields = [
             "id", "numero_anilla", "anio_nacimiento", "sexo", "variedad",
             "estado", "candidato_reproductor", "reproductor_aprobado",
-            "socio_nombre", "fotos", "created_at",
+            "socio_nombre", "granja", "granja_nombre", "fotos", "created_at",
         ]
 
 
@@ -21,6 +22,7 @@ class AnimalDetailSerializer(serializers.ModelSerializer):
     socio_nombre = serializers.CharField(source="socio.nombre_razon_social", read_only=True)
     padre_anilla = serializers.CharField(source="padre.numero_anilla", read_only=True, allow_null=True)
     madre_anilla = serializers.CharField(source="madre_animal.numero_anilla", read_only=True, allow_null=True)
+    granja_nombre = serializers.CharField(source="granja.nombre", read_only=True, allow_null=True)
 
     class Meta:
         model = Animal
@@ -28,6 +30,7 @@ class AnimalDetailSerializer(serializers.ModelSerializer):
             "id", "numero_anilla", "anio_nacimiento", "sexo", "variedad",
             "estado", "razon_rechazo", "candidato_reproductor", "reproductor_aprobado",
             "padre", "padre_anilla", "madre_animal", "madre_anilla", "madre_lote",
+            "granja", "granja_nombre",
             "fotos", "historico_pesos", "socio_nombre",
             "created_at", "updated_at",
         ]
@@ -40,6 +43,7 @@ class AnimalWriteSerializer(serializers.ModelSerializer):
         fields = [
             "numero_anilla", "anio_nacimiento", "sexo", "variedad",
             "padre", "madre_animal", "madre_lote",
+            "granja",
             "fotos", "historico_pesos", "candidato_reproductor",
         ]
 

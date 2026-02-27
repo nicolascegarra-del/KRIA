@@ -12,8 +12,10 @@ import PasswordResetPage from "./pages/auth/PasswordResetPage";
 // Socio pages
 import MisAnimalesPage from "./pages/socio/MisAnimalesPage";
 import AnimalFormPage from "./pages/socio/AnimalFormPage";
+import GranjasPage from "./pages/socio/GranjasPage";
 
 // Gestion pages
+import GranjasGestionPage from "./pages/gestion/GranjasGestionPage";
 import DashboardPage from "./pages/gestion/DashboardPage";
 import ValidacionesPage from "./pages/gestion/ValidacionesPage";
 import ConflictosPage from "./pages/gestion/ConflictosPage";
@@ -26,10 +28,19 @@ import EvaluacionPage from "./pages/gestion/EvaluacionPage";
 import Layout from "./components/Layout";
 import OfflineIndicator from "./components/OfflineIndicator";
 
-function ProtectedRoute({ children, gestionOnly = false }: { children: React.ReactNode; gestionOnly?: boolean }) {
+function ProtectedRoute({
+  children,
+  gestionOnly = false,
+  socioOnly = false,
+}: {
+  children: React.ReactNode;
+  gestionOnly?: boolean;
+  socioOnly?: boolean;
+}) {
   const { user } = useAuthStore();
   if (!user) return <Navigate to="/login" replace />;
   if (gestionOnly && !user.is_gestion) return <Navigate to="/mis-animales" replace />;
+  if (socioOnly && user.is_gestion) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
 
@@ -66,7 +77,7 @@ export default function App() {
   }, [branding]);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <OfflineIndicator />
       <Routes>
         {/* Public */}
@@ -77,7 +88,7 @@ export default function App() {
         <Route
           path="/mis-animales"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute socioOnly>
               <Layout>
                 <MisAnimalesPage />
               </Layout>
@@ -87,7 +98,7 @@ export default function App() {
         <Route
           path="/mis-animales/nuevo"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute socioOnly>
               <Layout>
                 <AnimalFormPage />
               </Layout>
@@ -97,7 +108,7 @@ export default function App() {
         <Route
           path="/mis-animales/:id"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute socioOnly>
               <Layout>
                 <AnimalFormPage />
               </Layout>
@@ -105,7 +116,29 @@ export default function App() {
           }
         />
 
+        {/* Socio granja route */}
+        <Route
+          path="/mis-granjas"
+          element={
+            <ProtectedRoute socioOnly>
+              <Layout>
+                <GranjasPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
         {/* Gestion routes */}
+        <Route
+          path="/granjas"
+          element={
+            <ProtectedRoute gestionOnly>
+              <Layout>
+                <GranjasGestionPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/dashboard"
           element={

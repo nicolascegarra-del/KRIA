@@ -20,4 +20,5 @@ urlpatterns = [
     path("api/v1/imports/", include("apps.imports.urls")),
     path("api/v1/reports/", include("apps.reports.urls")),
     path("api/v1/dashboard/", include("apps.conflicts.urls")),
+    path("api/v1/granjas/", include("apps.granjas.urls")),
 ]

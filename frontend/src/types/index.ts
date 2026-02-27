@@ -41,6 +41,16 @@ export interface Socio {
   full_name: string;
 }
 
+// ─── Granja ───────────────────────────────────────────────────────────────────
+export interface Granja {
+  id: string;
+  socio: string;
+  socio_nombre?: string;
+  nombre: string;
+  codigo_rega: string;
+  created_at: string;
+}
+
 // ─── Animal ───────────────────────────────────────────────────────────────────
 export type AnimalEstado = "AÑADIDO" | "APROBADO" | "EVALUADO" | "RECHAZADO" | "SOCIO_EN_BAJA";
 export type AnimalSexo = "M" | "H";
@@ -62,6 +72,8 @@ export interface Animal {
   madre_animal: string | null;
   madre_anilla: string | null;
   madre_lote: string | null;
+  granja: string | null;
+  granja_nombre: string | null;
   fotos: PhotoEntry[];
   historico_pesos: WeightEntry[];
   created_at: string;

@@ -34,7 +34,7 @@ services:
   minio:
     image: minio/minio:latest
     restart: unless-stopped
-    command: server /data --console-address ":9001"
+    command: server /data --console-address ":9091"
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
@@ -42,7 +42,7 @@ services:
       - minio_data:/data
     ports:
       - "9000:9000"
-      - "9001:9001"
+      - "9091:9091"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -118,6 +118,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: dev
     restart: unless-stopped
     volumes:
       - ./frontend:/app
