@@ -1,5 +1,6 @@
 /**
  * Axios client with JWT interceptors and tenant slug header injection.
+ * API calls use relative paths — nginx proxies /api/ to backend internally.
  */
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 
