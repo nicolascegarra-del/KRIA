@@ -8,7 +8,6 @@ CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
 # Production build
 FROM node:20-alpine AS build
-ENV VITE_API_URL=""
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
