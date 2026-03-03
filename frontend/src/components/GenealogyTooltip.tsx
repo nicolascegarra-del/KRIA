@@ -9,9 +9,10 @@ interface GenealogyNode {
   id: string;
   anilla: string;
   anio: number;
-  sexo: string;
-  variedad: string;
-  estado: string;
+  sexo: string | null;
+  variedad: string | null;
+  estado: string | null;
+  tipo?: "ANIMAL" | "LOTE";
   padre?: GenealogyNode | null;
   madre?: GenealogyNode | null;
 }
@@ -28,6 +29,7 @@ function flattenToHierarchy(node: GenealogyNode | null | undefined): any {
     name: `${node.anilla}\n${node.anio}`,
     anilla: node.anilla,
     estado: node.estado,
+    tipo: node.tipo,
     children: [
       flattenToHierarchy(node.padre),
       flattenToHierarchy(node.madre),
@@ -104,9 +106,21 @@ export default function GenealogyTooltip({ tree, width = 500, height = 300 }: Pr
     node
       .append("circle")
       .attr("r", 14)
-      .attr("fill", (d: any) => STATE_COLORS[d.data.estado] ?? "#e5e7eb")
+      .attr("fill", (d: any) =>
+        d.data.tipo === "LOTE" ? "#3B82F6" : (STATE_COLORS[d.data.estado] ?? "#e5e7eb")
+      )
       .attr("stroke", "white")
       .attr("stroke-width", 2);
+
+    // "Lote" label below year for LOTE nodes
+    node
+      .filter((d: any) => d.data.tipo === "LOTE")
+      .append("text")
+      .attr("dy", "3.0em")
+      .attr("text-anchor", "middle")
+      .attr("font-size", "7px")
+      .attr("fill", "#3B82F6")
+      .text("Lote");
 
     node
       .append("text")

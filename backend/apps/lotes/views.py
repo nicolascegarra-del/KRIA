@@ -47,9 +47,37 @@ class LoteCloseView(APIView):
         except Lote.DoesNotExist:
             return Response({"detail": "Not found."}, status=404)
 
+        if not get_effective_is_gestion(request):
+            try:
+                if lote.socio != request.user.socio:
+                    return Response({"detail": "Permission denied."}, status=403)
+            except Exception:
+                return Response({"detail": "Permission denied."}, status=403)
+
         from django.utils import timezone
         lote.is_closed = True
         if not lote.fecha_fin:
             lote.fecha_fin = timezone.now().date()
         lote.save(update_fields=["is_closed", "fecha_fin"])
         return Response(LoteSerializer(lote).data)
+
+
+class LoteHembrasView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            lote = Lote.objects.prefetch_related("hembras__socio").get(pk=pk)
+        except Lote.DoesNotExist:
+            return Response({"detail": "Not found."}, status=404)
+        data = [
+            {
+                "id": str(h.id),
+                "numero_anilla": h.numero_anilla,
+                "anio_nacimiento": h.anio_nacimiento,
+                "variedad": h.variedad,
+                "socio_nombre": h.socio.nombre_razon_social,
+            }
+            for h in lote.hembras.all()
+        ]
+        return Response(data)

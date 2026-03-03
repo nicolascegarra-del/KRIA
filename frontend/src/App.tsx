@@ -13,6 +13,7 @@ import PasswordResetPage from "./pages/auth/PasswordResetPage";
 import MisAnimalesPage from "./pages/socio/MisAnimalesPage";
 import AnimalFormPage from "./pages/socio/AnimalFormPage";
 import GranjasPage from "./pages/socio/GranjasPage";
+import MisLotesPage from "./pages/socio/MisLotesPage";
 
 // Gestion pages
 import GranjasGestionPage from "./pages/gestion/GranjasGestionPage";
@@ -123,6 +124,18 @@ export default function App() {
             <ProtectedRoute socioOnly>
               <Layout>
                 <GranjasPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Socio lotes route */}
+        <Route
+          path="/mis-lotes"
+          element={
+            <ProtectedRoute socioOnly>
+              <Layout>
+                <MisLotesPage />
               </Layout>
             </ProtectedRoute>
           }

@@ -102,11 +102,29 @@ export interface WeightEntry {
 export interface Lote {
   id: string;
   nombre: string;
+  socio: string;
   macho: string | null;
+  macho_anilla: string | null;
   hembras: string[];
+  hembras_anillas: string[];
+  crias_count: number;
   fecha_inicio: string;
   fecha_fin: string | null;
   is_closed: boolean;
+  created_at: string;
+}
+
+// ─── Genealogy ────────────────────────────────────────────────────────────────
+export interface GenealogyNode {
+  id: string;
+  anilla: string;
+  anio: number;
+  sexo: string | null;
+  variedad: string | null;
+  estado: string | null;
+  tipo?: "ANIMAL" | "LOTE";
+  padre?: GenealogyNode | null;
+  madre?: GenealogyNode | null;
 }
 
 // ─── Evaluacion ───────────────────────────────────────────────────────────────

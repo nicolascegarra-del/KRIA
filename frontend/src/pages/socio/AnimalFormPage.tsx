@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { animalsApi } from "../../api/animals";
 import { granjasApi } from "../../api/granjas";
+import { lotesApi } from "../../api/lotes";
 import AnimalStateChip from "../../components/AnimalStateChip";
 import GenealogyTooltip from "../../components/GenealogyTooltip";
 import { Loader2, ArrowLeft, Info, Camera, X, Scale, Plus, CheckCircle2, Circle } from "lucide-react";
@@ -39,6 +40,8 @@ export default function AnimalFormPage() {
   const [showGenealogia, setShowGenealogia] = useState(false);
   const [conflictError, setConflictError] = useState("");
   const [serverError, setServerError] = useState("");
+  const [madreMode, setMadreMode] = useState<"individual" | "lote">("individual");
+  const [madreLoteId, setMadreLoteId] = useState("");
 
   // Foto upload state: which tipo is being uploaded
   const [uploadingTipo, setUploadingTipo] = useState<FotoTipo | null>(null);
@@ -70,10 +73,23 @@ export default function AnimalFormPage() {
     queryFn: () => granjasApi.list(),
   });
 
+  const { data: lotesData } = useQuery({
+    queryKey: ["lotes"],
+    queryFn: lotesApi.list,
+    enabled: madreMode === "lote",
+  });
+
   const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm<FormData>();
 
   useEffect(() => {
     if (animal) {
+      if (animal.madre_lote) {
+        setMadreMode("lote");
+        setMadreLoteId(animal.madre_lote);
+      } else {
+        setMadreMode("individual");
+        setMadreLoteId("");
+      }
       reset({
         numero_anilla: animal.numero_anilla,
         anio_nacimiento: animal.anio_nacimiento,
@@ -174,11 +190,17 @@ export default function AnimalFormPage() {
       payload.padre = null;
     }
 
-    if (data.madre_anilla && data.madre_anio) {
-      payload.madre_anilla = data.madre_anilla;
-      payload.madre_anio = parseInt(data.madre_anio, 10);
-    } else if (!data.madre_anilla) {
+    if (madreMode === "lote") {
+      payload.madre_lote = madreLoteId || null;
       payload.madre_animal = null;
+    } else {
+      if (data.madre_anilla && data.madre_anio) {
+        payload.madre_anilla = data.madre_anilla;
+        payload.madre_anio = parseInt(data.madre_anio, 10);
+      } else if (!data.madre_anilla) {
+        payload.madre_animal = null;
+      }
+      payload.madre_lote = null;
     }
 
     mutation.mutate(payload);
@@ -339,23 +361,68 @@ export default function AnimalFormPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Madre (anilla + año)</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    className="input-field font-mono flex-1"
-                    placeholder="Nº anilla de la madre"
-                    {...register("madre_anilla")}
-                  />
-                  <input
-                    type="number"
-                    className="input-field w-24"
-                    placeholder="Año"
-                    min={2000}
-                    max={new Date().getFullYear()}
-                    {...register("madre_anio")}
-                  />
+                <div className="flex items-center gap-4 mb-2">
+                  <label className="text-xs text-gray-500">Madre</label>
+                  <div className="flex gap-3">
+                    <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                      <input
+                        type="radio"
+                        name="madreMode"
+                        checked={madreMode === "individual"}
+                        onChange={() => {
+                          setMadreMode("individual");
+                          setMadreLoteId("");
+                        }}
+                        className="accent-blue-700"
+                      />
+                      Individual
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                      <input
+                        type="radio"
+                        name="madreMode"
+                        checked={madreMode === "lote"}
+                        onChange={() => setMadreMode("lote")}
+                        className="accent-blue-700"
+                      />
+                      Lote de Cría
+                    </label>
+                  </div>
                 </div>
+
+                {madreMode === "individual" ? (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      className="input-field font-mono flex-1"
+                      placeholder="Nº anilla de la madre"
+                      {...register("madre_anilla")}
+                    />
+                    <input
+                      type="number"
+                      className="input-field w-24"
+                      placeholder="Año"
+                      min={2000}
+                      max={new Date().getFullYear()}
+                      {...register("madre_anio")}
+                    />
+                  </div>
+                ) : (
+                  <select
+                    className="input-field"
+                    value={madreLoteId}
+                    onChange={(e) => setMadreLoteId(e.target.value)}
+                  >
+                    <option value="">Sin lote asignado</option>
+                    {(lotesData?.results ?? []).map((lote) => (
+                      <option key={lote.id} value={lote.id}>
+                        {lote.nombre}
+                        {lote.is_closed ? " (Finalizado)" : ""}
+                        {lote.macho_anilla ? ` — Macho: ${lote.macho_anilla}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
           </div>

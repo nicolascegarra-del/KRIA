@@ -157,6 +157,25 @@ def _build_genealogy_node(animal, depth=0, max_depth=3):
     """Recursively build a 3-generation genealogy tree."""
     if animal is None or depth >= max_depth:
         return None
+
+    # Resolve madre: individual animal or via lote
+    madre_node = None
+    if animal.madre_animal_id:
+        madre_node = _build_genealogy_node(animal.madre_animal, depth + 1, max_depth)
+    elif animal.madre_lote_id:
+        lote = animal.madre_lote
+        madre_node = {
+            "id": str(lote.id),
+            "anilla": lote.nombre,
+            "anio": lote.fecha_inicio.year,
+            "sexo": None,
+            "variedad": None,
+            "estado": None,
+            "tipo": "LOTE",
+            "padre": _build_genealogy_node(lote.macho, depth + 1, max_depth) if lote.macho else None,
+            "madre": None,
+        }
+
     return {
         "id": str(animal.id),
         "anilla": animal.numero_anilla,
@@ -164,8 +183,9 @@ def _build_genealogy_node(animal, depth=0, max_depth=3):
         "sexo": animal.sexo,
         "variedad": animal.variedad,
         "estado": animal.estado,
+        "tipo": "ANIMAL",
         "padre": _build_genealogy_node(animal.padre, depth + 1, max_depth),
-        "madre": _build_genealogy_node(animal.madre_animal, depth + 1, max_depth),
+        "madre": madre_node,
     }
 
 

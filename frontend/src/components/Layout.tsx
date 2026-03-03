@@ -12,6 +12,7 @@ import {
   FileText,
   Building,
   Building2,
+  Layers,
   LogOut,
   Menu,
   X,
@@ -36,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/reportes",    label: "Reportes",    icon: <FileText size={18} />,         gestionOnly: true },
   { to: "/mis-animales",label: "Mis Animales",icon: <Bird size={18} />,             socioOnly: true },
   { to: "/mis-granjas", label: "Mis Granjas", icon: <Building size={18} />,         socioOnly: true },
+  { to: "/mis-lotes",   label: "Mis Lotes",   icon: <Layers size={18} />,           socioOnly: true },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
