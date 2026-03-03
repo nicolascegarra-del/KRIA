@@ -3,13 +3,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { animalsApi } from "../../api/animals";
 import AnimalCard from "../../components/AnimalCard";
 import AnimalStateChip from "../../components/AnimalStateChip";
-import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react";
 import type { Animal } from "../../types";
 
 export default function ValidacionesPage() {
   const qc = useQueryClient();
   const [rejectModal, setRejectModal] = useState<Animal | null>(null);
   const [razonRechazo, setRazonRechazo] = useState("");
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [approveErrors, setApproveErrors] = useState<Record<string, string>>({});
 
   const { data, isLoading } = useQuery({
     queryKey: ["animals", { estado: "AÑADIDO" }],
@@ -17,8 +19,22 @@ export default function ValidacionesPage() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: animalsApi.approve,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["animals"] }),
+    mutationFn: (id: string) => {
+      setApprovingId(id);
+      setApproveErrors((prev) => { const next = { ...prev }; delete next[id]; return next; });
+      return animalsApi.approve(id);
+    },
+    onSuccess: () => {
+      setApprovingId(null);
+      qc.invalidateQueries({ queryKey: ["animals"] });
+    },
+    onError: (err: any, id: string) => {
+      setApprovingId(null);
+      const msg =
+        err?.response?.data?.detail ??
+        "Error al aprobar el animal. Comprueba que tiene las 3 fotos obligatorias.";
+      setApproveErrors((prev) => ({ ...prev, [id]: msg }));
+    },
   });
 
   const rejectMutation = useMutation({
@@ -66,15 +82,21 @@ export default function ValidacionesPage() {
                     {animal.sexo === "M" ? "♂" : "♀"} · {animal.variedad} ·{" "}
                     <strong>{animal.socio_nombre}</strong>
                   </div>
+                  {approveErrors[animal.id] && (
+                    <div className="mt-2 flex items-start gap-1.5 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-2.5 py-1.5">
+                      <AlertCircle size={13} className="mt-0.5 shrink-0" />
+                      {approveErrors[animal.id]}
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <button
                     onClick={() => approveMutation.mutate(animal.id)}
-                    disabled={approveMutation.isPending}
+                    disabled={approvingId === animal.id}
                     className="p-2 rounded-lg bg-green-700 text-white hover:bg-green-800 min-h-[44px] min-w-[44px] flex items-center justify-center"
                     title="Aprobar"
                   >
-                    {approveMutation.isPending ? (
+                    {approvingId === animal.id ? (
                       <Loader2 size={18} className="animate-spin" />
                     ) : (
                       <CheckCircle2 size={18} />
