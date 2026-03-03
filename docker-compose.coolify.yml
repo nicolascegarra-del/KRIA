@@ -69,6 +69,10 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
+    # expose declara el puerto del contenedor a Traefik sin enlazarlo al host.
+    # Necesario para que SERVICE_FQDN_BACKEND sepa a qué puerto enrutar.
+    expose:
+      - "8000"
     environment:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
       DJANGO_SETTINGS_MODULE: config.settings.production
@@ -175,6 +179,12 @@ services:
       dockerfile: Dockerfile
       target: production
     restart: unless-stopped
+    # expose declara el puerto del contenedor a Traefik sin enlazarlo al host.
+    # Necesario para que SERVICE_FQDN_FRONTEND sepa a qué puerto enrutar.
+    # Correcto: Traefik enruta solo los dominios configurados (agamur.klyp.es).
+    # Incorrecto habría sido "ports: 80:80" que captura TODO el tráfico del host.
+    expose:
+      - "80"
     environment:
       # Dominios que este nginx debe aceptar.
       # El bloque default_server del nginx rechaza cualquier otro dominio.
