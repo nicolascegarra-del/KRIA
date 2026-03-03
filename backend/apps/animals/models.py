@@ -79,6 +79,11 @@ class Animal(UUIDModel):
     candidato_reproductor = models.BooleanField(default=False)
     reproductor_aprobado = models.BooleanField(default=False)
 
+    # Breeding data
+    fecha_incubacion = models.DateField(null=True, blank=True)
+    ganaderia_nacimiento = models.CharField(max_length=200, blank=True, default="")
+    ganaderia_actual = models.CharField(max_length=200, blank=True, default="")
+
     # Farm
     granja = models.ForeignKey(
         "granjas.Granja",

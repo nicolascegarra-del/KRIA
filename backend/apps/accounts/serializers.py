@@ -1,6 +1,7 @@
 """
 Serializers for accounts app: JWT customisation, User, Socio.
 """
+import re
 import secrets
 
 from django.conf import settings
@@ -12,6 +13,37 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.tenants.models import Tenant
 from .models import Socio, User
+
+
+# ── Spanish DNI / NIE / CIF validator (no external deps) ─────────────────────
+_DNI_LETTERS = "TRWAGMYFPDXBNJZSQVHLCKE"
+
+
+def _validate_dni_nif(value: str) -> bool:
+    """
+    Validate Spanish DNI (8 digits + letter), NIE (X/Y/Z + 7 digits + letter)
+    or CIF (company tax id, letter + 7 digits + control char).
+    Returns True if the format and checksum are valid.
+    """
+    v = value.upper().strip()
+
+    # DNI: 8 digits + letter
+    m = re.match(r'^(\d{8})([A-Z])$', v)
+    if m:
+        return _DNI_LETTERS[int(m.group(1)) % 23] == m.group(2)
+
+    # NIE: X/Y/Z + 7 digits + letter
+    m = re.match(r'^([XYZ])(\d{7})([A-Z])$', v)
+    if m:
+        prefix_map = {'X': '0', 'Y': '1', 'Z': '2'}
+        num = int(prefix_map[m.group(1)] + m.group(2))
+        return _DNI_LETTERS[num % 23] == m.group(3)
+
+    # CIF (empresas): letter + 7 digits + letter or digit (basic format check)
+    if re.match(r'^[ABCDEFGHJKLMNPQRSUVW]\d{7}[A-Z0-9]$', v):
+        return True
+
+    return False
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -78,6 +110,13 @@ class SocioSerializer(serializers.ModelSerializer):
             "user", "email", "first_name", "last_name",
         ]
         read_only_fields = ["id"]
+
+    def validate_dni_nif(self, value):
+        if value and not _validate_dni_nif(value):
+            raise serializers.ValidationError(
+                "DNI/NIF/NIE inválido. Introduce un documento de identidad español válido."
+            )
+        return value.upper().strip() if value else value
 
     def create(self, validated_data):
         tenant = self.context["request"].tenant

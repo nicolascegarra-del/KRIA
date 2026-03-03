@@ -1,9 +1,47 @@
 """
 Animal API views including smart registration and state machine actions.
 """
+import io
 import os
 from datetime import datetime, timezone as dt_timezone
 from uuid import uuid4
+
+
+# ── Image MIME validation (no external deps) ──────────────────────────────────
+
+def _is_allowed_image(data: bytes) -> bool:
+    """Return True if the binary data starts with a known image magic header."""
+    if len(data) < 4:
+        return False
+    if data[:3] == b'\xff\xd8\xff':
+        return True
+    if data[:4] == b'\x89PNG':
+        return True
+    if data[:6] in (b'GIF87a', b'GIF89a'):
+        return True
+    if data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+        return True
+    return False
+
+
+# ── Image optimization (Pillow) ───────────────────────────────────────────────
+
+def _optimize_image(data: bytes, max_dimension: int = 1920, quality: int = 82) -> bytes:
+    """
+    Resize (if larger than max_dimension) and re-encode as progressive JPEG.
+    - Strips EXIF metadata automatically.
+    - Converts any color mode (RGBA, palette…) to RGB.
+    - Returns optimized JPEG bytes.
+    """
+    from PIL import Image  # type: ignore
+
+    img = Image.open(io.BytesIO(data))
+    if img.mode not in ("RGB", "L"):
+        img = img.convert("RGB")
+    img.thumbnail((max_dimension, max_dimension), Image.LANCZOS)
+    out = io.BytesIO()
+    img.save(out, format="JPEG", quality=quality, optimize=True, progressive=True)
+    return out.getvalue()
 
 from django.db import IntegrityError
 from rest_framework import generics, status
@@ -13,6 +51,7 @@ from rest_framework.views import APIView
 import django_filters
 
 from core.permissions import IsGestion, IsSocioOrGestion, IsSocioOwner, get_effective_is_gestion
+from core.throttles import UploadRateThrottle
 from .models import Animal
 from .serializers import (
     AnimalDetailSerializer,
@@ -90,20 +129,22 @@ class AnimalListCreateView(generics.ListCreateAPIView):
             anio_nacimiento=anio,
         ).first()
 
+        ctx = {"request": request}
+
         if existing is None:
             # Scenario 1: New animal
-            serializer = AnimalWriteSerializer(data=request.data)
+            serializer = AnimalWriteSerializer(data=request.data, context=ctx)
             serializer.is_valid(raise_exception=True)
             animal = serializer.save(tenant=tenant, socio=socio)
-            return Response(AnimalDetailSerializer(animal).data, status=201)
+            return Response(AnimalDetailSerializer(animal, context=ctx).data, status=201)
 
         if str(existing.socio_id) == str(socio.id):
             # Scenario 2: Same socio — update
-            serializer = AnimalWriteSerializer(existing, data=request.data, partial=True)
+            serializer = AnimalWriteSerializer(existing, data=request.data, partial=True, context=ctx)
             serializer.is_valid(raise_exception=True)
             existing._editing_user = user
             animal = serializer.save()
-            return Response(AnimalDetailSerializer(animal).data, status=200)
+            return Response(AnimalDetailSerializer(animal, context=ctx).data, status=200)
 
         # Different socio
         from apps.accounts.models import Socio as SocioModel
@@ -154,6 +195,9 @@ class AnimalDetailView(generics.RetrieveUpdateAPIView):
         serializer.save()
 
 
+FOTO_TIPOS_REQUERIDOS = {"PERFIL", "CABEZA", "ANILLA"}
+
+
 class AnimalApproveView(APIView):
     permission_classes = [IsGestion]
 
@@ -165,6 +209,15 @@ class AnimalApproveView(APIView):
 
         if animal.estado not in (Animal.Estado.AÑADIDO, Animal.Estado.RECHAZADO):
             return Response({"detail": f"Cannot approve animal in state {animal.estado}."}, status=400)
+
+        # Validate that all 3 required photo types are present
+        tipos_presentes = {f.get("tipo") for f in (animal.fotos or []) if f.get("tipo")}
+        faltantes = FOTO_TIPOS_REQUERIDOS - tipos_presentes
+        if faltantes:
+            return Response(
+                {"detail": f"Faltan fotos obligatorias: {', '.join(sorted(faltantes))}."},
+                status=400,
+            )
 
         animal.estado = Animal.Estado.APROBADO
         animal.razon_rechazo = ""
@@ -232,6 +285,7 @@ class AnimalGlobalSearchView(APIView):
 
 class AnimalFotoUploadView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [UploadRateThrottle]
 
     def _get_animal_and_check_perms(self, request, pk):
         try:
@@ -250,7 +304,8 @@ class AnimalFotoUploadView(APIView):
         return animal, None
 
     def post(self, request, pk):
-        from apps.reports.storage import upload_bytes, get_presigned_download_url
+        from apps.reports.storage import upload_bytes
+        from .serializers import FOTO_TIPOS
 
         animal, err = self._get_animal_and_check_perms(request, pk)
         if err:
@@ -260,15 +315,40 @@ class AnimalFotoUploadView(APIView):
         if not foto:
             return Response({"detail": "No file provided."}, status=400)
 
-        ext = os.path.splitext(foto.name)[1].lstrip(".").lower() or "jpg"
-        object_key = f"animals/{animal.tenant_id}/{animal.id}/{uuid4()}.{ext}"
+        tipo = request.data.get("tipo", "").upper()
+        if tipo not in FOTO_TIPOS:
+            return Response(
+                {"detail": f"tipo debe ser uno de: {', '.join(FOTO_TIPOS)}."},
+                status=400,
+            )
 
-        upload_bytes(object_key, foto.read(), content_type=foto.content_type or "image/jpeg")
-        url = get_presigned_download_url(object_key, expiry_hours=8760)
+        # Read bytes once — needed for MIME check, optimization, and upload
+        foto_bytes = foto.read()
+
+        # ── Security: validate magic bytes ────────────────────────────────────
+        if not _is_allowed_image(foto_bytes):
+            return Response(
+                {"detail": "Tipo de archivo no permitido. Solo se aceptan imágenes JPEG, PNG, GIF o WebP."},
+                status=400,
+            )
+
+        # ── Optimization: resize + compress to JPEG (max 1920px, q=82) ───────
+        try:
+            foto_bytes = _optimize_image(foto_bytes)
+        except Exception:
+            pass  # If Pillow fails for any reason, upload the original
+
+        # Always store as .jpg after optimization
+        object_key = f"animals/{animal.tenant_id}/{animal.id}/{uuid4()}.jpg"
+
+        # ── Store only the MinIO key (URL generated at read-time, never expires)
+        upload_bytes(object_key, foto_bytes, content_type="image/jpeg")
 
         fotos = list(animal.fotos or [])
+        # Replace existing photo of the same tipo (one per type enforced)
+        fotos = [f for f in fotos if f.get("tipo") != tipo]
         fotos.append({
-            "url": url,
+            "tipo": tipo,
             "key": object_key,
             "uploaded_at": datetime.now(dt_timezone.utc).isoformat(),
         })
@@ -299,3 +379,45 @@ class AnimalFotoUploadView(APIView):
         animal.save(update_fields=["fotos"])
 
         return Response(AnimalDetailSerializer(animal).data)
+
+
+class AnimalPesajeView(APIView):
+    """POST /api/v1/animals/:id/pesaje/ — append a weight record."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            animal = Animal.objects.get(pk=pk)
+        except Animal.DoesNotExist:
+            return Response({"detail": "Not found."}, status=404)
+
+        # Socios can only log weight for their own animals
+        if not get_effective_is_gestion(request):
+            try:
+                if animal.socio != request.user.socio:
+                    return Response({"detail": "Permission denied."}, status=403)
+            except Exception:
+                return Response({"detail": "Permission denied."}, status=403)
+
+        fecha = request.data.get("fecha")
+        peso = request.data.get("peso")
+
+        if not fecha or peso is None:
+            return Response({"detail": "fecha y peso son obligatorios."}, status=400)
+
+        try:
+            float(peso)
+        except (TypeError, ValueError):
+            return Response({"detail": "peso debe ser un número."}, status=400)
+
+        entrada = {
+            "fecha": fecha,
+            "peso": float(peso),
+            "usuario": request.user.full_name or request.user.email,
+        }
+        historico = list(animal.historico_pesos or [])
+        historico.append(entrada)
+        animal.historico_pesos = historico
+        animal.save(update_fields=["historico_pesos"])
+
+        return Response(AnimalDetailSerializer(animal).data, status=201)

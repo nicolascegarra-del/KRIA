@@ -2,7 +2,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.permissions import IsGestion, IsSocioOrGestion
+from core.permissions import IsGestion, IsSocioOrGestion, get_effective_is_gestion
+from core.throttles import UploadRateThrottle
 from .models import ReportJob
 from .tasks import generate_report
 
@@ -45,10 +46,11 @@ class ReportJobStatusView(APIView):
 
 class InventoryReportView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [UploadRateThrottle]
 
     def post(self, request):
         socio_id = request.data.get("socio_id")
-        if not (request.user.is_gestion or request.user.is_superadmin):
+        if not get_effective_is_gestion(request):
             # Socio can only request their own
             try:
                 socio_id = str(request.user.socio.id)
@@ -59,6 +61,7 @@ class InventoryReportView(APIView):
 
 class IndividualReportView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [UploadRateThrottle]
 
     def post(self, request, animal_id):
         return _create_report_job(request, ReportJob.ReportType.INDIVIDUAL, {"animal_id": str(animal_id)})
@@ -66,6 +69,7 @@ class IndividualReportView(APIView):
 
 class GenealogyCertView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [UploadRateThrottle]
 
     def post(self, request, animal_id):
         return _create_report_job(request, ReportJob.ReportType.GENEALOGY_CERT, {"animal_id": str(animal_id)})
@@ -73,6 +77,7 @@ class GenealogyCertView(APIView):
 
 class LibroGenealogicView(APIView):
     permission_classes = [IsGestion]
+    throttle_classes = [UploadRateThrottle]
 
     def post(self, request):
         return _create_report_job(request, ReportJob.ReportType.LIBRO_GENEALOGICO, {})
@@ -80,6 +85,7 @@ class LibroGenealogicView(APIView):
 
 class CatalogoReproductoresView(APIView):
     permission_classes = [IsGestion]
+    throttle_classes = [UploadRateThrottle]
 
     def post(self, request):
         return _create_report_job(request, ReportJob.ReportType.CATALOGO_REPRODUCTORES, {})

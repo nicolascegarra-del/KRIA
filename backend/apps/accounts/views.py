@@ -71,7 +71,7 @@ class PasswordResetConfirmView(APIView):
         new_password = serializer.validated_data["new_password"]
 
         try:
-            user = User.all_objects.get(reset_token=token)
+            user = User.objects.get(reset_token=token)
         except User.DoesNotExist:
             return Response({"detail": "Invalid or expired token."}, status=400)
 

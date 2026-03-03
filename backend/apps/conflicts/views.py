@@ -48,10 +48,23 @@ class DashboardTareasPendientesView(APIView):
         from apps.animals.models import Animal
         from apps.imports.models import ImportJob
 
-        pendientes_aprobacion = Animal.objects.filter(estado=Animal.Estado.AÑADIDO).count()
-        conflictos_pendientes = Conflicto.objects.filter(estado=Conflicto.Estado.PENDIENTE).count()
-        imports_pendientes = ImportJob.objects.filter(
-            status__in=["PENDING", "PROCESSING"]
+        tenant = request.tenant
+
+        # Explicit tenant filter on every query — never rely on TenantManager
+        # thread-local alone for dashboard counters.
+        pendientes_aprobacion = Animal.all_objects.filter(
+            tenant=tenant,
+            estado=Animal.Estado.AÑADIDO,
+        ).count()
+
+        conflictos_pendientes = Conflicto.all_objects.filter(
+            tenant=tenant,
+            estado=Conflicto.Estado.PENDIENTE,
+        ).count()
+
+        imports_pendientes = ImportJob.all_objects.filter(
+            tenant=tenant,
+            status__in=[ImportJob.Status.PENDING, ImportJob.Status.PROCESSING],
         ).count()
 
         return Response({

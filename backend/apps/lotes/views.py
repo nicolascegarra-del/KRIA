@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.permissions import IsSocioOwner
+from core.permissions import IsSocioOwner, get_effective_is_gestion
 from .models import Lote
 from .serializers import LoteSerializer
 
@@ -13,22 +13,21 @@ class LoteListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        user = self.request.user
         qs = Lote.objects.select_related("socio", "macho")
-        if not (user.is_gestion or user.is_superadmin):
+        # Use JWT claim, not DB field, to respect the dual-login checkbox
+        if not get_effective_is_gestion(self.request):
             try:
-                qs = qs.filter(socio=user.socio)
+                qs = qs.filter(socio=self.request.user.socio)
             except Exception:
                 return Lote.objects.none()
         return qs
 
     def perform_create(self, serializer):
         tenant = self.request.tenant
-        user = self.request.user
-        if user.is_gestion or user.is_superadmin:
+        if get_effective_is_gestion(self.request):
             serializer.save(tenant=tenant)
         else:
-            serializer.save(tenant=tenant, socio=user.socio)
+            serializer.save(tenant=tenant, socio=self.request.user.socio)
 
 
 class LoteDetailView(generics.RetrieveUpdateAPIView):

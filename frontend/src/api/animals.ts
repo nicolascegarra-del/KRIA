@@ -52,9 +52,10 @@ export const animalsApi = {
     return data;
   },
 
-  uploadFoto: async (id: string, file: File): Promise<Animal> => {
+  uploadFoto: async (id: string, file: File, tipo: string): Promise<Animal> => {
     const form = new FormData();
     form.append("foto", file);
+    form.append("tipo", tipo);
     const { data } = await apiClient.post(`/animals/${id}/foto/`, form, {
       headers: { "Content-Type": "multipart/form-data" },
     });
@@ -63,6 +64,11 @@ export const animalsApi = {
 
   deleteFoto: async (id: string, key: string): Promise<Animal> => {
     const { data } = await apiClient.delete(`/animals/${id}/foto/`, { data: { key } });
+    return data;
+  },
+
+  addPesaje: async (id: string, fecha: string, peso: number): Promise<Animal> => {
+    const { data } = await apiClient.post(`/animals/${id}/pesaje/`, { fecha, peso });
     return data;
   },
 };

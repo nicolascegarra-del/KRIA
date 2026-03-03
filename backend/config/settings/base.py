@@ -119,6 +119,16 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
+    # ── Throttling (defense-in-depth; Nginx also rate-limits auth) ───────────
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "30/min",       # unauthenticated (login, branding, public catalog)
+        "user": "300/min",      # authenticated general use
+        "uploads": "20/min",    # photo upload, import, report generation
+    },
 }
 
 # ─── JWT ──────────────────────────────────────────────────────────────────────

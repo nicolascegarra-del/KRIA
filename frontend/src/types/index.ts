@@ -56,12 +56,17 @@ export type AnimalEstado = "AÑADIDO" | "APROBADO" | "EVALUADO" | "RECHAZADO" | 
 export type AnimalSexo = "M" | "H";
 export type AnimalVariedad = "SALMON" | "PLATA" | "OTRA";
 
+export type FotoTipo = "PERFIL" | "CABEZA" | "ANILLA";
+
 export interface Animal {
   id: string;
   numero_anilla: string;
   anio_nacimiento: number;
   sexo: AnimalSexo;
   variedad: AnimalVariedad;
+  fecha_incubacion: string | null;
+  ganaderia_nacimiento: string;
+  ganaderia_actual: string;
   estado: AnimalEstado;
   razon_rechazo: string;
   candidato_reproductor: boolean;
@@ -81,6 +86,7 @@ export interface Animal {
 }
 
 export interface PhotoEntry {
+  tipo: FotoTipo | null;
   url: string;
   key: string;
   uploaded_at: string;
@@ -89,6 +95,7 @@ export interface PhotoEntry {
 export interface WeightEntry {
   fecha: string;
   peso: number;
+  usuario?: string;
 }
 
 // ─── Lote ─────────────────────────────────────────────────────────────────────

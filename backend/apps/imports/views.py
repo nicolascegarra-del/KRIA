@@ -5,12 +5,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.permissions import IsGestion
+from core.throttles import UploadRateThrottle
 from .models import ImportJob
 from .tasks import process_import_job
 
 
 class SocioImportView(APIView):
     permission_classes = [IsGestion]
+    throttle_classes = [UploadRateThrottle]
     parser_classes = [MultiPartParser]
 
     def post(self, request):
