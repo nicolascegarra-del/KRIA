@@ -163,12 +163,23 @@ services:
   # Coolify/Traefik enruta aquí AMBOS dominios:
   #   agamur.klyp.es       → SPA React
   #   admin-agamur.klyp.es → /admin/ (Django admin) + /api/
+  #
+  # IMPORTANTE: NO exponer "ports: 80:80" aquí.
+  # Coolify/Traefik gestiona el routing por dominio externamente.
+  # Exponer el puerto directamente al host haría que AGAMUR
+  # interceptara TODO el tráfico HTTP del servidor (incluyendo
+  # dominios de otras apps como kronos.klyp.es).
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       target: production
     restart: unless-stopped
+    environment:
+      # Dominios que este nginx debe aceptar.
+      # El bloque default_server del nginx rechaza cualquier otro dominio.
+      # Separar múltiples dominios con espacio: "dominio1.com dominio2.com"
+      NGINX_HOSTS: "${NGINX_HOSTS:-agamur.klyp.es admin-agamur.klyp.es}"
     volumes:
       - static_files:/app/staticfiles:ro
     depends_on:
