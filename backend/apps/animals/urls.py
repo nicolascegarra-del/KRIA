@@ -8,6 +8,7 @@ from .views import (
     AnimalListCreateView,
     AnimalPesajeView,
     AnimalRejectView,
+    AnimalReproductorApproveView,
 )
 
 urlpatterns = [
@@ -19,4 +20,5 @@ urlpatterns = [
     path("<uuid:pk>/genealogy/", AnimalGenealogyView.as_view(), name="animals-genealogy"),
     path("<uuid:pk>/foto/", AnimalFotoUploadView.as_view(), name="animals-foto"),
     path("<uuid:pk>/pesaje/", AnimalPesajeView.as_view(), name="animals-pesaje"),
+    path("<uuid:pk>/aprobar-reproductor/", AnimalReproductorApproveView.as_view(), name="animals-aprobar-reproductor"),
 ]

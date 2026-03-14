@@ -34,6 +34,18 @@ class Evaluacion(UUIDModel):
 
     puntuacion_media = models.DecimalField(max_digits=4, decimal_places=2, editable=False, default=0)
 
+    # Observaciones morfológicas adicionales
+    picos_cresta = models.CharField(max_length=100, blank=True, default="")
+    color_orejilla = models.CharField(max_length=100, blank=True, default="")
+    color_general = models.CharField(max_length=100, blank=True, default="")
+    peso_evaluacion = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    variedad_confirmada = models.CharField(
+        max_length=20,
+        choices=[("SALMON", "Salmón"), ("PLATA", "Plata"), ("OTRA", "Otra")],
+        null=True,
+        blank=True,
+    )
+
     notas = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 

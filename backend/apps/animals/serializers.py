@@ -45,6 +45,7 @@ class AnimalListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "numero_anilla", "anio_nacimiento", "sexo", "variedad",
             "estado", "candidato_reproductor", "reproductor_aprobado",
+            "alerta_anilla",
             "socio_nombre", "granja", "granja_nombre", "fotos", "created_at",
         ]
 
@@ -65,6 +66,7 @@ class AnimalDetailSerializer(serializers.ModelSerializer):
             "id", "numero_anilla", "anio_nacimiento", "sexo", "variedad",
             "fecha_incubacion", "ganaderia_nacimiento", "ganaderia_actual",
             "estado", "razon_rechazo", "candidato_reproductor", "reproductor_aprobado",
+            "alerta_anilla",
             "padre", "padre_anilla", "madre_animal", "madre_anilla", "madre_lote",
             "granja", "granja_nombre",
             "fotos", "historico_pesos", "socio_nombre",

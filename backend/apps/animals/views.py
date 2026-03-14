@@ -62,6 +62,24 @@ from .serializers import (
 from apps.conflicts.models import Conflicto
 
 
+def _update_alerta_anilla(animal):
+    """Recomputa y guarda alerta_anilla en el animal. Llama tras create/update."""
+    try:
+        from apps.anillas.utils import compute_alerta_anilla
+        alerta = compute_alerta_anilla(
+            numero_anilla=animal.numero_anilla,
+            anio=animal.anio_nacimiento,
+            sexo=animal.sexo,
+            socio_id=animal.socio_id,
+            tenant_id=animal.tenant_id,
+        )
+    except Exception:
+        alerta = ""
+    if animal.alerta_anilla != alerta:
+        animal.alerta_anilla = alerta
+        animal.save(update_fields=["alerta_anilla"])
+
+
 class AnimalFilter(django_filters.FilterSet):
     estado = django_filters.CharFilter()
     variedad = django_filters.CharFilter()
@@ -136,6 +154,7 @@ class AnimalListCreateView(generics.ListCreateAPIView):
             serializer = AnimalWriteSerializer(data=request.data, context=ctx)
             serializer.is_valid(raise_exception=True)
             animal = serializer.save(tenant=tenant, socio=socio)
+            _update_alerta_anilla(animal)
             return Response(AnimalDetailSerializer(animal, context=ctx).data, status=201)
 
         if str(existing.socio_id) == str(socio.id):
@@ -144,6 +163,7 @@ class AnimalListCreateView(generics.ListCreateAPIView):
             serializer.is_valid(raise_exception=True)
             existing._editing_user = user
             animal = serializer.save()
+            _update_alerta_anilla(animal)
             return Response(AnimalDetailSerializer(animal, context=ctx).data, status=200)
 
         # Different socio
@@ -192,7 +212,8 @@ class AnimalDetailView(generics.RetrieveUpdateAPIView):
 
     def perform_update(self, serializer):
         serializer.instance._editing_user = self.request.user
-        serializer.save()
+        animal = serializer.save()
+        _update_alerta_anilla(animal)
 
 
 FOTO_TIPOS_REQUERIDOS = {"PERFIL", "CABEZA", "ANILLA"}
@@ -216,6 +237,13 @@ class AnimalApproveView(APIView):
         if faltantes:
             return Response(
                 {"detail": f"Faltan fotos obligatorias: {', '.join(sorted(faltantes))}."},
+                status=400,
+            )
+
+        # Bloquear aprobación si hay alerta de diámetro (anilla no corresponde al sexo)
+        if animal.alerta_anilla == "DIAMETRO":
+            return Response(
+                {"detail": "No se puede aprobar: el diámetro de la anilla no corresponde al sexo del animal."},
                 status=400,
             )
 
@@ -423,3 +451,34 @@ class AnimalPesajeView(APIView):
         animal.save(update_fields=["historico_pesos"])
 
         return Response(AnimalDetailSerializer(animal).data, status=201)
+
+
+class AnimalReproductorApproveView(APIView):
+    """POST /api/v1/animals/:id/aprobar-reproductor/ — gestión aprueba o deniega candidato."""
+    permission_classes = [IsGestion]
+
+    def post(self, request, pk):
+        try:
+            animal = Animal.objects.get(pk=pk, tenant=request.tenant)
+        except Animal.DoesNotExist:
+            return Response({"detail": "Not found."}, status=404)
+
+        aprobado = request.data.get("aprobado")
+        if aprobado is None:
+            return Response({"detail": "El campo 'aprobado' es obligatorio (true/false)."}, status=400)
+
+        if not isinstance(aprobado, bool):
+            return Response({"detail": "El campo 'aprobado' debe ser un booleano."}, status=400)
+
+        animal.reproductor_aprobado = aprobado
+        if aprobado:
+            animal.candidato_reproductor = True
+        update_fields = ["reproductor_aprobado", "candidato_reproductor"]
+
+        notas = request.data.get("notas_decision", "")
+        if notas:
+            animal.razon_rechazo = notas if not aprobado else ""
+            update_fields.append("razon_rechazo")
+
+        animal.save(update_fields=update_fields)
+        return Response(AnimalDetailSerializer(animal).data)
