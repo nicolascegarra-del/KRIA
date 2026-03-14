@@ -25,6 +25,10 @@ import ImportPage from "./pages/gestion/ImportPage";
 import ReportesPage from "./pages/gestion/ReportesPage";
 import EvaluacionPage from "./pages/gestion/EvaluacionPage";
 import CandidatosReproductorPage from "./pages/gestion/CandidatosReproductorPage";
+import DocumentosPage from "./pages/gestion/DocumentosPage";
+import SolicitudesRealtaPage from "./pages/gestion/SolicitudesRealtaPage";
+import SuperAdminPage from "./pages/gestion/SuperAdminPage";
+import MisDocumentosPage from "./pages/socio/MisDocumentosPage";
 
 // Layout
 import Layout from "./components/Layout";
@@ -227,9 +231,39 @@ export default function App() {
           path="/reproductores/candidatos"
           element={
             <ProtectedRoute gestionOnly>
-              <Layout>
-                <CandidatosReproductorPage />
-              </Layout>
+              <Layout><CandidatosReproductorPage /></Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/documentos"
+          element={
+            <ProtectedRoute gestionOnly>
+              <Layout><DocumentosPage /></Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/solicitudes-realta"
+          element={
+            <ProtectedRoute gestionOnly>
+              <Layout><SolicitudesRealtaPage /></Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/superadmin"
+          element={
+            <ProtectedRoute gestionOnly>
+              <Layout><SuperAdminPage /></Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mis-documentos"
+          element={
+            <ProtectedRoute socioOnly>
+              <Layout><MisDocumentosPage /></Layout>
             </ProtectedRoute>
           }
         />

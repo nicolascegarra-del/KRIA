@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { reproductoresApi } from "../../api/reproductores";
-import { AnimalStateChip } from "../../components/AnimalStateChip";
+import AnimalStateChip from "../../components/AnimalStateChip";
 import { Bird, Check, X, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import type { Animal } from "../../types";
 

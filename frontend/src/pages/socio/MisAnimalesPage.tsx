@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Plus, Search, Filter, Bird } from "lucide-react";
+import { Plus, Search, Bird, RefreshCw, Loader2 } from "lucide-react";
 import { animalsApi } from "../../api/animals";
+import { realtaApi } from "../../api/realta";
 import AnimalCard from "../../components/AnimalCard";
 import AnimalStateChip from "../../components/AnimalStateChip";
 import type { AnimalEstado } from "../../types";
@@ -13,9 +14,16 @@ const ACTIVO_STATES: AnimalEstado[] = ["AÑADIDO", "APROBADO", "EVALUADO"];
 const HISTORICO_STATES: AnimalEstado[] = ["RECHAZADO", "SOCIO_EN_BAJA"];
 
 export default function MisAnimalesPage() {
+  const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("activos");
   const [search, setSearch] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("");
+  const [realtaId, setRealtaId] = useState<string | null>(null);
+
+  const realtaMutation = useMutation({
+    mutationFn: realtaApi.solicitar,
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["animals"] }); setRealtaId(null); },
+  });
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["animals", { search, estado: estadoFilter }],
@@ -121,7 +129,23 @@ export default function MisAnimalesPage() {
       ) : (
         <div className="space-y-2">
           {filteredAnimals.map((animal) => (
-            <AnimalCard key={animal.id} animal={animal} />
+            <div key={animal.id}>
+              <AnimalCard animal={animal} />
+              {animal.estado === "SOCIO_EN_BAJA" && (
+                <div className="pl-2 pb-1">
+                  <button
+                    onClick={() => { setRealtaId(animal.id); realtaMutation.mutate(animal.id); }}
+                    disabled={realtaMutation.isPending && realtaId === animal.id}
+                    className="flex items-center gap-1.5 text-xs text-violet-600 hover:text-violet-800 disabled:opacity-50 mt-1"
+                  >
+                    {realtaMutation.isPending && realtaId === animal.id
+                      ? <Loader2 size={12} className="animate-spin" />
+                      : <RefreshCw size={12} />}
+                    Solicitar re-alta
+                  </button>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
