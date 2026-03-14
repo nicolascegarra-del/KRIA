@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "apps.reports",
     "apps.reproductores",
     "apps.granjas",
+    "apps.anillas",
 ]
 
 MIDDLEWARE = [

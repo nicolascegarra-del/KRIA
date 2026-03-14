@@ -70,6 +70,7 @@ class AnimalFactory(DjangoModelFactory):
     estado = Animal.Estado.AÑADIDO
     fotos = []
     historico_pesos = []
+    alerta_anilla = ""
 
 
 class LoteFactory(DjangoModelFactory):

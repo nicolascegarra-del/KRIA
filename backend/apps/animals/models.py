@@ -79,6 +79,10 @@ class Animal(UUIDModel):
     candidato_reproductor = models.BooleanField(default=False)
     reproductor_aprobado = models.BooleanField(default=False)
 
+    # Alerta de anilla (computed on save, non-blocking warning except for APROBADO transition)
+    # "" = sin alerta, "FUERA_RANGO" = fuera del rango asignado, "DIAMETRO" = diámetro no corresponde al sexo
+    alerta_anilla = models.CharField(max_length=20, blank=True, default="")
+
     # Breeding data
     fecha_incubacion = models.DateField(null=True, blank=True)
     ganaderia_nacimiento = models.CharField(max_length=200, blank=True, default="")
