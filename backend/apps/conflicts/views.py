@@ -4,8 +4,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.permissions import IsGestion
-from .models import Conflicto
-from .serializers import ConflictoSerializer
+from .models import Conflicto, SolicitudRealta
+from .serializers import ConflictoSerializer, SolicitudRealtaSerializer
 
 
 class ConflictoListView(generics.ListAPIView):
@@ -41,6 +41,54 @@ class ConflictoResolveView(APIView):
         return Response(ConflictoSerializer(conflicto).data)
 
 
+class SolicitudRealtaListView(generics.ListAPIView):
+    """GET /api/v1/dashboard/solicitudes-realta/ — lista solicitudes pendientes (solo Gestión)."""
+    serializer_class = SolicitudRealtaSerializer
+    permission_classes = [IsGestion]
+
+    def get_queryset(self):
+        return SolicitudRealta.all_objects.filter(
+            tenant=self.request.tenant,
+            estado=SolicitudRealta.Estado.PENDIENTE,
+        ).select_related("animal", "solicitante")
+
+
+class SolicitudRealtaResolveView(APIView):
+    """POST /api/v1/dashboard/solicitudes-realta/:id/resolver/ — gestión aprueba o deniega."""
+    permission_classes = [IsGestion]
+
+    def post(self, request, pk):
+        try:
+            solicitud = SolicitudRealta.all_objects.get(pk=pk, tenant=request.tenant)
+        except SolicitudRealta.DoesNotExist:
+            return Response({"detail": "Not found."}, status=404)
+
+        if solicitud.estado != SolicitudRealta.Estado.PENDIENTE:
+            return Response({"detail": "Esta solicitud ya fue resuelta."}, status=400)
+
+        accion = request.data.get("accion")  # "aprobar" o "denegar"
+        if accion not in ("aprobar", "denegar"):
+            return Response({"detail": "accion debe ser 'aprobar' o 'denegar'."}, status=400)
+
+        solicitud.notas = request.data.get("notas", solicitud.notas)
+        solicitud.resolved_at = timezone.now()
+
+        if accion == "aprobar":
+            solicitud.estado = SolicitudRealta.Estado.APROBADO
+            solicitud.save()
+            # Reactivar animal: vuelve a AÑADIDO, se vacían fotos para exigir nuevas
+            animal = solicitud.animal
+            animal.estado = "AÑADIDO"
+            animal.fotos = []
+            animal.razon_rechazo = ""
+            animal.save(update_fields=["estado", "fotos", "razon_rechazo"])
+        else:
+            solicitud.estado = SolicitudRealta.Estado.DENEGADO
+            solicitud.save()
+
+        return Response(SolicitudRealtaSerializer(solicitud).data)
+
+
 class DashboardTareasPendientesView(APIView):
     permission_classes = [IsGestion]
 
@@ -50,8 +98,6 @@ class DashboardTareasPendientesView(APIView):
 
         tenant = request.tenant
 
-        # Explicit tenant filter on every query — never rely on TenantManager
-        # thread-local alone for dashboard counters.
         pendientes_aprobacion = Animal.all_objects.filter(
             tenant=tenant,
             estado=Animal.Estado.AÑADIDO,
@@ -78,10 +124,16 @@ class DashboardTareasPendientesView(APIView):
             alerta_anilla__in=["FUERA_RANGO", "DIAMETRO"],
         ).count()
 
+        solicitudes_realta = SolicitudRealta.all_objects.filter(
+            tenant=tenant,
+            estado=SolicitudRealta.Estado.PENDIENTE,
+        ).count()
+
         return Response({
             "pendientes_aprobacion": pendientes_aprobacion,
             "conflictos_pendientes": conflictos_pendientes,
             "imports_pendientes": imports_pendientes,
             "candidatos_reproductor": candidatos_reproductor,
             "alertas_anilla": alertas_anilla,
+            "solicitudes_realta": solicitudes_realta,
         })

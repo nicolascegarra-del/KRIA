@@ -482,3 +482,88 @@ class AnimalReproductorApproveView(APIView):
 
         animal.save(update_fields=update_fields)
         return Response(AnimalDetailSerializer(animal).data)
+
+
+# Motivos de rechazo predefinidos por fase
+MOTIVOS_RECHAZO = {
+    "AÑADIDO": [
+        "Documentación incompleta",
+        "Foto de perfil ilegible",
+        "Foto de cabeza ilegible",
+        "Foto de anilla ilegible",
+        "Anilla no legible en la imagen",
+        "Datos genealógicos incorrectos",
+        "Animal no identificable",
+        "Otros",
+    ],
+    "APROBADO": [
+        "No cumple estándar morfológico",
+        "Variedad no confirmada",
+        "Peso fuera de rango",
+        "Defecto descalificante",
+        "Documentación caducada",
+        "Otros",
+    ],
+    "EVALUACION": [
+        "Puntuación insuficiente (< 6 en media)",
+        "Variedad no conforme con el estándar",
+        "Estado sanitario deficiente",
+        "Información insuficiente para evaluar",
+        "Otros",
+    ],
+}
+
+
+class AnimalMotivosRechazoView(APIView):
+    """GET /api/v1/animals/motivos-rechazo/ — devuelve los motivos predefinidos por fase."""
+    permission_classes = [IsGestion]
+
+    def get(self, request):
+        return Response(MOTIVOS_RECHAZO)
+
+
+class AnimalSolicitarRealtaView(APIView):
+    """POST /api/v1/animals/:id/solicitar-realta/ — socio solicita re-alta de su animal."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            animal = Animal.objects.get(pk=pk)
+        except Animal.DoesNotExist:
+            return Response({"detail": "Not found."}, status=404)
+
+        # Solo el socio propietario puede solicitar re-alta
+        if get_effective_is_gestion(request):
+            return Response({"detail": "Solo los socios pueden solicitar re-alta."}, status=403)
+
+        try:
+            socio = request.user.socio
+        except Exception:
+            return Response({"detail": "No se encontró perfil de socio."}, status=400)
+
+        if animal.socio != socio:
+            return Response({"detail": "Permission denied."}, status=403)
+
+        if animal.estado != Animal.Estado.SOCIO_EN_BAJA:
+            return Response(
+                {"detail": f"Solo se puede solicitar re-alta de animales en estado SOCIO_EN_BAJA. Estado actual: {animal.estado}."},
+                status=400,
+            )
+
+        from apps.conflicts.models import SolicitudRealta
+        # Evitar solicitudes duplicadas pendientes
+        if SolicitudRealta.all_objects.filter(
+            animal=animal, estado=SolicitudRealta.Estado.PENDIENTE
+        ).exists():
+            return Response({"detail": "Ya existe una solicitud de re-alta pendiente para este animal."}, status=400)
+
+        solicitud = SolicitudRealta.all_objects.create(
+            tenant=request.tenant,
+            animal=animal,
+            solicitante=socio,
+            estado=SolicitudRealta.Estado.PENDIENTE,
+            notas=request.data.get("notas", ""),
+        )
+
+        from apps.conflicts.serializers import SolicitudRealtaSerializer
+        return Response(SolicitudRealtaSerializer(solicitud).data, status=201)

@@ -4,6 +4,39 @@ from core.managers import TenantManager
 from core.models import UUIDModel
 
 
+class SolicitudRealta(UUIDModel):
+    class Estado(models.TextChoices):
+        PENDIENTE = "PENDIENTE", "Pendiente"
+        APROBADO = "APROBADO", "Aprobado"
+        DENEGADO = "DENEGADO", "Denegado"
+
+    tenant = models.ForeignKey(
+        "tenants.Tenant", on_delete=models.CASCADE, related_name="solicitudes_realta", db_index=True
+    )
+    animal = models.ForeignKey(
+        "animals.Animal", on_delete=models.CASCADE, related_name="solicitudes_realta"
+    )
+    solicitante = models.ForeignKey(
+        "accounts.Socio", on_delete=models.CASCADE, related_name="solicitudes_realta"
+    )
+    estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.PENDIENTE)
+    notas = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        db_table = "conflicts_solicitudrealta"
+        verbose_name = "Solicitud de Re-alta"
+        verbose_name_plural = "Solicitudes de Re-alta"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Re-alta {self.animal} — {self.estado}"
+
+
 class Conflicto(UUIDModel):
     class Estado(models.TextChoices):
         PENDIENTE = "PENDIENTE", "Pendiente"
