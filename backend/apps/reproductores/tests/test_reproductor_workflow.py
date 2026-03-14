@@ -96,12 +96,13 @@ class TestReproductorWorkflow:
         assert animal.reproductor_aprobado is False
 
     def test_animal_aprobado_aparece_en_catalogo(self, gestion_client, api_client, tenant, socio_user):
-        """Animal con reproductor_aprobado=True aparece en catálogo público."""
+        """Animal con reproductor_aprobado=True y estado=EVALUADO aparece en catálogo público."""
         animal = AnimalFactory(
             tenant=tenant,
             socio=socio_user.socio,
             candidato_reproductor=True,
             reproductor_aprobado=True,
+            estado="EVALUADO",
         )
         resp = api_client.get(CATALOGO_URL, HTTP_X_TENANT_SLUG="demo")
         assert resp.status_code == 200

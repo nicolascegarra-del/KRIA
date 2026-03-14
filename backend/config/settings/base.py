@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "apps.reproductores",
     "apps.granjas",
     "apps.anillas",
+    "apps.documentos",
 ]
 
 MIDDLEWARE = [

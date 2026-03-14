@@ -22,4 +22,6 @@ urlpatterns = [
     path("api/v1/dashboard/", include("apps.conflicts.urls")),
     path("api/v1/granjas/", include("apps.granjas.urls")),
     path("api/v1/anillas/", include("apps.anillas.urls")),
+    path("api/v1/documentos/", include("apps.documentos.urls")),
+    path("api/v1/superadmin/", include("apps.tenants.superadmin_urls")),
 ]

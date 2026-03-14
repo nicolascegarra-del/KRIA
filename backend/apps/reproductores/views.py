@@ -28,6 +28,7 @@ class ReproductorListView(generics.ListAPIView):
         return Animal.all_objects.filter(
             tenant=tenant,
             reproductor_aprobado=True,
+            estado=Animal.Estado.EVALUADO,
         ).select_related("socio", "padre", "madre_animal").order_by("variedad", "numero_anilla")
 
 

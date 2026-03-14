@@ -133,7 +133,9 @@ def _gen_libro_genealogico(job) -> str:
 
     HEADERS = [
         "Nº Anilla", "Año Nac.", "Sexo", "Variedad",
-        "Padre (Anilla)", "Madre (Anilla)", "Socio", "DNI/NIF", "Cód. REGA",
+        "Padre (Anilla)", "Madre (Anilla)", "Lote Madre",
+        "Fecha Incubación", "Ganadería Nacimiento",
+        "Socio", "DNI/NIF", "Cód. REGA",
         "Estado", "Puntuación Media",
     ]
 
@@ -156,6 +158,13 @@ def _gen_libro_genealogico(job) -> str:
         except Exception:
             media = ""
 
+        lote_madre = ""
+        if animal.madre_lote_id:
+            try:
+                lote_madre = animal.madre_lote.nombre
+            except Exception:
+                pass
+
         ws.append([
             animal.numero_anilla,
             animal.anio_nacimiento,
@@ -163,6 +172,9 @@ def _gen_libro_genealogico(job) -> str:
             animal.get_variedad_display(),
             animal.padre.numero_anilla if animal.padre else "",
             animal.madre_animal.numero_anilla if animal.madre_animal else "",
+            lote_madre,
+            str(animal.fecha_incubacion) if animal.fecha_incubacion else "",
+            animal.ganaderia_nacimiento or "",
             animal.socio.nombre_razon_social,
             animal.socio.dni_nif,
             animal.socio.codigo_rega,
@@ -192,7 +204,9 @@ def _gen_catalogo_reproductores(job) -> str:
     import io, base64
 
     animals = Animal.all_objects.filter(
-        tenant=job.tenant, reproductor_aprobado=True
+        tenant=job.tenant,
+        reproductor_aprobado=True,
+        estado=Animal.Estado.EVALUADO,
     ).select_related("socio").prefetch_related("evaluacion").order_by("variedad", "numero_anilla")
 
     pages = []

@@ -58,6 +58,17 @@ class IsSocioOrGestion(BasePermission):
         return request.user and request.user.is_authenticated
 
 
+class IsSuperAdmin(BasePermission):
+    """Platform-level superadmin — has access across all tenants."""
+
+    def has_permission(self, request, view):
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and getattr(request.user, "is_superadmin", False)
+        )
+
+
 class IsSocioOwner(BasePermission):
     """
     Object-level: the authenticated socio must own the object
