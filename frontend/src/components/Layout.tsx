@@ -16,6 +16,9 @@ import {
   LogOut,
   Menu,
   X,
+  FolderOpen,
+  RefreshCw,
+  Shield,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -27,17 +30,33 @@ interface NavItem {
   socioOnly?: boolean;
 }
 
+interface NavItem {
+  to: string;
+  label: string;
+  icon: React.ReactNode;
+  gestionOnly?: boolean;
+  socioOnly?: boolean;
+  superadminOnly?: boolean;
+}
+
 const NAV_ITEMS: NavItem[] = [
-  { to: "/dashboard",   label: "Dashboard",   icon: <LayoutDashboard size={18} />, gestionOnly: true },
-  { to: "/validaciones",label: "Validaciones",icon: <CheckSquare size={18} />,     gestionOnly: true },
-  { to: "/conflictos",  label: "Conflictos",  icon: <AlertTriangle size={18} />,   gestionOnly: true },
-  { to: "/socios",      label: "Socios",      icon: <Users size={18} />,            gestionOnly: true },
-  { to: "/granjas",     label: "Granjas",     icon: <Building2 size={18} />,        gestionOnly: true },
-  { to: "/importar",    label: "Importar",    icon: <Upload size={18} />,           gestionOnly: true },
-  { to: "/reportes",    label: "Reportes",    icon: <FileText size={18} />,         gestionOnly: true },
-  { to: "/mis-animales",label: "Mis Animales",icon: <Bird size={18} />,             socioOnly: true },
-  { to: "/mis-granjas", label: "Mis Granjas", icon: <Building size={18} />,         socioOnly: true },
-  { to: "/mis-lotes",   label: "Mis Lotes",   icon: <Layers size={18} />,           socioOnly: true },
+  // Gestión
+  { to: "/dashboard",               label: "Dashboard",         icon: <LayoutDashboard size={18} />, gestionOnly: true },
+  { to: "/validaciones",            label: "Validaciones",       icon: <CheckSquare size={18} />,     gestionOnly: true },
+  { to: "/reproductores/candidatos",label: "Reproductores",      icon: <Bird size={18} />,            gestionOnly: true },
+  { to: "/conflictos",              label: "Conflictos",         icon: <AlertTriangle size={18} />,   gestionOnly: true },
+  { to: "/solicitudes-realta",      label: "Re-altas",           icon: <RefreshCw size={18} />,       gestionOnly: true },
+  { to: "/socios",                  label: "Socios",             icon: <Users size={18} />,           gestionOnly: true },
+  { to: "/granjas",                 label: "Granjas",            icon: <Building2 size={18} />,       gestionOnly: true },
+  { to: "/documentos",              label: "Documentos",         icon: <FolderOpen size={18} />,      gestionOnly: true },
+  { to: "/importar",                label: "Importar",           icon: <Upload size={18} />,          gestionOnly: true },
+  { to: "/reportes",                label: "Reportes",           icon: <FileText size={18} />,        gestionOnly: true },
+  { to: "/superadmin",              label: "Super Admin",        icon: <Shield size={18} />,          superadminOnly: true },
+  // Socio
+  { to: "/mis-animales",            label: "Mis Animales",       icon: <Bird size={18} />,            socioOnly: true },
+  { to: "/mis-granjas",             label: "Mis Granjas",        icon: <Building size={18} />,        socioOnly: true },
+  { to: "/mis-lotes",               label: "Mis Lotes",          icon: <Layers size={18} />,          socioOnly: true },
+  { to: "/mis-documentos",          label: "Mis Documentos",     icon: <FolderOpen size={18} />,      socioOnly: true },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -48,7 +67,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isGestion = user?.is_gestion ?? false;
+  const isSuperadmin = user?.is_superadmin ?? false;
   const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.superadminOnly && !isSuperadmin) return false;
     if (item.gestionOnly && !isGestion) return false;
     if (item.socioOnly && isGestion) return false;
     return true;

@@ -188,6 +188,77 @@ export interface DashboardStats {
   pendientes_aprobacion: number;
   conflictos_pendientes: number;
   imports_pendientes: number;
+  candidatos_reproductor: number;
+  alertas_anilla: number;
+  solicitudes_realta: number;
+}
+
+// ─── Reproductores ────────────────────────────────────────────────────────────
+export interface ReproductorAprobacion {
+  aprobado: boolean;
+  notas_decision?: string;
+}
+
+// ─── Import 2-phase ───────────────────────────────────────────────────────────
+export interface ImportPreviewRow {
+  fila: number;
+  dni_nif: string;
+  email: string;
+  nombre_razon_social: string;
+  errores: string[];
+}
+
+export interface ImportValidateResult {
+  total_filas: number;
+  filas_ok: number;
+  filas_con_error: number;
+  errores: { fila: number; errores: string[] }[];
+  preview: ImportPreviewRow[];
+  temp_key: string;
+}
+
+// ─── Documento ────────────────────────────────────────────────────────────────
+export type DocumentoTipo = "GENERAL" | "PARTICULAR";
+
+export interface Documento {
+  id: string;
+  tipo: DocumentoTipo;
+  socio: string | null;
+  socio_nombre: string | null;
+  nombre_archivo: string;
+  content_type: string;
+  tamanio_bytes: number;
+  version: number;
+  subido_por: string;
+  subido_por_nombre: string | null;
+  download_url: string | null;
+  created_at: string;
+}
+
+// ─── Solicitud de Re-alta ─────────────────────────────────────────────────────
+export type SolicitudRealtaEstado = "PENDIENTE" | "APROBADO" | "DENEGADO";
+
+export interface SolicitudRealta {
+  id: string;
+  animal: string;
+  animal_anilla?: string;
+  solicitante: string;
+  solicitante_nombre?: string;
+  estado: SolicitudRealtaEstado;
+  notas: string;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+// ─── Tenant (SuperAdmin) ──────────────────────────────────────────────────────
+export interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  primary_color: string;
+  secondary_color: string;
+  is_active: boolean;
+  logo_url: string | null;
 }
 
 // ─── Pagination ───────────────────────────────────────────────────────────────

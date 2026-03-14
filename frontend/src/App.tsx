@@ -24,6 +24,7 @@ import SociosPage from "./pages/gestion/SociosPage";
 import ImportPage from "./pages/gestion/ImportPage";
 import ReportesPage from "./pages/gestion/ReportesPage";
 import EvaluacionPage from "./pages/gestion/EvaluacionPage";
+import CandidatosReproductorPage from "./pages/gestion/CandidatosReproductorPage";
 
 // Layout
 import Layout from "./components/Layout";
@@ -218,6 +219,16 @@ export default function App() {
             <ProtectedRoute gestionOnly>
               <Layout>
                 <EvaluacionPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reproductores/candidatos"
+          element={
+            <ProtectedRoute gestionOnly>
+              <Layout>
+                <CandidatosReproductorPage />
               </Layout>
             </ProtectedRoute>
           }
