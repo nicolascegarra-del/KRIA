@@ -14,73 +14,56 @@ interface LoteModalProps {
 function LoteModal({ onClose }: LoteModalProps) {
   const qc = useQueryClient();
   const [nombre, setNombre] = useState("");
-  const [machoAnilla, setMachoAnilla] = useState("");
-  const [hembrasAnillas, setHembrasAnillas] = useState<string[]>([""]);
+  const [machoId, setMachoId] = useState("");
+  const [hembrasIds, setHembrasIds] = useState<string[]>([]);
   const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().slice(0, 10));
   const [modalError, setModalError] = useState("");
 
+  // Cargar machos y hembras del socio
+  const { data: machosData, isLoading: loadingMachos } = useQuery({
+    queryKey: ["animals-machos-select"],
+    queryFn: () => animalsApi.list({ sexo: "M" }),
+  });
+  const { data: hembrasData, isLoading: loadingHembras } = useQuery({
+    queryKey: ["animals-hembras-select"],
+    queryFn: () => animalsApi.list({ sexo: "H" }),
+  });
+
+  const machos = machosData?.results ?? [];
+  const hembras = hembrasData?.results ?? [];
+
+  const toggleHembra = (id: string) => {
+    setHembrasIds((prev) =>
+      prev.includes(id) ? prev.filter((h) => h !== id) : [...prev, id]
+    );
+  };
+
   const createMutation = useMutation({
-    mutationFn: async () => {
-      // Resolve macho by anilla search
-      let machoId: string | null = null;
-      if (machoAnilla.trim()) {
-        const results = await animalsApi.list({ search: machoAnilla.trim(), sexo: "M" });
-        if (results.results.length === 0) {
-          throw new Error(`No se encontró ningún macho con anilla "${machoAnilla.trim()}".`);
-        }
-        if (results.results.length > 1) {
-          throw new Error(
-            `Anilla ambigua: "${machoAnilla.trim()}" coincide con ${results.results.length} machos. Usa una anilla más específica.`
-          );
-        }
-        machoId = results.results[0].id;
-      }
-
-      // Resolve hembras by anilla search
-      const hembrasIds: string[] = [];
-      for (const anilla of hembrasAnillas.filter((a) => a.trim())) {
-        const results = await animalsApi.list({ search: anilla.trim(), sexo: "H" });
-        if (results.results.length === 0) {
-          throw new Error(`No se encontró ninguna hembra con anilla "${anilla.trim()}".`);
-        }
-        if (results.results.length > 1) {
-          throw new Error(
-            `Anilla ambigua: "${anilla.trim()}" coincide con ${results.results.length} hembras. Usa una anilla más específica.`
-          );
-        }
-        hembrasIds.push(results.results[0].id);
-      }
-
-      return lotesApi.create({
+    mutationFn: () =>
+      lotesApi.create({
         nombre,
-        macho: machoId,
+        macho: machoId || null,
         hembras: hembrasIds,
         fecha_inicio: fechaInicio,
-      });
-    },
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lotes"] });
       onClose();
     },
     onError: (err: any) => {
       const msg =
-        err?.message ??
         err?.response?.data?.detail ??
         "Error al crear el lote. Comprueba los datos e inténtalo de nuevo.";
       setModalError(msg);
     },
   });
 
-  const addHembra = () => setHembrasAnillas((prev) => [...prev, ""]);
-  const removeHembra = (idx: number) =>
-    setHembrasAnillas((prev) => prev.filter((_, i) => i !== idx));
-  const updateHembra = (idx: number, val: string) =>
-    setHembrasAnillas((prev) => prev.map((a, i) => (i === idx ? val : a)));
+  const loadingAnimals = loadingMachos || loadingHembras;
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
           <h2 className="text-lg font-semibold text-gray-900">Nuevo Lote de Cría</h2>
           <button
             onClick={onClose}
@@ -90,7 +73,7 @@ function LoteModal({ onClose }: LoteModalProps) {
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4 overflow-y-auto">
           {/* Nombre */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -121,56 +104,72 @@ function LoteModal({ onClose }: LoteModalProps) {
           {/* Macho */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Macho (anilla)
+              Macho
             </label>
-            <input
-              type="text"
-              className="input-field font-mono"
-              placeholder="Nº anilla del macho"
-              value={machoAnilla}
-              onChange={(e) => setMachoAnilla(e.target.value)}
-            />
-            <p className="text-xs text-gray-400 mt-0.5">
-              Se buscará automáticamente al crear el lote.
-            </p>
+            {loadingMachos ? (
+              <div className="flex items-center gap-2 text-sm text-gray-400 py-2">
+                <Loader2 size={14} className="animate-spin" /> Cargando machos...
+              </div>
+            ) : machos.length === 0 ? (
+              <p className="text-sm text-gray-400 italic">No tienes machos registrados.</p>
+            ) : (
+              <select
+                className="input-field"
+                value={machoId}
+                onChange={(e) => setMachoId(e.target.value)}
+              >
+                <option value="">— Sin macho asignado —</option>
+                {machos.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.numero_anilla} / {a.anio_nacimiento}
+                    {a.estado !== "APROBADO" ? ` (${a.estado.toLowerCase()})` : ""}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Hembras */}
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">
-                Hembras (anillas)
-              </label>
-              <button
-                type="button"
-                onClick={addHembra}
-                className="flex items-center gap-1 text-xs text-blue-700 hover:text-blue-800"
-              >
-                <Plus size={12} /> Añadir
-              </button>
-            </div>
-            <div className="space-y-2">
-              {hembrasAnillas.map((anilla, idx) => (
-                <div key={idx} className="flex gap-2">
-                  <input
-                    type="text"
-                    className="input-field font-mono flex-1 text-sm"
-                    placeholder={`Anilla hembra ${idx + 1}`}
-                    value={anilla}
-                    onChange={(e) => updateHembra(idx, e.target.value)}
-                  />
-                  {hembrasAnillas.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeHembra(idx)}
-                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Hembras
+              {hembrasIds.length > 0 && (
+                <span className="ml-2 text-xs bg-blue-100 text-blue-700 rounded-full px-2 py-0.5">
+                  {hembrasIds.length} seleccionada{hembrasIds.length !== 1 ? "s" : ""}
+                </span>
+              )}
+            </label>
+            {loadingHembras ? (
+              <div className="flex items-center gap-2 text-sm text-gray-400 py-2">
+                <Loader2 size={14} className="animate-spin" /> Cargando hembras...
+              </div>
+            ) : hembras.length === 0 ? (
+              <p className="text-sm text-gray-400 italic">No tienes hembras registradas.</p>
+            ) : (
+              <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-44 overflow-y-auto">
+                {hembras.map((a) => (
+                  <label
+                    key={a.id}
+                    className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-gray-50"
+                  >
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 accent-blue-700"
+                      checked={hembrasIds.includes(a.id)}
+                      onChange={() => toggleHembra(a.id)}
+                    />
+                    <span className="text-sm font-mono text-gray-800">
+                      {a.numero_anilla} / {a.anio_nacimiento}
+                    </span>
+                    {a.estado !== "APROBADO" && (
+                      <span className="text-xs text-gray-400 ml-auto">
+                        {a.estado.toLowerCase()}
+                      </span>
+                    )}
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           {modalError && (
@@ -181,7 +180,7 @@ function LoteModal({ onClose }: LoteModalProps) {
           )}
         </div>
 
-        <div className="flex gap-3 px-5 pb-5">
+        <div className="flex gap-3 px-5 pb-5 pt-3 border-t shrink-0">
           <button type="button" onClick={onClose} className="btn-secondary flex-1">
             Cancelar
           </button>
@@ -190,7 +189,7 @@ function LoteModal({ onClose }: LoteModalProps) {
               setModalError("");
               createMutation.mutate();
             }}
-            disabled={createMutation.isPending || !nombre.trim() || !fechaInicio}
+            disabled={createMutation.isPending || !nombre.trim() || !fechaInicio || loadingAnimals}
             className="btn-primary flex-1"
           >
             {createMutation.isPending ? (
