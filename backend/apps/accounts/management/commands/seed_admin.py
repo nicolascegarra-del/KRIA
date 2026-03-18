@@ -92,13 +92,13 @@ class Command(BaseCommand):
 
         socio1, sp_created = Socio.all_objects.update_or_create(
             tenant=tenant,
-            user=socio_user1,
+            numero_socio="0001",
             defaults={
+                "user": socio_user1,
                 "nombre_razon_social": "Granja Hidalgo S.L.",
                 "dni_nif": "12345678Z",
                 "telefono": "612345678",
                 "direccion": "Calle Mayor 1, 28001 Madrid",
-                "numero_socio": "0001",
                 "codigo_rega": "ES280101000001",
                 "estado": Socio.Estado.ALTA,
             },
@@ -124,13 +124,13 @@ class Command(BaseCommand):
 
         socio2, _ = Socio.all_objects.update_or_create(
             tenant=tenant,
-            user=socio_user2,
+            numero_socio="0002",
             defaults={
+                "user": socio_user2,
                 "nombre_razon_social": "Avícola Montaña S.C.",
                 "dni_nif": "87654321B",
                 "telefono": "623456789",
                 "direccion": "Calle Sierra 5, 08001 Barcelona",
-                "numero_socio": "0002",
                 "codigo_rega": "ES080201000045",
                 "estado": Socio.Estado.ALTA,
             },
@@ -152,13 +152,13 @@ class Command(BaseCommand):
 
         socio3, _ = Socio.all_objects.update_or_create(
             tenant=tenant,
-            user=socio_user3,
+            numero_socio="0003",
             defaults={
+                "user": socio_user3,
                 "nombre_razon_social": "Explotación Roca Viva",
                 "dni_nif": "11223344C",
                 "telefono": "634567890",
                 "direccion": "Camino Rural 12, 41001 Sevilla",
-                "numero_socio": "0003",
                 "codigo_rega": "ES410301000010",
                 "estado": Socio.Estado.ALTA,
             },
