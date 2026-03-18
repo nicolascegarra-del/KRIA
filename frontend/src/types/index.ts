@@ -68,6 +68,7 @@ export interface Animal {
   ganaderia_nacimiento: string;
   ganaderia_actual: string;
   estado: AnimalEstado;
+  alerta_anilla: "FUERA_RANGO" | "DIAMETRO" | "" | null;
   razon_rechazo: string;
   candidato_reproductor: boolean;
   reproductor_aprobado: boolean;

@@ -128,3 +128,13 @@ class TestImportTemplate:
         """POST /imports/confirm/ sin temp_key → 400."""
         resp = gestion_client.post(CONFIRM_URL, {}, format="json")
         assert resp.status_code == 400
+
+    def test_confirm_temp_key_otro_tenant_400(self, gestion_client, tenant):
+        """POST /imports/confirm/ con temp_key de otro tenant → 400 (SEC-02)."""
+        resp = gestion_client.post(
+            CONFIRM_URL,
+            {"temp_key": "imports/otro-tenant/validate/abc/socios.xlsx"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "Invalid temp_key" in resp.data["detail"]

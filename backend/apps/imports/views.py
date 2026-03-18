@@ -71,7 +71,7 @@ class ImportJobStatusView(APIView):
 
     def get(self, request, job_id):
         try:
-            job = ImportJob.objects.get(pk=job_id)
+            job = ImportJob.objects.get(pk=job_id, tenant=request.tenant)
         except ImportJob.DoesNotExist:
             return Response({"detail": "Not found."}, status=404)
 

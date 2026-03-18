@@ -225,7 +225,7 @@ class AnimalApproveView(APIView):
 
     def post(self, request, pk):
         try:
-            animal = Animal.objects.get(pk=pk)
+            animal = Animal.objects.get(pk=pk, tenant=request.tenant)
         except Animal.DoesNotExist:
             return Response({"detail": "Not found."}, status=404)
 
@@ -259,7 +259,7 @@ class AnimalRejectView(APIView):
 
     def post(self, request, pk):
         try:
-            animal = Animal.objects.get(pk=pk)
+            animal = Animal.objects.get(pk=pk, tenant=request.tenant)
         except Animal.DoesNotExist:
             return Response({"detail": "Not found."}, status=404)
 
