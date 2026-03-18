@@ -4,6 +4,7 @@ import type { Granja, PaginatedResponse } from "../types";
 export interface GranjaFilters {
   search?: string;
   page?: number;
+  socio_id?: string;
 }
 
 export const granjasApi = {

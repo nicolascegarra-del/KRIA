@@ -24,7 +24,7 @@ export default function PerfilPage() {
 
   const mutation = useMutation({
     mutationFn: async (data: PasswordFormData) => {
-      await apiClient.post("/accounts/me/change-password/", {
+      await apiClient.post("/auth/me/change-password/", {
         current_password: data.current_password,
         new_password: data.new_password,
       });

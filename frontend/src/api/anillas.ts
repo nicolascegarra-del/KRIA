@@ -21,7 +21,7 @@ export interface AnillaCheckResult {
 }
 
 export const anillasApi = {
-  list: async (params?: { anio_campana?: number; socio?: string }): Promise<PaginatedResponse<EntregaAnillas>> => {
+  list: async (params?: { anio?: number; socio?: string }): Promise<PaginatedResponse<EntregaAnillas>> => {
     const { data } = await apiClient.get("/anillas/", { params });
     return data;
   },

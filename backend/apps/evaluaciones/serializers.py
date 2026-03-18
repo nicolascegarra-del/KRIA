@@ -16,4 +16,4 @@ class EvaluacionSerializer(serializers.ModelSerializer):
             "picos_cresta", "color_orejilla", "color_general", "peso_evaluacion", "variedad_confirmada",
             "notas", "created_at",
         ]
-        read_only_fields = ["id", "puntuacion_media", "created_at"]
+        read_only_fields = ["id", "evaluador", "puntuacion_media", "created_at"]

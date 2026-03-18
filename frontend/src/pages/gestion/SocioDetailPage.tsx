@@ -55,7 +55,7 @@ export default function SocioDetailPage() {
 
   const { data: granjasData } = useQuery({
     queryKey: ["granjas", { socio_id: id }],
-    queryFn: () => granjasApi.list(),
+    queryFn: () => granjasApi.list({ socio_id: id! }),
     enabled: tab === "granjas" && !!id,
   });
 
@@ -125,8 +125,7 @@ export default function SocioDetailPage() {
   }
 
   const animales = animalesData?.results ?? [];
-  // Filtrar solo las granjas de este socio (el backend devuelve todas para gestión)
-  const granjas = (granjasData?.results ?? []).filter((g) => g.socio === id);
+  const granjas = granjasData?.results ?? [];
 
   return (
     <div className="space-y-4 max-w-3xl">

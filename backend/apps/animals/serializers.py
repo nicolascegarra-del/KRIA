@@ -56,7 +56,9 @@ class AnimalListSerializer(serializers.ModelSerializer):
 class AnimalDetailSerializer(serializers.ModelSerializer):
     socio_nombre = serializers.CharField(source="socio.nombre_razon_social", read_only=True)
     padre_anilla = serializers.CharField(source="padre.numero_anilla", read_only=True, allow_null=True)
+    padre_anio_nacimiento = serializers.IntegerField(source="padre.anio_nacimiento", read_only=True, allow_null=True)
     madre_anilla = serializers.CharField(source="madre_animal.numero_anilla", read_only=True, allow_null=True)
+    madre_anio_nacimiento = serializers.IntegerField(source="madre_animal.anio_nacimiento", read_only=True, allow_null=True)
     granja_nombre = serializers.CharField(source="granja.nombre", read_only=True, allow_null=True)
     fotos = serializers.SerializerMethodField()
 
@@ -67,7 +69,7 @@ class AnimalDetailSerializer(serializers.ModelSerializer):
             "fecha_incubacion", "ganaderia_nacimiento", "ganaderia_actual",
             "estado", "razon_rechazo", "candidato_reproductor", "reproductor_aprobado",
             "alerta_anilla",
-            "padre", "padre_anilla", "madre_animal", "madre_anilla", "madre_lote",
+            "padre", "padre_anilla", "padre_anio_nacimiento", "madre_animal", "madre_anilla", "madre_anio_nacimiento", "madre_lote",
             "granja", "granja_nombre",
             "fotos", "historico_pesos", "socio_nombre",
             "created_at", "updated_at",

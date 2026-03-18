@@ -99,9 +99,9 @@ export default function AnimalFormPage() {
         ganaderia_nacimiento: animal.ganaderia_nacimiento ?? "",
         ganaderia_actual: animal.ganaderia_actual ?? "",
         padre_anilla: animal.padre_anilla ?? "",
-        padre_anio: "",
+        padre_anio: animal.padre_anio_nacimiento ? String(animal.padre_anio_nacimiento) : "",
         madre_anilla: animal.madre_anilla ?? "",
-        madre_anio: "",
+        madre_anio: animal.madre_anio_nacimiento ? String(animal.madre_anio_nacimiento) : "",
         candidato_reproductor: animal.candidato_reproductor,
         granja: animal.granja ?? "",
       });

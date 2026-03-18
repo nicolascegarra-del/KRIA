@@ -157,6 +157,18 @@ class SocioDetailView(generics.RetrieveUpdateAPIView):
         return Socio.objects.select_related("user").all()
 
 
+class SocioMeView(APIView):
+    """Returns the Socio record linked to the authenticated user."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            socio = Socio.objects.select_related("user").get(user=request.user)
+        except Socio.DoesNotExist:
+            return Response({"detail": "No tienes un perfil de socio."}, status=404)
+        return Response(SocioListSerializer(socio).data)
+
+
 class SocioDarBajaView(APIView):
     permission_classes = [IsGestion]
 

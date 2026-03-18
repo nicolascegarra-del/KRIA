@@ -35,7 +35,7 @@ export default function AnillasPage() {
 
   const { data: entregasData, isLoading } = useQuery({
     queryKey: ["anillas", filterAnio],
-    queryFn: () => anillasApi.list({ anio_campana: parseInt(filterAnio, 10) }),
+    queryFn: () => anillasApi.list({ anio: parseInt(filterAnio, 10) }),
   });
 
   const { data: sociosData } = useQuery({

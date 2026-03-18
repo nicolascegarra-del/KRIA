@@ -58,7 +58,7 @@ function ScoreButtons({ value, onChange, label }: ScoreButtonsProps) {
           {value}
         </span>
       </div>
-      <div className="grid grid-cols-10 gap-1">
+      <div className="grid grid-cols-5 sm:grid-cols-10 gap-1">
         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
           <button
             key={n}

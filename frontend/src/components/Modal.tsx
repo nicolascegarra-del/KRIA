@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 
 interface ModalProps {
@@ -12,6 +12,7 @@ interface ModalProps {
  * Modal accesible con focus trap, role="dialog", aria-modal y cierre con Escape.
  */
 export default function Modal({ title, onClose, children, maxWidth = "max-w-lg" }: ModalProps) {
+  const titleId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Focus trap + cierre con Escape
@@ -63,12 +64,12 @@ export default function Modal({ title, onClose, children, maxWidth = "max-w-lg" 
         ref={containerRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="modal-title"
+        aria-labelledby={titleId}
         className={`bg-white rounded-xl shadow-xl w-full ${maxWidth} max-h-[90vh] flex flex-col`}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-          <h2 id="modal-title" className="text-lg font-bold text-gray-900">{title}</h2>
+          <h2 id={titleId} className="text-lg font-bold text-gray-900">{title}</h2>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700"

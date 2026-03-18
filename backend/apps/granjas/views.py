@@ -31,6 +31,10 @@ class GranjaListCreateView(generics.ListCreateAPIView):
                 qs = qs.filter(socio=user.socio)
             except Exception:
                 return Granja.objects.none()
+        else:
+            socio_id = self.request.query_params.get("socio_id")
+            if socio_id:
+                qs = qs.filter(socio_id=socio_id)
         return qs
 
     def perform_create(self, serializer):

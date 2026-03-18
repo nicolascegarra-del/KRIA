@@ -41,6 +41,13 @@ export default function ValidacionesPage() {
         err?.response?.data?.detail ??
         "Error al aprobar el animal. Comprueba que tiene las 3 fotos obligatorias.";
       setApproveErrors((prev) => ({ ...prev, [id]: msg }));
+      setTimeout(() => {
+        setApproveErrors((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+      }, 6000);
     },
   });
 

@@ -74,8 +74,10 @@ export interface Animal {
   socio_nombre: string;
   padre: string | null;
   padre_anilla: string | null;
+  padre_anio_nacimiento: number | null;
   madre_animal: string | null;
   madre_anilla: string | null;
+  madre_anio_nacimiento: number | null;
   madre_lote: string | null;
   granja: string | null;
   granja_nombre: string | null;

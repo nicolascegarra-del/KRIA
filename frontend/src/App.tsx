@@ -44,25 +44,29 @@ function ProtectedRoute({
   children,
   gestionOnly = false,
   socioOnly = false,
+  superadminOnly = false,
 }: {
   children: React.ReactNode;
   gestionOnly?: boolean;
   socioOnly?: boolean;
+  superadminOnly?: boolean;
 }) {
   const { user } = useAuthStore();
   if (!user) return <Navigate to="/login" replace />;
+  if (superadminOnly && !user.is_superadmin) return <Navigate to="/dashboard" replace />;
   if (gestionOnly && !user.is_gestion) return <Navigate to="/mis-animales" replace />;
   if (socioOnly && user.is_gestion) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
 
-function LayoutRoute({ children, gestionOnly = false, socioOnly = false }: {
+function LayoutRoute({ children, gestionOnly = false, socioOnly = false, superadminOnly = false }: {
   children: React.ReactNode;
   gestionOnly?: boolean;
   socioOnly?: boolean;
+  superadminOnly?: boolean;
 }) {
   return (
-    <ProtectedRoute gestionOnly={gestionOnly} socioOnly={socioOnly}>
+    <ProtectedRoute gestionOnly={gestionOnly} socioOnly={socioOnly} superadminOnly={superadminOnly}>
       <Layout>{children}</Layout>
     </ProtectedRoute>
   );
@@ -134,7 +138,7 @@ export default function App() {
         <Route path="/reproductores/candidatos" element={<LayoutRoute gestionOnly><CandidatosReproductorPage /></LayoutRoute>} />
         <Route path="/reproductores/catalogo" element={<LayoutRoute gestionOnly><CatalogoReproductoresPage /></LayoutRoute>} />
         <Route path="/solicitudes-realta" element={<LayoutRoute gestionOnly><SolicitudesRealtaPage /></LayoutRoute>} />
-        <Route path="/superadmin" element={<LayoutRoute gestionOnly><SuperAdminPage /></LayoutRoute>} />
+        <Route path="/superadmin" element={<LayoutRoute superadminOnly><SuperAdminPage /></LayoutRoute>} />
 
         {/* Default redirects */}
         <Route
