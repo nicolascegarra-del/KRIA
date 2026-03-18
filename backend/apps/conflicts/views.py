@@ -13,9 +13,10 @@ class ConflictoListView(generics.ListAPIView):
     permission_classes = [IsGestion]
 
     def get_queryset(self):
-        return Conflicto.objects.filter(estado=Conflicto.Estado.PENDIENTE).select_related(
-            "socio_reclamante", "socio_actual"
-        )
+        return Conflicto.objects.filter(
+            tenant=self.request.tenant,
+            estado=Conflicto.Estado.PENDIENTE,
+        ).select_related("socio_reclamante", "socio_actual")
 
 
 class ConflictoResolveView(APIView):
@@ -23,7 +24,7 @@ class ConflictoResolveView(APIView):
 
     def post(self, request, pk):
         try:
-            conflicto = Conflicto.objects.get(pk=pk)
+            conflicto = Conflicto.objects.get(pk=pk, tenant=request.tenant)
         except Conflicto.DoesNotExist:
             return Response({"detail": "Not found."}, status=404)
 

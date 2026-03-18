@@ -217,6 +217,11 @@ class ImportConfirmView(APIView):
 
         tenant = request.tenant
 
+        # Security: ensure temp_key belongs to this tenant
+        expected_prefix = f"imports/{tenant.slug}/"
+        if not temp_key.startswith(expected_prefix):
+            return Response({"detail": "Invalid temp_key."}, status=400)
+
         # Create ImportJob pointing at the already-uploaded temp file
         job = ImportJob.objects.create(
             tenant=tenant,

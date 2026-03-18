@@ -70,6 +70,14 @@ class LoteHembrasView(APIView):
             lote = Lote.objects.prefetch_related("hembras__socio").get(pk=pk)
         except Lote.DoesNotExist:
             return Response({"detail": "Not found."}, status=404)
+
+        if not get_effective_is_gestion(request):
+            try:
+                if lote.socio != request.user.socio:
+                    return Response({"detail": "Not found."}, status=404)
+            except Exception:
+                return Response({"detail": "Not found."}, status=404)
+
         data = [
             {
                 "id": str(h.id),

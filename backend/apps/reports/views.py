@@ -24,7 +24,7 @@ class ReportJobStatusView(APIView):
 
     def get(self, request, job_id):
         try:
-            job = ReportJob.objects.get(pk=job_id)
+            job = ReportJob.objects.get(pk=job_id, tenant=request.tenant)
         except ReportJob.DoesNotExist:
             return Response({"detail": "Not found."}, status=404)
 
@@ -59,11 +59,30 @@ class InventoryReportView(APIView):
         return _create_report_job(request, ReportJob.ReportType.INVENTORY, {"socio_id": socio_id})
 
 
+def _check_animal_ownership(request, animal_id):
+    """Returns (animal, error_response). Socios can only request reports for their own animals."""
+    from apps.animals.models import Animal
+    try:
+        animal = Animal.objects.get(pk=animal_id, tenant=request.tenant)
+    except Animal.DoesNotExist:
+        return None, Response({"detail": "Animal no encontrado."}, status=404)
+    if not get_effective_is_gestion(request):
+        try:
+            if animal.socio != request.user.socio:
+                return None, Response({"detail": "Animal no encontrado."}, status=404)
+        except Exception:
+            return None, Response({"detail": "Animal no encontrado."}, status=404)
+    return animal, None
+
+
 class IndividualReportView(APIView):
     permission_classes = [IsAuthenticated]
     throttle_classes = [UploadRateThrottle]
 
     def post(self, request, animal_id):
+        _, err = _check_animal_ownership(request, animal_id)
+        if err:
+            return err
         return _create_report_job(request, ReportJob.ReportType.INDIVIDUAL, {"animal_id": str(animal_id)})
 
 
@@ -72,6 +91,9 @@ class GenealogyCertView(APIView):
     throttle_classes = [UploadRateThrottle]
 
     def post(self, request, animal_id):
+        _, err = _check_animal_ownership(request, animal_id)
+        if err:
+            return err
         return _create_report_job(request, ReportJob.ReportType.GENEALOGY_CERT, {"animal_id": str(animal_id)})
 
 

@@ -283,6 +283,14 @@ class AnimalGenealogyView(APIView):
             ).get(pk=pk)
         except Animal.DoesNotExist:
             return Response({"detail": "Not found."}, status=404)
+
+        if not get_effective_is_gestion(request):
+            try:
+                if animal.socio != request.user.socio:
+                    return Response({"detail": "Not found."}, status=404)
+            except Exception:
+                return Response({"detail": "Not found."}, status=404)
+
         return Response(GenealogySerializer(animal).data)
 
 
