@@ -56,6 +56,15 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/mis-documentos",           label: "Mis Documentos",        icon: <FolderOpen size={18} />,      socioOnly: true },
 ];
 
+// Bottom nav items for socios (mobile)
+const SOCIO_BOTTOM_NAV = [
+  { to: "/mis-animales",  label: "Animales",   icon: (size: number) => <Bird size={size} /> },
+  { to: "/mis-granjas",   label: "Granjas",    icon: (size: number) => <Building size={size} /> },
+  { to: "/mis-lotes",     label: "Lotes",      icon: (size: number) => <Layers size={size} /> },
+  { to: "/mis-documentos",label: "Documentos", icon: (size: number) => <FolderOpen size={size} /> },
+  { to: "/perfil",        label: "Perfil",     icon: (size: number) => <User size={size} /> },
+];
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, clearAuth } = useAuthStore();
   const { branding } = useTenantStore();
@@ -65,6 +74,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const isGestion = user?.is_gestion ?? false;
   const isSuperadmin = user?.is_superadmin ?? false;
+  const isSocio = !isGestion && !isSuperadmin;
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.superadminOnly && !isSuperadmin) return false;
@@ -82,8 +92,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="h-full flex bg-gray-50">
-      {/* Sidebar overlay (mobile) */}
-      {sidebarOpen && (
+      {/* Sidebar overlay (mobile) — solo gestión */}
+      {sidebarOpen && !isSocio && (
         <div
           className="fixed inset-0 bg-black/40 z-20 lg:hidden"
           onClick={() => setSidebarOpen(false)}
@@ -95,7 +105,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         className={clsx(
           "fixed lg:static inset-y-0 left-0 z-30 w-64 flex flex-col",
           "text-white transition-transform duration-200",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          // Socios en mobile: sidebar oculto (solo desktop)
+          // Gestión en mobile: sidebar como drawer
+          isSocio
+            ? "-translate-x-full lg:translate-x-0"
+            : sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
         style={{ background: primaryColor }}
       >
@@ -168,22 +182,76 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Mobile top bar */}
-        <header className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
-            aria-label="Abrir menú"
-          >
-            <Menu size={20} />
-          </button>
-          <span className="font-semibold text-gray-800">{branding?.name ?? "KRIA"}</span>
+        <header className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3"
+          style={isSocio ? { borderBottomColor: `${primaryColor}30` } : undefined}
+        >
+          {isSocio ? (
+            /* Socios: logo + nombre de la asociación, sin hamburguesa */
+            <>
+              {branding?.logo_url ? (
+                <img src={branding.logo_url} alt="Logo" className="w-7 h-7 rounded object-cover" />
+              ) : (
+                <Bird size={20} style={{ color: primaryColor }} />
+              )}
+              <span className="font-semibold text-gray-800 flex-1">{branding?.name ?? "KRIA"}</span>
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                aria-label="Cerrar sesión"
+              >
+                <LogOut size={18} />
+              </button>
+            </>
+          ) : (
+            /* Gestión: hamburguesa normal */
+            <>
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                aria-label="Abrir menú"
+              >
+                <Menu size={20} />
+              </button>
+              <span className="font-semibold text-gray-800">{branding?.name ?? "KRIA"}</span>
+            </>
+          )}
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        {/* Page content — socios en mobile necesitan padding inferior para la bottom nav */}
+        <main className={clsx(
+          "flex-1 overflow-y-auto p-4 lg:p-6",
+          isSocio && "pb-24 lg:pb-6"
+        )}>
           {children}
         </main>
       </div>
+
+      {/* ── Bottom Navigation Bar — socios mobile únicamente ── */}
+      {isSocio && (
+        <nav
+          className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 flex"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+          aria-label="Navegación principal"
+        >
+          {SOCIO_BOTTOM_NAV.map((item) => {
+            const isActive = location.pathname.startsWith(item.to);
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] transition-colors"
+                style={{ color: isActive ? primaryColor : "#9CA3AF" }}
+                aria-current={isActive ? "page" : undefined}
+              >
+                {item.icon(isActive ? 22 : 20)}
+                <span className={clsx("text-[10px] font-medium leading-tight", isActive ? "font-semibold" : "")}>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
     </div>
   );
 }
