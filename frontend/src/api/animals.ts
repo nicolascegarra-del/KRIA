@@ -46,7 +46,7 @@ export const animalsApi = {
     return data;
   },
 
-  searchGlobal: async (anilla: string, anio: number) => {
+  searchGlobal: async (anilla: string, anio: number): Promise<Animal[]> => {
     const { data } = await apiClient.get("/animals/search-global/", {
       params: { anilla, anio },
     });
