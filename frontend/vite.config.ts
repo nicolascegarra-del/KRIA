@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "masked-icon.svg"],
       manifest: {
-        name: "AGAMUR — Libros Genealógicos",
-        short_name: "AGAMUR",
+        name: "KRIA — Libros Genealógicos",
+        short_name: "KRIA",
         description: "Plataforma de gestión de libros genealógicos avícolas",
         theme_color: "#1565C0",
         background_color: "#ffffff",

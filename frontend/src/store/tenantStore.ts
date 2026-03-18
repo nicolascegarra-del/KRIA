@@ -17,7 +17,7 @@ export const useTenantStore = create<TenantState>()(
       setBranding: (branding) => set({ branding, slug: branding.slug }),
       setSlug: (slug) => set({ slug }),
     }),
-    { name: "agamur-tenant" }
+    { name: "kria-tenant" }
   )
 );
 
@@ -28,5 +28,5 @@ export const useTenantStore = create<TenantState>()(
 export function applyBranding(branding: TenantBranding) {
   document.documentElement.style.setProperty("--color-primary", branding.primary_color);
   document.documentElement.style.setProperty("--color-secondary", branding.secondary_color);
-  document.title = `${branding.name} — AGAMUR`;
+  document.title = `${branding.name} — KRIA`;
 }

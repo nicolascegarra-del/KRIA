@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { superadminApi } from "../../api/superadmin";
 import Modal from "../../components/Modal";
 import ErrorAlert from "../../components/ErrorAlert";
 import SuccessToast from "../../components/SuccessToast";
 import { useAutoCloseError } from "../../hooks/useAutoCloseError";
-import { Shield, Plus, Edit2, Users, Bird, Building, Check, Loader2 } from "lucide-react";
+import { Shield, Plus, Edit2, Users, Bird, Building, Check, Loader2, Upload } from "lucide-react";
 import type { Tenant } from "../../types";
 
 interface TenantForm {
@@ -31,6 +31,10 @@ export default function SuperAdminPage() {
   const [form, setForm] = useState<TenantForm>(FORM_DEFAULTS);
   const [error, setError, clearError] = useAutoCloseError();
   const [successMsg, setSuccessMsg] = useState("");
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoError, setLogoError] = useState("");
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const { data: stats } = useQuery({ queryKey: ["superadmin-stats"], queryFn: superadminApi.stats });
   const { data: tenantsData, isLoading } = useQuery({
@@ -66,12 +70,16 @@ export default function SuperAdminPage() {
     setModalOpen(false);
     setEditing(null);
     setForm(FORM_DEFAULTS);
+    setLogoPreview(null);
+    setLogoError("");
     clearError();
   };
 
   const openCreate = () => {
     setEditing(null);
     setForm(FORM_DEFAULTS);
+    setLogoPreview(null);
+    setLogoError("");
     clearError();
     setModalOpen(true);
   };
@@ -85,6 +93,8 @@ export default function SuperAdminPage() {
       secondary_color: t.secondary_color,
       is_active: t.is_active,
     });
+    setLogoPreview((t as any).logo_url ?? null);
+    setLogoError("");
     clearError();
     setModalOpen(true);
   };
@@ -96,6 +106,26 @@ export default function SuperAdminPage() {
       updateMutation.mutate({ id: editing.id, payload: form });
     } else {
       createMutation.mutate(form);
+    }
+  };
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editing) return;
+    setLogoError("");
+    setLogoUploading(true);
+    try {
+      const updated = await superadminApi.uploadLogo(editing.id, file);
+      const newLogoUrl = (updated as any).logo_url ?? null;
+      setLogoPreview(newLogoUrl);
+      qc.invalidateQueries({ queryKey: ["superadmin-tenants"] });
+      qc.invalidateQueries({ queryKey: ["tenant-branding"] });
+      setSuccessMsg("Logo actualizado correctamente.");
+    } catch {
+      setLogoError("Error al subir el logo. Inténtalo de nuevo.");
+    } finally {
+      setLogoUploading(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
     }
   };
 
@@ -286,6 +316,49 @@ export default function SuperAdminPage() {
               />
               Asociación activa
             </label>
+
+            {/* Logo — solo visible al editar (necesita ID) */}
+            {editing && (
+              <div className="border-t border-gray-100 pt-4">
+                <label className="block text-xs font-medium text-gray-700 mb-2">
+                  Logo de la asociación
+                </label>
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-lg border border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50 flex-shrink-0">
+                    {logoPreview ? (
+                      <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
+                    ) : (
+                      <Bird size={24} className="text-gray-300" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <label
+                      className="btn-secondary flex items-center gap-2 cursor-pointer text-sm w-fit"
+                      aria-label="Subir logo"
+                    >
+                      {logoUploading ? (
+                        <Loader2 size={15} className="animate-spin" />
+                      ) : (
+                        <Upload size={15} />
+                      )}
+                      {logoUploading ? "Subiendo..." : "Seleccionar imagen"}
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleLogoChange}
+                        disabled={logoUploading}
+                      />
+                    </label>
+                    <p className="text-xs text-gray-400 mt-1">PNG, JPG o SVG. Se sube al seleccionar.</p>
+                    {logoError && (
+                      <p className="text-xs text-red-600 mt-1">{logoError}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <ErrorAlert message={error} onDismiss={clearError} />
 

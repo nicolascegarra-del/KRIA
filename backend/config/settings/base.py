@@ -82,7 +82,7 @@ ASGI_APPLICATION = "config.asgi.application"
 # ─── Database ─────────────────────────────────────────────────────────────────
 DATABASES = {
     "default": dj_database_url.config(
-        default=config("DATABASE_URL", default="postgres://agamur:agamur_dev_password@localhost:5432/agamur"),
+        default=config("DATABASE_URL", default="postgres://kria:kria_dev_password@localhost:5432/kria"),
         conn_max_age=600,
         conn_health_checks=True,
     )
@@ -172,7 +172,7 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 MINIO_ENDPOINT = config("MINIO_ENDPOINT", default="minio:9000")
 MINIO_ACCESS_KEY = config("MINIO_ACCESS_KEY", default="minioadmin")
 MINIO_SECRET_KEY = config("MINIO_SECRET_KEY", default="minioadmin")
-MINIO_BUCKET_NAME = config("MINIO_BUCKET_NAME", default="agamur")
+MINIO_BUCKET_NAME = config("MINIO_BUCKET_NAME", default="kria")
 MINIO_USE_HTTPS = config("MINIO_USE_HTTPS", default=False, cast=bool)
 MINIO_EXTERNAL_ENDPOINT = config("MINIO_EXTERNAL_ENDPOINT", default="http://localhost:9000")
 
@@ -204,9 +204,9 @@ EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
-DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="AGAMUR <noreply@agamur.es>")
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="KRIA <noreply@kria.es>")
 
 # ─── App Settings ─────────────────────────────────────────────────────────────
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
-TENANT_DOMAIN_SUFFIX = config("TENANT_DOMAIN_SUFFIX", default=".agamur.es")
+TENANT_DOMAIN_SUFFIX = config("TENANT_DOMAIN_SUFFIX", default=".kria.es")
 PASSWORD_RESET_TIMEOUT = 86400  # 24 hours

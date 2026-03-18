@@ -107,7 +107,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Bird size={24} className="text-white" />
           )}
           <div>
-            <div className="font-bold text-sm leading-tight">{branding?.name ?? "AGAMUR"}</div>
+            <div className="font-bold text-sm leading-tight">{branding?.name ?? "KRIA"}</div>
             {user?.is_gestion && (
               <div className="text-xs text-white/60">Panel Gestión</div>
             )}
@@ -176,7 +176,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           >
             <Menu size={20} />
           </button>
-          <span className="font-semibold text-gray-800">{branding?.name ?? "AGAMUR"}</span>
+          <span className="font-semibold text-gray-800">{branding?.name ?? "KRIA"}</span>
         </header>
 
         {/* Page content */}

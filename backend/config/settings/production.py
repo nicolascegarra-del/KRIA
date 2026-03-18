@@ -19,7 +19,7 @@ if _cors_origins:
     CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(",") if o.strip()]
 else:
     # Fallback: acepta cualquier subdominio de TENANT_DOMAIN_SUFFIX
-    _suffix = config("TENANT_DOMAIN_SUFFIX", default=".agamur.es").lstrip(".")
+    _suffix = config("TENANT_DOMAIN_SUFFIX", default=".kria.es").lstrip(".")
     import re
     CORS_ALLOWED_ORIGIN_REGEXES = [
         rf"^https://[\w-]+\.{re.escape(_suffix)}$",

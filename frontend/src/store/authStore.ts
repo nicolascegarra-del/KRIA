@@ -41,7 +41,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: "agamur-auth",
+      name: "kria-auth",
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,

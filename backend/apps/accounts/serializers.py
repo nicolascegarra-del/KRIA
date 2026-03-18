@@ -138,15 +138,15 @@ class SocioSerializer(serializers.ModelSerializer):
             user.set_password(password)
             user.save(update_fields=["password"])
             send_mail(
-                subject="Bienvenido a AGAMUR — tus credenciales de acceso",
+                subject="Bienvenido a KRIA — tus credenciales de acceso",
                 message=(
                     f"Hola {first_name or email},\n\n"
-                    f"Tu cuenta en AGAMUR ha sido creada.\n\n"
+                    f"Tu cuenta en KRIA ha sido creada.\n\n"
                     f"Email: {email}\n"
                     f"Contraseña: {password}\n\n"
                     f"Accede en: {settings.FRONTEND_URL}\n\n"
                     f"Te recomendamos cambiar la contraseña tras el primer acceso.\n\n"
-                    f"Un saludo,\nEquipo AGAMUR"
+                    f"Un saludo,\nEquipo KRIA"
                 ),
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[email],

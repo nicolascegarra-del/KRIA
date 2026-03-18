@@ -5,15 +5,15 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-agamur}
-      POSTGRES_USER: ${POSTGRES_USER:-agamur}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agamur_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-kria}
+      POSTGRES_USER: ${POSTGRES_USER:-kria}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kria_dev_password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agamur}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kria}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -56,7 +56,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-agamur}:${POSTGRES_PASSWORD:-agamur_dev_password}@db:5432/${POSTGRES_DB:-agamur}
+      DATABASE_URL: postgres://${POSTGRES_USER:-kria}:${POSTGRES_PASSWORD:-kria_dev_password}@db:5432/${POSTGRES_DB:-kria}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
     volumes:
@@ -84,7 +84,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-agamur}:${POSTGRES_PASSWORD:-agamur_dev_password}@db:5432/${POSTGRES_DB:-agamur}
+      DATABASE_URL: postgres://${POSTGRES_USER:-kria}:${POSTGRES_PASSWORD:-kria_dev_password}@db:5432/${POSTGRES_DB:-kria}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
     volumes:
@@ -103,7 +103,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-agamur}:${POSTGRES_PASSWORD:-agamur_dev_password}@db:5432/${POSTGRES_DB:-agamur}
+      DATABASE_URL: postgres://${POSTGRES_USER:-kria}:${POSTGRES_PASSWORD:-kria_dev_password}@db:5432/${POSTGRES_DB:-kria}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
     volumes:

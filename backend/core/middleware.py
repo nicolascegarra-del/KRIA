@@ -2,7 +2,7 @@
 TenantMiddleware — resolves the active tenant for each request.
 
 Resolution order:
-  1. Subdomain: <slug>.agamur.es  → Tenant.slug
+  1. Subdomain: <slug>.kria.es    → Tenant.slug
   2. Header:    X-Tenant-Slug      → Tenant.slug  (PWA fallback / local dev)
   3. Custom domain                  → Tenant.custom_domain
 """
@@ -16,7 +16,7 @@ from core.managers import clear_current_tenant, set_current_tenant
 
 logger = logging.getLogger(__name__)
 
-SUFFIX = getattr(settings, "TENANT_DOMAIN_SUFFIX", ".agamur.es")
+SUFFIX = getattr(settings, "TENANT_DOMAIN_SUFFIX", ".kria.es")
 
 # Paths that do NOT require a tenant (public health/admin)
 TENANT_EXEMPT_PATHS = [
@@ -85,7 +85,7 @@ class TenantMiddleware:
         except Tenant.DoesNotExist:
             pass
 
-        # 2. Subdomain pattern  slug.agamur.es
+        # 2. Subdomain pattern  slug.kria.es
         if SUFFIX and host.endswith(SUFFIX):
             slug = host[: -len(SUFFIX)]
             if slug:

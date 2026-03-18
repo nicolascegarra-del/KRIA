@@ -275,7 +275,7 @@ class TestBloqueoVariedad:
     def _crear_evaluacion(self, animal, tenant):
         from apps.evaluaciones.models import Evaluacion
         from apps.accounts.models import User
-        gestion_user = User.objects.get(email="admin@agamur.es", tenant=tenant)
+        gestion_user = User.objects.get(email="admin@kria.es", tenant=tenant)
         return Evaluacion.objects.create(
             tenant=tenant, animal=animal, evaluador=gestion_user,
             cabeza=7, cola=7, pecho_abdomen=7,

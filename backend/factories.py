@@ -1,5 +1,5 @@
 """
-Factory Boy factories for AGAMUR test data.
+Factory Boy factories for KRIA test data.
 Usage:
     from factories import AnimalFactory, SocioFactory
     animal = AnimalFactory(socio=some_socio)
@@ -29,7 +29,7 @@ class UserFactory(DjangoModelFactory):
     class Meta:
         model = User
 
-    email = factory.Sequence(lambda n: f"user{n}@test.agamur.es")
+    email = factory.Sequence(lambda n: f"user{n}@test.kria.es")
     tenant = factory.SubFactory(TenantFactory)
     first_name = factory.Faker("first_name", locale="es_ES")
     last_name = factory.Faker("last_name", locale="es_ES")

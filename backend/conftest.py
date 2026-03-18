@@ -1,9 +1,9 @@
 """
-Pytest fixtures for the AGAMUR test suite.
+Pytest fixtures for the KRIA test suite.
 
 Test users mirror the seed_admin command to ensure tests reflect real usage:
-  - Gestión: admin@agamur.es / agamur2024!  (is_gestion=True)
-  - Socio:   socio@agamur.es / socio2024!   (is_gestion=False, has Socio profile)
+  - Gestión: admin@kria.es / kria2024!  (is_gestion=True)
+  - Socio:   socio@kria.es / kria2024!  (is_gestion=False, has Socio profile)
 """
 import pytest
 from rest_framework.test import APIClient
@@ -20,7 +20,7 @@ def tenant(db):
     t, _ = Tenant.objects.get_or_create(
         slug="demo",
         defaults={
-            "name": "Asociación Demo AGAMUR",
+            "name": "Asociación Demo KRIA",
             "is_active": True,
             "primary_color": "#1565C0",
             "secondary_color": "#FBC02D",
@@ -33,11 +33,11 @@ def tenant(db):
 def gestion_user(db, tenant):
     """
     Gestión user — mirrors seed_admin.
-    Login: admin@agamur.es / agamur2024!  +  checkbox Gestión = ON
+    Login: admin@kria.es / kria2024!  +  checkbox Gestión = ON
     """
     user, _ = User.objects.get_or_create(
         tenant=tenant,
-        email="admin@agamur.es",
+        email="admin@kria.es",
         defaults={
             "is_gestion": True,
             "is_superadmin": True,
@@ -45,10 +45,10 @@ def gestion_user(db, tenant):
             "is_superuser": True,
             "is_active": True,
             "first_name": "Admin",
-            "last_name": "AGAMUR",
+            "last_name": "KRIA",
         },
     )
-    user.set_password("agamur2024!")
+    user.set_password("kria2024!")
     user.save()
     return user
 
@@ -57,11 +57,11 @@ def gestion_user(db, tenant):
 def socio_user(db, tenant):
     """
     Socio user with a linked Socio profile — mirrors seed_admin.
-    Login: socio@agamur.es / socio2024!  +  checkbox Gestión = OFF
+    Login: socio@kria.es / kria2024!  +  checkbox Gestión = OFF
     """
     user, _ = User.objects.get_or_create(
         tenant=tenant,
-        email="socio@agamur.es",
+        email="socio@kria.es",
         defaults={
             "is_gestion": False,
             "is_active": True,
@@ -69,7 +69,7 @@ def socio_user(db, tenant):
             "last_name": "Demo",
         },
     )
-    user.set_password("socio2024!")
+    user.set_password("kria2024!")
     user.save()
 
     Socio.all_objects.get_or_create(
@@ -93,7 +93,7 @@ def socio_user_b(db, tenant):
     """A second socio for cross-socio permission tests."""
     user, _ = User.objects.get_or_create(
         tenant=tenant,
-        email="socio_b@agamur.es",
+        email="socio_b@kria.es",
         defaults={
             "is_gestion": False,
             "is_active": True,
@@ -101,7 +101,7 @@ def socio_user_b(db, tenant):
             "last_name": "Socio",
         },
     )
-    user.set_password("socio2024!")
+    user.set_password("kria2024!")
     user.save()
 
     Socio.all_objects.get_or_create(
@@ -136,8 +136,8 @@ def gestion_client(db, gestion_user, tenant):
     resp = client.post(
         "/api/v1/auth/login/",
         {
-            "email": "admin@agamur.es",
-            "password": "agamur2024!",
+            "email": "admin@kria.es",
+            "password": "kria2024!",
             "access_as_gestion": True,
         },
         HTTP_X_TENANT_SLUG="demo",
@@ -161,8 +161,8 @@ def socio_client(db, socio_user, tenant):
     resp = client.post(
         "/api/v1/auth/login/",
         {
-            "email": "socio@agamur.es",
-            "password": "socio2024!",
+            "email": "socio@kria.es",
+            "password": "kria2024!",
             "access_as_gestion": False,
         },
         HTTP_X_TENANT_SLUG="demo",
@@ -183,8 +183,8 @@ def socio_client_b(db, socio_user_b, tenant):
     resp = client.post(
         "/api/v1/auth/login/",
         {
-            "email": "socio_b@agamur.es",
-            "password": "socio2024!",
+            "email": "socio_b@kria.es",
+            "password": "kria2024!",
             "access_as_gestion": False,
         },
         HTTP_X_TENANT_SLUG="demo",

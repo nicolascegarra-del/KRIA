@@ -52,7 +52,7 @@ class PasswordResetRequestView(APIView):
 
         reset_url = f"{settings.FRONTEND_URL}/auth/reset-password?token={token}"
         send_mail(
-            subject="Restablecimiento de contraseña — AGAMUR",
+            subject="Restablecimiento de contraseña — KRIA",
             message=f"Haz clic en el enlace para restablecer tu contraseña:\n{reset_url}\n\nEste enlace expira en 24 horas.",
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[email],

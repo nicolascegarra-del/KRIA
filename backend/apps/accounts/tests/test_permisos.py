@@ -23,8 +23,8 @@ class TestPermisosRol:
         resp = client.post(
             "/api/v1/auth/login/",
             {
-                "email": "socio@agamur.es",
-                "password": "socio2024!",
+                "email": "socio@kria.es",
+                "password": "kria2024!",
                 "access_as_gestion": True,  # intenta activar gestión
             },
             HTTP_X_TENANT_SLUG="demo",
@@ -38,8 +38,8 @@ class TestPermisosRol:
         resp = client.post(
             "/api/v1/auth/login/",
             {
-                "email": "admin@agamur.es",
-                "password": "agamur2024!",
+                "email": "admin@kria.es",
+                "password": "kria2024!",
                 "access_as_gestion": False,
             },
             HTTP_X_TENANT_SLUG="demo",
