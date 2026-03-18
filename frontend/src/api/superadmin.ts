@@ -25,9 +25,7 @@ export const superadminApi = {
   uploadLogo: async (id: string, file: File): Promise<Tenant> => {
     const form = new FormData();
     form.append("logo", file);
-    const { data } = await apiClient.post<Tenant>(`/superadmin/tenants/${id}/logo/`, form, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const { data } = await apiClient.post<Tenant>(`/superadmin/tenants/${id}/logo/`, form);
     return data;
   },
 };
