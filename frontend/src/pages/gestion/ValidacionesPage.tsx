@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { animalsApi } from "../../api/animals";
-import AnimalCard from "../../components/AnimalCard";
 import AnimalStateChip from "../../components/AnimalStateChip";
+import SuccessToast from "../../components/SuccessToast";
 import { CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react";
 import type { Animal } from "../../types";
 
@@ -12,6 +12,7 @@ export default function ValidacionesPage() {
   const [razonRechazo, setRazonRechazo] = useState("");
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [approveErrors, setApproveErrors] = useState<Record<string, string>>({});
+  const [successMsg, setSuccessMsg] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["animals", { estado: "AÑADIDO" }],
@@ -21,12 +22,18 @@ export default function ValidacionesPage() {
   const approveMutation = useMutation({
     mutationFn: (id: string) => {
       setApprovingId(id);
-      setApproveErrors((prev) => { const next = { ...prev }; delete next[id]; return next; });
+      setApproveErrors((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
       return animalsApi.approve(id);
     },
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       setApprovingId(null);
       qc.invalidateQueries({ queryKey: ["animals"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      setSuccessMsg("Animal aprobado correctamente.");
     },
     onError: (err: any, id: string) => {
       setApprovingId(null);
@@ -42,8 +49,10 @@ export default function ValidacionesPage() {
       animalsApi.reject(id, razon),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["animals"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
       setRejectModal(null);
       setRazonRechazo("");
+      setSuccessMsg("Animal rechazado.");
     },
   });
 
@@ -51,6 +60,8 @@ export default function ValidacionesPage() {
 
   return (
     <div className="space-y-4">
+      <SuccessToast message={successMsg} onDismiss={() => setSuccessMsg("")} />
+
       <div>
         <h1 className="text-xl font-bold text-gray-900">Validaciones Pendientes</h1>
         <p className="text-sm text-gray-500">
@@ -60,7 +71,9 @@ export default function ValidacionesPage() {
 
       {isLoading ? (
         <div className="space-y-3">
-          {[1, 2, 3].map((i) => <div key={i} className="card h-20 animate-pulse bg-gray-100" />)}
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="card h-20 animate-pulse bg-gray-100" />
+          ))}
         </div>
       ) : animals.length === 0 ? (
         <div className="card text-center py-12">
@@ -94,6 +107,7 @@ export default function ValidacionesPage() {
                     onClick={() => approveMutation.mutate(animal.id)}
                     disabled={approvingId === animal.id}
                     className="p-2 rounded-lg bg-green-700 text-white hover:bg-green-800 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                    aria-label={`Aprobar ${animal.numero_anilla}`}
                     title="Aprobar"
                   >
                     {approvingId === animal.id ? (
@@ -105,6 +119,7 @@ export default function ValidacionesPage() {
                   <button
                     onClick={() => { setRejectModal(animal); setRazonRechazo(""); }}
                     className="p-2 rounded-lg bg-red-700 text-white hover:bg-red-800 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                    aria-label={`Rechazar ${animal.numero_anilla}`}
                     title="Rechazar"
                   >
                     <XCircle size={18} />
@@ -119,8 +134,15 @@ export default function ValidacionesPage() {
       {/* Reject modal */}
       {rejectModal && (
         <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
-            <h2 className="text-lg font-bold text-gray-900">Rechazar Animal</h2>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reject-modal-title"
+            className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4"
+          >
+            <h2 id="reject-modal-title" className="text-lg font-bold text-gray-900">
+              Rechazar Animal
+            </h2>
             <p className="text-sm text-gray-600">
               Animal: <strong>{rejectModal.numero_anilla}</strong> / {rejectModal.anio_nacimiento}
             </p>
@@ -133,17 +155,17 @@ export default function ValidacionesPage() {
                 value={razonRechazo}
                 onChange={(e) => setRazonRechazo(e.target.value)}
                 placeholder="Describe el motivo del rechazo..."
+                autoFocus
               />
             </div>
             <div className="flex gap-3">
-              <button
-                onClick={() => setRejectModal(null)}
-                className="btn-secondary flex-1"
-              >
+              <button onClick={() => setRejectModal(null)} className="btn-secondary flex-1">
                 Cancelar
               </button>
               <button
-                onClick={() => rejectMutation.mutate({ id: rejectModal.id, razon: razonRechazo })}
+                onClick={() =>
+                  rejectMutation.mutate({ id: rejectModal.id, razon: razonRechazo })
+                }
                 disabled={!razonRechazo.trim() || rejectMutation.isPending}
                 className="btn-danger flex-1"
               >

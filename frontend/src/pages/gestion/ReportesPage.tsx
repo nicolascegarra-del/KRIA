@@ -1,92 +1,80 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { reportsApi } from "../../api/reports";
-import { FileText, Table, BookOpen, Download, Loader2, Clock, CheckCircle2 } from "lucide-react";
+import { animalsApi } from "../../api/animals";
+import { FileText, Table, BookOpen, Download, Loader2, Clock, CheckCircle2, Search, User } from "lucide-react";
 import type { ReportJob } from "../../types";
 
-interface ReportTile {
+// ─── Animal search picker ───────────────────────────────────────────────────
+
+function AnimalPicker({
+  label,
+  onSelect,
+}: {
   label: string;
-  description: string;
-  icon: React.ReactNode;
-  color: string;
-  action: () => Promise<{ job_id: string }>;
-}
+  onSelect: (id: string, label: string) => void;
+}) {
+  const [anilla, setAnilla] = useState("");
+  const [anio, setAnio] = useState(String(new Date().getFullYear()));
 
-export default function ReportesPage() {
-  const [jobs, setJobs] = useState<Record<string, string>>({}); // label → job_id
-  const [generating, setGenerating] = useState<Record<string, boolean>>({});
-
-  const tiles: ReportTile[] = [
-    {
-      label: "Inventario PDF",
-      description: "Lista completa de animales (todos los socios)",
-      icon: <FileText size={24} />,
-      color: "bg-blue-700",
-      action: () => reportsApi.inventory(),
-    },
-    {
-      label: "Libro Genealógico",
-      description: "Excel formato ARCA/Ministerio con toda la genealogía",
-      icon: <Table size={24} />,
-      color: "bg-green-700",
-      action: () => reportsApi.libroGenealogico(),
-    },
-    {
-      label: "Catálogo Reproductores",
-      description: "PDF editorial: 1 página por animal con gráfico radar",
-      icon: <BookOpen size={24} />,
-      color: "bg-purple-700",
-      action: () => reportsApi.catalogoReproductores(),
-    },
-  ];
-
-  const handleGenerate = async (tile: ReportTile) => {
-    setGenerating((prev) => ({ ...prev, [tile.label]: true }));
-    try {
-      const res = await tile.action();
-      setJobs((prev) => ({ ...prev, [tile.label]: res.job_id }));
-    } finally {
-      setGenerating((prev) => ({ ...prev, [tile.label]: false }));
-    }
-  };
+  const { data: results, isFetching } = useQuery({
+    queryKey: ["animals-search-report", anilla, anio],
+    queryFn: () => animalsApi.searchGlobal(anilla, parseInt(anio, 10)),
+    enabled: anilla.length >= 2 && !!anio,
+  });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Reportes</h1>
-        <p className="text-sm text-gray-500">Generación asíncrona — recibirás el enlace de descarga al completar</p>
+    <div className="space-y-2">
+      <p className="text-xs text-gray-500">{label}</p>
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            className="input-field pl-8 text-sm font-mono"
+            placeholder="Nº anilla"
+            value={anilla}
+            onChange={(e) => setAnilla(e.target.value)}
+          />
+        </div>
+        <input
+          type="number"
+          className="input-field w-20 text-sm"
+          placeholder="Año"
+          value={anio}
+          onChange={(e) => setAnio(e.target.value)}
+          min={2000}
+          max={new Date().getFullYear()}
+        />
+        {isFetching && <Loader2 size={14} className="animate-spin self-center text-gray-400" />}
       </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {tiles.map((tile) => (
-          <div key={tile.label} className="card space-y-3">
-            <div className="flex items-center gap-3">
-              <div className={`${tile.color} text-white p-2.5 rounded-xl`}>{tile.icon}</div>
-              <div>
-                <div className="font-semibold text-gray-900 text-sm">{tile.label}</div>
-                <div className="text-xs text-gray-500">{tile.description}</div>
-              </div>
-            </div>
-            <button
-              onClick={() => handleGenerate(tile)}
-              disabled={generating[tile.label]}
-              className="btn-primary w-full"
-            >
-              {generating[tile.label] ? (
-                <><Loader2 size={16} className="animate-spin" /> Iniciando...</>
-              ) : (
-                "Generar"
-              )}
-            </button>
-            {jobs[tile.label] && (
-              <ReportJobStatus jobId={jobs[tile.label]} />
-            )}
-          </div>
-        ))}
-      </div>
+      {results && results.length > 0 && (
+        <ul className="bg-white border border-gray-200 rounded-lg shadow-sm divide-y divide-gray-100 max-h-32 overflow-y-auto">
+          {results.map((a) => (
+            <li key={a.id}>
+              <button
+                type="button"
+                className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 flex gap-2 items-center"
+                onClick={() => {
+                  onSelect(a.id, `${a.numero_anilla} / ${a.anio_nacimiento}`);
+                  setAnilla("");
+                }}
+              >
+                <span className="font-mono font-medium">{a.numero_anilla}</span>
+                <span className="text-gray-400">{a.anio_nacimiento} · {a.socio_nombre}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {results && results.length === 0 && anilla.length >= 2 && (
+        <p className="text-xs text-gray-400">Sin resultados</p>
+      )}
     </div>
   );
 }
+
+// ─── Job status polling ─────────────────────────────────────────────────────
 
 function ReportJobStatus({ jobId }: { jobId: string }) {
   const { data } = useQuery<ReportJob>({
@@ -126,6 +114,150 @@ function ReportJobStatus({ jobId }: { jobId: string }) {
       {data.status === "FAILED" && (
         <p className="text-red-600">Error al generar</p>
       )}
+    </div>
+  );
+}
+
+// ─── Main page ──────────────────────────────────────────────────────────────
+
+interface TileAnimalState {
+  selectedId: string;
+  selectedLabel: string;
+}
+
+export default function ReportesPage() {
+  const [jobs, setJobs] = useState<Record<string, string>>({}); // label → job_id
+  const [generating, setGenerating] = useState<Record<string, boolean>>({});
+  const [animalState, setAnimalState] = useState<Record<string, TileAnimalState>>({});
+
+  const handleGenerate = async (label: string, action: () => Promise<{ job_id: string }>) => {
+    setGenerating((prev) => ({ ...prev, [label]: true }));
+    try {
+      const res = await action();
+      setJobs((prev) => ({ ...prev, [label]: res.job_id }));
+    } finally {
+      setGenerating((prev) => ({ ...prev, [label]: false }));
+    }
+  };
+
+  const setAnimalForTile = (tileLabel: string, id: string, label: string) => {
+    setAnimalState((prev) => ({ ...prev, [tileLabel]: { selectedId: id, selectedLabel: label } }));
+  };
+
+  const tiles = [
+    {
+      label: "Inventario PDF",
+      description: "Lista completa de animales (todos los socios)",
+      icon: <FileText size={24} />,
+      color: "bg-blue-700",
+      requiresAnimal: false,
+      action: () => reportsApi.inventory(),
+    },
+    {
+      label: "Libro Genealógico",
+      description: "Excel formato ARCA/Ministerio con toda la genealogía",
+      icon: <Table size={24} />,
+      color: "bg-green-700",
+      requiresAnimal: false,
+      action: () => reportsApi.libroGenealogico(),
+    },
+    {
+      label: "Catálogo Reproductores",
+      description: "PDF editorial: 1 página por animal con gráfico radar",
+      icon: <BookOpen size={24} />,
+      color: "bg-purple-700",
+      requiresAnimal: false,
+      action: () => reportsApi.catalogoReproductores(),
+    },
+    {
+      label: "Ficha Individual",
+      description: "PDF completo de un animal (datos, fotos, genealogía)",
+      icon: <User size={24} />,
+      color: "bg-orange-600",
+      requiresAnimal: true,
+      action: () => {
+        const id = animalState["Ficha Individual"]?.selectedId;
+        if (!id) throw new Error("Selecciona un animal.");
+        return reportsApi.individual(id);
+      },
+    },
+    {
+      label: "Certificado Genealógico",
+      description: "PDF con árbol genealógico de 3 generaciones",
+      icon: <FileText size={24} />,
+      color: "bg-teal-700",
+      requiresAnimal: true,
+      action: () => {
+        const id = animalState["Certificado Genealógico"]?.selectedId;
+        if (!id) throw new Error("Selecciona un animal.");
+        return reportsApi.genealogyCert(id);
+      },
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-bold text-gray-900">Reportes</h1>
+        <p className="text-sm text-gray-500">
+          Generación asíncrona — recibirás el enlace de descarga al completar
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {tiles.map((tile) => {
+          const animalSel = animalState[tile.label];
+          const canGenerate = !tile.requiresAnimal || !!animalSel?.selectedId;
+
+          return (
+            <div key={tile.label} className="card space-y-3">
+              <div className="flex items-center gap-3">
+                <div className={`${tile.color} text-white p-2.5 rounded-xl`}>{tile.icon}</div>
+                <div>
+                  <div className="font-semibold text-gray-900 text-sm">{tile.label}</div>
+                  <div className="text-xs text-gray-500">{tile.description}</div>
+                </div>
+              </div>
+
+              {/* Animal picker for individual reports */}
+              {tile.requiresAnimal && (
+                animalSel?.selectedId ? (
+                  <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs">
+                    <span className="font-mono font-medium text-blue-800 flex-1">
+                      {animalSel.selectedLabel}
+                    </span>
+                    <button
+                      onClick={() => setAnimalState((p) => { const n = { ...p }; delete n[tile.label]; return n; })}
+                      className="text-blue-400 hover:text-blue-700"
+                    >
+                      Cambiar
+                    </button>
+                  </div>
+                ) : (
+                  <AnimalPicker
+                    label="Selecciona el animal"
+                    onSelect={(id, label) => setAnimalForTile(tile.label, id, label)}
+                  />
+                )
+              )}
+
+              <button
+                onClick={() => handleGenerate(tile.label, tile.action)}
+                disabled={generating[tile.label] || !canGenerate}
+                className="btn-primary w-full disabled:opacity-50"
+              >
+                {generating[tile.label] ? (
+                  <><Loader2 size={16} className="animate-spin" /> Iniciando...</>
+                ) : (
+                  "Generar"
+                )}
+              </button>
+
+              {jobs[tile.label] && <ReportJobStatus jobId={jobs[tile.label]} />}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

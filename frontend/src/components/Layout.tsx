@@ -19,16 +19,11 @@ import {
   FolderOpen,
   RefreshCw,
   Shield,
+  Tag,
+  BookOpen,
+  User,
 } from "lucide-react";
 import clsx from "clsx";
-
-interface NavItem {
-  to: string;
-  label: string;
-  icon: React.ReactNode;
-  gestionOnly?: boolean;
-  socioOnly?: boolean;
-}
 
 interface NavItem {
   to: string;
@@ -41,22 +36,24 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   // Gestión
-  { to: "/dashboard",               label: "Dashboard",         icon: <LayoutDashboard size={18} />, gestionOnly: true },
-  { to: "/validaciones",            label: "Validaciones",       icon: <CheckSquare size={18} />,     gestionOnly: true },
-  { to: "/reproductores/candidatos",label: "Reproductores",      icon: <Bird size={18} />,            gestionOnly: true },
-  { to: "/conflictos",              label: "Conflictos",         icon: <AlertTriangle size={18} />,   gestionOnly: true },
-  { to: "/solicitudes-realta",      label: "Re-altas",           icon: <RefreshCw size={18} />,       gestionOnly: true },
-  { to: "/socios",                  label: "Socios",             icon: <Users size={18} />,           gestionOnly: true },
-  { to: "/granjas",                 label: "Granjas",            icon: <Building2 size={18} />,       gestionOnly: true },
-  { to: "/documentos",              label: "Documentos",         icon: <FolderOpen size={18} />,      gestionOnly: true },
-  { to: "/importar",                label: "Importar",           icon: <Upload size={18} />,          gestionOnly: true },
-  { to: "/reportes",                label: "Reportes",           icon: <FileText size={18} />,        gestionOnly: true },
-  { to: "/superadmin",              label: "Super Admin",        icon: <Shield size={18} />,          superadminOnly: true },
+  { to: "/dashboard",                label: "Dashboard",             icon: <LayoutDashboard size={18} />, gestionOnly: true },
+  { to: "/validaciones",             label: "Validaciones",          icon: <CheckSquare size={18} />,     gestionOnly: true },
+  { to: "/reproductores/candidatos", label: "Candidatos Reprod.",    icon: <Bird size={18} />,            gestionOnly: true },
+  { to: "/reproductores/catalogo",   label: "Catálogo Reprod.",      icon: <BookOpen size={18} />,        gestionOnly: true },
+  { to: "/conflictos",               label: "Conflictos",            icon: <AlertTriangle size={18} />,   gestionOnly: true },
+  { to: "/solicitudes-realta",       label: "Re-altas",              icon: <RefreshCw size={18} />,       gestionOnly: true },
+  { to: "/socios",                   label: "Socios",                icon: <Users size={18} />,           gestionOnly: true },
+  { to: "/granjas",                  label: "Granjas",               icon: <Building2 size={18} />,       gestionOnly: true },
+  { to: "/anillas",                  label: "Anillas",               icon: <Tag size={18} />,             gestionOnly: true },
+  { to: "/documentos",               label: "Documentos",            icon: <FolderOpen size={18} />,      gestionOnly: true },
+  { to: "/importar",                 label: "Importar",              icon: <Upload size={18} />,          gestionOnly: true },
+  { to: "/reportes",                 label: "Reportes",              icon: <FileText size={18} />,        gestionOnly: true },
+  { to: "/superadmin",               label: "Super Admin",           icon: <Shield size={18} />,          superadminOnly: true },
   // Socio
-  { to: "/mis-animales",            label: "Mis Animales",       icon: <Bird size={18} />,            socioOnly: true },
-  { to: "/mis-granjas",             label: "Mis Granjas",        icon: <Building size={18} />,        socioOnly: true },
-  { to: "/mis-lotes",               label: "Mis Lotes",          icon: <Layers size={18} />,          socioOnly: true },
-  { to: "/mis-documentos",          label: "Mis Documentos",     icon: <FolderOpen size={18} />,      socioOnly: true },
+  { to: "/mis-animales",             label: "Mis Animales",          icon: <Bird size={18} />,            socioOnly: true },
+  { to: "/mis-granjas",              label: "Mis Granjas",           icon: <Building size={18} />,        socioOnly: true },
+  { to: "/mis-lotes",                label: "Mis Lotes",             icon: <Layers size={18} />,          socioOnly: true },
+  { to: "/mis-documentos",           label: "Mis Documentos",        icon: <FolderOpen size={18} />,      socioOnly: true },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -68,6 +65,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const isGestion = user?.is_gestion ?? false;
   const isSuperadmin = user?.is_superadmin ?? false;
+
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.superadminOnly && !isSuperadmin) return false;
     if (item.gestionOnly && !isGestion) return false;
@@ -117,13 +115,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <button
             className="ml-auto lg:hidden"
             onClick={() => setSidebarOpen(false)}
+            aria-label="Cerrar menú"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto" aria-label="Navegación principal">
           {visibleItems.map((item) => (
             <Link
               key={item.to}
@@ -144,15 +143,25 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
         {/* User footer */}
         <div className="px-4 py-4 border-t border-white/20">
-          <div className="text-xs text-white/60 truncate mb-1">{user?.email}</div>
+          <div className="text-xs text-white/60 truncate mb-0.5">{user?.email}</div>
           <div className="text-sm font-medium text-white truncate mb-3">{user?.full_name}</div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors w-full min-h-[40px]"
-          >
-            <LogOut size={16} />
-            Cerrar sesión
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { navigate("/perfil"); setSidebarOpen(false); }}
+              className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors flex-1 min-h-[40px]"
+              aria-label="Mi perfil"
+            >
+              <User size={15} />
+              Mi perfil
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors min-h-[40px]"
+              aria-label="Cerrar sesión"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -163,6 +172,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Abrir menú"
           >
             <Menu size={20} />
           </button>

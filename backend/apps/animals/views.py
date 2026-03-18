@@ -85,10 +85,11 @@ class AnimalFilter(django_filters.FilterSet):
     variedad = django_filters.CharFilter()
     sexo = django_filters.CharFilter()
     anio = django_filters.NumberFilter(field_name="anio_nacimiento")
+    socio_id = django_filters.UUIDFilter(field_name="socio__id")
 
     class Meta:
         model = Animal
-        fields = ["estado", "variedad", "sexo", "anio_nacimiento"]
+        fields = ["estado", "variedad", "sexo", "anio_nacimiento", "socio"]
 
 
 class AnimalListCreateView(generics.ListCreateAPIView):

@@ -7,6 +7,7 @@ export interface AnimalFilters {
   sexo?: string;
   search?: string;
   page?: number;
+  socio_id?: string;
 }
 
 export const animalsApi = {

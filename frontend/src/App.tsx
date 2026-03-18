@@ -9,11 +9,15 @@ import type { TenantBranding } from "./types";
 import LoginPage from "./pages/auth/LoginPage";
 import PasswordResetPage from "./pages/auth/PasswordResetPage";
 
+// Shared pages
+import PerfilPage from "./pages/PerfilPage";
+
 // Socio pages
 import MisAnimalesPage from "./pages/socio/MisAnimalesPage";
 import AnimalFormPage from "./pages/socio/AnimalFormPage";
 import GranjasPage from "./pages/socio/GranjasPage";
 import MisLotesPage from "./pages/socio/MisLotesPage";
+import MisDocumentosPage from "./pages/socio/MisDocumentosPage";
 
 // Gestion pages
 import GranjasGestionPage from "./pages/gestion/GranjasGestionPage";
@@ -21,14 +25,16 @@ import DashboardPage from "./pages/gestion/DashboardPage";
 import ValidacionesPage from "./pages/gestion/ValidacionesPage";
 import ConflictosPage from "./pages/gestion/ConflictosPage";
 import SociosPage from "./pages/gestion/SociosPage";
+import SocioDetailPage from "./pages/gestion/SocioDetailPage";
 import ImportPage from "./pages/gestion/ImportPage";
 import ReportesPage from "./pages/gestion/ReportesPage";
 import EvaluacionPage from "./pages/gestion/EvaluacionPage";
 import CandidatosReproductorPage from "./pages/gestion/CandidatosReproductorPage";
+import CatalogoReproductoresPage from "./pages/gestion/CatalogoReproductoresPage";
 import DocumentosPage from "./pages/gestion/DocumentosPage";
 import SolicitudesRealtaPage from "./pages/gestion/SolicitudesRealtaPage";
 import SuperAdminPage from "./pages/gestion/SuperAdminPage";
-import MisDocumentosPage from "./pages/socio/MisDocumentosPage";
+import AnillasPage from "./pages/gestion/AnillasPage";
 
 // Layout
 import Layout from "./components/Layout";
@@ -48,6 +54,18 @@ function ProtectedRoute({
   if (gestionOnly && !user.is_gestion) return <Navigate to="/mis-animales" replace />;
   if (socioOnly && user.is_gestion) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
+}
+
+function LayoutRoute({ children, gestionOnly = false, socioOnly = false }: {
+  children: React.ReactNode;
+  gestionOnly?: boolean;
+  socioOnly?: boolean;
+}) {
+  return (
+    <ProtectedRoute gestionOnly={gestionOnly} socioOnly={socioOnly}>
+      <Layout>{children}</Layout>
+    </ProtectedRoute>
+  );
 }
 
 export default function App() {
@@ -90,183 +108,33 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/reset-password" element={<PasswordResetPage />} />
 
+        {/* Shared — autenticado (cualquier rol) */}
+        <Route path="/perfil" element={<LayoutRoute><PerfilPage /></LayoutRoute>} />
+
         {/* Socio routes */}
-        <Route
-          path="/mis-animales"
-          element={
-            <ProtectedRoute socioOnly>
-              <Layout>
-                <MisAnimalesPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/mis-animales/nuevo"
-          element={
-            <ProtectedRoute socioOnly>
-              <Layout>
-                <AnimalFormPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/mis-animales/:id"
-          element={
-            <ProtectedRoute socioOnly>
-              <Layout>
-                <AnimalFormPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Socio granja route */}
-        <Route
-          path="/mis-granjas"
-          element={
-            <ProtectedRoute socioOnly>
-              <Layout>
-                <GranjasPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Socio lotes route */}
-        <Route
-          path="/mis-lotes"
-          element={
-            <ProtectedRoute socioOnly>
-              <Layout>
-                <MisLotesPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/mis-animales" element={<LayoutRoute socioOnly><MisAnimalesPage /></LayoutRoute>} />
+        <Route path="/mis-animales/nuevo" element={<LayoutRoute socioOnly><AnimalFormPage /></LayoutRoute>} />
+        <Route path="/mis-animales/:id" element={<LayoutRoute socioOnly><AnimalFormPage /></LayoutRoute>} />
+        <Route path="/mis-granjas" element={<LayoutRoute socioOnly><GranjasPage /></LayoutRoute>} />
+        <Route path="/mis-lotes" element={<LayoutRoute socioOnly><MisLotesPage /></LayoutRoute>} />
+        <Route path="/mis-documentos" element={<LayoutRoute socioOnly><MisDocumentosPage /></LayoutRoute>} />
 
         {/* Gestion routes */}
-        <Route
-          path="/granjas"
-          element={
-            <ProtectedRoute gestionOnly>
-              <Layout>
-                <GranjasGestionPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute gestionOnly>
-              <Layout>
-                <DashboardPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/validaciones"
-          element={
-            <ProtectedRoute gestionOnly>
-              <Layout>
-                <ValidacionesPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/conflictos"
-          element={
-            <ProtectedRoute gestionOnly>
-              <Layout>
-                <ConflictosPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/socios"
-          element={
-            <ProtectedRoute gestionOnly>
-              <Layout>
-                <SociosPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/importar"
-          element={
-            <ProtectedRoute gestionOnly>
-              <Layout>
-                <ImportPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reportes"
-          element={
-            <ProtectedRoute gestionOnly>
-              <Layout>
-                <ReportesPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/evaluaciones/nuevo"
-          element={
-            <ProtectedRoute gestionOnly>
-              <Layout>
-                <EvaluacionPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reproductores/candidatos"
-          element={
-            <ProtectedRoute gestionOnly>
-              <Layout><CandidatosReproductorPage /></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/documentos"
-          element={
-            <ProtectedRoute gestionOnly>
-              <Layout><DocumentosPage /></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/solicitudes-realta"
-          element={
-            <ProtectedRoute gestionOnly>
-              <Layout><SolicitudesRealtaPage /></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/superadmin"
-          element={
-            <ProtectedRoute gestionOnly>
-              <Layout><SuperAdminPage /></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/mis-documentos"
-          element={
-            <ProtectedRoute socioOnly>
-              <Layout><MisDocumentosPage /></Layout>
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/dashboard" element={<LayoutRoute gestionOnly><DashboardPage /></LayoutRoute>} />
+        <Route path="/validaciones" element={<LayoutRoute gestionOnly><ValidacionesPage /></LayoutRoute>} />
+        <Route path="/conflictos" element={<LayoutRoute gestionOnly><ConflictosPage /></LayoutRoute>} />
+        <Route path="/socios" element={<LayoutRoute gestionOnly><SociosPage /></LayoutRoute>} />
+        <Route path="/socios/:id" element={<LayoutRoute gestionOnly><SocioDetailPage /></LayoutRoute>} />
+        <Route path="/granjas" element={<LayoutRoute gestionOnly><GranjasGestionPage /></LayoutRoute>} />
+        <Route path="/anillas" element={<LayoutRoute gestionOnly><AnillasPage /></LayoutRoute>} />
+        <Route path="/documentos" element={<LayoutRoute gestionOnly><DocumentosPage /></LayoutRoute>} />
+        <Route path="/importar" element={<LayoutRoute gestionOnly><ImportPage /></LayoutRoute>} />
+        <Route path="/reportes" element={<LayoutRoute gestionOnly><ReportesPage /></LayoutRoute>} />
+        <Route path="/evaluaciones/nuevo" element={<LayoutRoute gestionOnly><EvaluacionPage /></LayoutRoute>} />
+        <Route path="/reproductores/candidatos" element={<LayoutRoute gestionOnly><CandidatosReproductorPage /></LayoutRoute>} />
+        <Route path="/reproductores/catalogo" element={<LayoutRoute gestionOnly><CatalogoReproductoresPage /></LayoutRoute>} />
+        <Route path="/solicitudes-realta" element={<LayoutRoute gestionOnly><SolicitudesRealtaPage /></LayoutRoute>} />
+        <Route path="/superadmin" element={<LayoutRoute gestionOnly><SuperAdminPage /></LayoutRoute>} />
 
         {/* Default redirects */}
         <Route
