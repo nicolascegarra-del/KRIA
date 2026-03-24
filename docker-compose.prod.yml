@@ -1,7 +1,7 @@
 version: "3.9"
 
 # ═══════════════════════════════════════════════════════════════════
-#  AGAMUR — Standalone Production Docker Compose
+#  Kria — Standalone Production Docker Compose
 #  Uso: docker compose -f docker-compose.prod.yml up -d
 # ═══════════════════════════════════════════════════════════════════
 
@@ -63,7 +63,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: agamur-backend:latest
+    image: kria-backend:latest
     restart: always
     env_file: .env
     environment:
@@ -105,7 +105,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: agamur-backend:latest
+    image: kria-backend:latest
     restart: always
     env_file: .env
     environment:
@@ -124,7 +124,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: agamur-backend:latest
+    image: kria-backend:latest
     restart: always
     env_file: .env
     environment:
@@ -144,7 +144,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: production
-    image: agamur-frontend:latest
+    image: kria-frontend:latest
     restart: always
     networks:
       - internal

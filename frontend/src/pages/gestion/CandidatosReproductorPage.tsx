@@ -94,7 +94,7 @@ export default function CandidatosReproductorPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono font-bold text-gray-900">{animal.numero_anilla}</span>
-                      <span className="text-gray-400 text-sm">({animal.anio_nacimiento})</span>
+                      <span className="text-gray-400 text-sm">({animal.fecha_nacimiento ? new Date(animal.fecha_nacimiento).getFullYear() : "—"})</span>
                       <AnimalStateChip estado={animal.estado} />
                     </div>
                     <div className="text-sm text-gray-600 mt-0.5">

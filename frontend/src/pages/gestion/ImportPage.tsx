@@ -111,12 +111,6 @@ export default function ImportPage() {
         <div className="card space-y-4">
           <div>
             <h2 className="text-base font-semibold text-gray-800">Paso 1 — Selecciona el archivo</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Columnas requeridas:{" "}
-              {["dni_nif", "nombre_razon_social", "email"].map((c) => (
-                <code key={c} className="bg-gray-100 px-1 rounded mx-0.5">{c}</code>
-              ))}
-            </p>
           </div>
 
           <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-10 cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
@@ -163,23 +157,37 @@ export default function ImportPage() {
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className="text-center bg-gray-50 rounded-lg p-3">
                 <div className="text-2xl font-bold text-gray-900">{preview.total_filas}</div>
-                <div className="text-xs text-gray-500">Total filas</div>
+                <div className="text-xs text-gray-500">Total socios</div>
               </div>
               <div className="text-center bg-green-50 rounded-lg p-3">
                 <div className="text-2xl font-bold text-green-700">{preview.filas_ok}</div>
-                <div className="text-xs text-gray-500">Sin errores</div>
+                <div className="text-xs text-gray-500">Sin advertencias</div>
               </div>
-              <div className="text-center bg-red-50 rounded-lg p-3">
-                <div className="text-2xl font-bold text-red-700">{preview.filas_con_error}</div>
-                <div className="text-xs text-gray-500">Con errores</div>
+              <div className="text-center bg-amber-50 rounded-lg p-3">
+                <div className="text-2xl font-bold text-amber-700">{preview.filas_con_error}</div>
+                <div className="text-xs text-gray-500">Con datos incompletos</div>
               </div>
             </div>
 
-            {/* Error list */}
+            {/* Missing columns warning */}
+            {preview.columnas_faltantes && preview.columnas_faltantes.length > 0 && (
+              <div className="border border-blue-200 bg-blue-50 rounded-lg p-3 mb-4">
+                <p className="text-sm font-medium text-blue-800 mb-1">
+                  Columnas no encontradas en el archivo (se importará sin esos datos):
+                </p>
+                <p className="text-xs text-blue-700">
+                  {preview.columnas_faltantes.map((c: string) => (
+                    <code key={c} className="bg-blue-100 px-1 rounded mx-0.5">{c}</code>
+                  ))}
+                </p>
+              </div>
+            )}
+
+            {/* Advertencias por fila */}
             {preview.filas_con_error > 0 && (
               <div className="border border-amber-200 bg-amber-50 rounded-lg p-3 mb-4">
                 <p className="text-sm font-medium text-amber-800 mb-2">
-                  Filas con errores (no se importarán):
+                  Advertencias — estos socios se importarán igualmente:
                 </p>
                 <ul className="space-y-1 max-h-40 overflow-y-auto">
                   {preview.errores.map((e) => (
@@ -240,7 +248,7 @@ export default function ImportPage() {
             </button>
             <button
               onClick={handleConfirm}
-              disabled={confirming || preview.filas_ok === 0}
+              disabled={confirming || preview.total_filas === 0}
               className="btn-primary gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {confirming ? (
@@ -248,7 +256,7 @@ export default function ImportPage() {
               ) : (
                 <CheckCheck size={16} />
               )}
-              Confirmar importación ({preview.filas_ok} filas válidas)
+              Importar {preview.total_filas} socios
             </button>
           </div>
 

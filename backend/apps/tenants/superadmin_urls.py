@@ -1,16 +1,49 @@
 from django.urls import path
 from .superadmin_views import (
     SuperAdminStatsView,
+    SuperAdminTenantActivateView,
     SuperAdminTenantDetailView,
     SuperAdminTenantListCreateView,
     SuperAdminTenantLogoView,
+    SuperAdminTenantSuspendView,
+    SuperAdminImpersonateView,
+    SuperAdminTenantUsersView,
+    SuperAdminUserDetailView,
+    SuperAdminUserSuspendView,
+    SuperAdminUserActivateView,
     SuperAdminUserResetPasswordView,
+    SuperAdminAdminUsersListView,
+    SuperAdminSuperAdminListCreateView,
+    SuperAdminSuperAdminDetailView,
+    PlatformSettingsView,
+    PlatformSmtpTestView,
+    TenantSmtpTestView,
+    SuperAdminTenantDeleteSociosView,
 )
 
 urlpatterns = [
+    # Asociaciones
     path("tenants/", SuperAdminTenantListCreateView.as_view(), name="superadmin-tenants-list"),
     path("tenants/<uuid:pk>/", SuperAdminTenantDetailView.as_view(), name="superadmin-tenants-detail"),
     path("tenants/<uuid:pk>/logo/", SuperAdminTenantLogoView.as_view(), name="superadmin-tenants-logo"),
+    path("tenants/<uuid:pk>/suspend/", SuperAdminTenantSuspendView.as_view(), name="superadmin-tenants-suspend"),
+    path("tenants/<uuid:pk>/activate/", SuperAdminTenantActivateView.as_view(), name="superadmin-tenants-activate"),
+    path("tenants/<uuid:pk>/impersonate/", SuperAdminImpersonateView.as_view(), name="superadmin-tenants-impersonate"),
+    path("tenants/<uuid:pk>/users/", SuperAdminTenantUsersView.as_view(), name="superadmin-tenants-users"),
+    path("tenants/<uuid:pk>/test-smtp/", TenantSmtpTestView.as_view(), name="superadmin-tenants-test-smtp"),
+    path("tenants/<uuid:pk>/delete-socios/", SuperAdminTenantDeleteSociosView.as_view(), name="superadmin-tenant-delete-socios"),
+    # Usuarios admin (gestión, no superadmin)
+    path("admin-users/", SuperAdminAdminUsersListView.as_view(), name="superadmin-admin-users-list"),
+    path("users/<uuid:pk>/", SuperAdminUserDetailView.as_view(), name="superadmin-user-detail"),
+    path("users/<uuid:pk>/suspend/", SuperAdminUserSuspendView.as_view(), name="superadmin-user-suspend"),
+    path("users/<uuid:pk>/activate/", SuperAdminUserActivateView.as_view(), name="superadmin-user-activate"),
     path("users/<uuid:pk>/reset-password/", SuperAdminUserResetPasswordView.as_view(), name="superadmin-user-reset"),
+    # SuperAdmins
+    path("superadmins/", SuperAdminSuperAdminListCreateView.as_view(), name="superadmin-superadmins-list"),
+    path("superadmins/<uuid:pk>/", SuperAdminSuperAdminDetailView.as_view(), name="superadmin-superadmins-detail"),
+    # Stats
     path("stats/", SuperAdminStatsView.as_view(), name="superadmin-stats"),
+    # Platform settings (SMTP global)
+    path("settings/", PlatformSettingsView.as_view(), name="superadmin-platform-settings"),
+    path("settings/test-smtp/", PlatformSmtpTestView.as_view(), name="superadmin-platform-test-smtp"),
 ]

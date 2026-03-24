@@ -77,8 +77,8 @@ function LoteModal({ onClose }: LoteModalProps) {
   const loadingAnimals = loadingMachos || loadingHembras;
 
   // Helper: etiqueta de opción animal
-  const animalLabel = (a: { numero_anilla: string; anio_nacimiento: number; estado: string }) =>
-    `${a.numero_anilla} / ${a.anio_nacimiento}${a.estado !== "APROBADO" ? ` — ${a.estado.toLowerCase()}` : ""}`;
+  const animalLabel = (a: { numero_anilla: string; fecha_nacimiento: string; estado: string }) =>
+    `${a.numero_anilla} / ${a.fecha_nacimiento ? new Date(a.fecha_nacimiento).getFullYear() : "—"}${a.estado !== "APROBADO" ? ` — ${a.estado.toLowerCase()}` : ""}`;
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">

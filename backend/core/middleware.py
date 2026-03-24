@@ -2,9 +2,10 @@
 TenantMiddleware — resolves the active tenant for each request.
 
 Resolution order:
-  1. Subdomain: <slug>.kria.es    → Tenant.slug
-  2. Header:    X-Tenant-Slug      → Tenant.slug  (PWA fallback / local dev)
-  3. Custom domain                  → Tenant.custom_domain
+  1. Custom domain                  → Tenant.custom_domain
+  2. Subdomain: <slug>.kria.es    → Tenant.slug
+  3. Header:    X-Tenant-Slug      → Tenant.slug  (legacy / local dev)
+  4. JWT Bearer token              → tenant_id claim (no slug required)
 """
 import logging
 
@@ -94,12 +95,28 @@ class TenantMiddleware:
                 except Tenant.DoesNotExist:
                     pass
 
-        # 3. Header fallback (dev / PWA)
+        # 3. Header fallback (legacy / dev)
         slug = request.headers.get("X-Tenant-Slug", "").strip().lower()
         if slug:
             try:
                 return Tenant.objects.get(slug=slug, is_active=True)
             except Tenant.DoesNotExist:
+                pass
+
+        # 4. JWT Bearer token — extract tenant_id claim
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token_str = auth_header[7:]
+            try:
+                from rest_framework_simplejwt.tokens import AccessToken
+                token = AccessToken(token_str)
+                tenant_id = token.get("tenant_id")
+                if tenant_id:
+                    try:
+                        return Tenant.objects.get(id=tenant_id, is_active=True)
+                    except Tenant.DoesNotExist:
+                        pass
+            except Exception:
                 pass
 
         return None

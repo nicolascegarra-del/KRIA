@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { animalsApi } from "../../api/animals";
 import { granjasApi } from "../../api/granjas";
 import { lotesApi } from "../../api/lotes";
+import { useTenantStore } from "../../store/tenantStore";
 import AnimalStateChip from "../../components/AnimalStateChip";
 import GenealogyTooltip from "../../components/GenealogyTooltip";
 import { Loader2, ArrowLeft, Info, Camera, X, Scale, Plus, CheckCircle2, Circle } from "lucide-react";
@@ -18,7 +19,7 @@ const FOTO_TIPOS: { tipo: FotoTipo; label: string }[] = [
 
 interface FormData {
   numero_anilla: string;
-  anio_nacimiento: number;
+  fecha_nacimiento: string;
   sexo: "M" | "H";
   variedad: "SALMON" | "PLATA" | "OTRA";
   fecha_incubacion: string;
@@ -33,9 +34,12 @@ interface FormData {
 }
 
 export default function AnimalFormPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id, socioId } = useParams<{ id?: string; socioId?: string }>();
   const isEdit = !!id;
+  const isGestionCreate = !!socioId; // gestion admin creating for a specific socio
   const navigate = useNavigate();
+  const { branding } = useTenantStore();
+  const granjasEnabled = branding?.granjas_enabled !== false;
   const qc = useQueryClient();
   const [showGenealogia, setShowGenealogia] = useState(false);
   const [conflictError, setConflictError] = useState("");
@@ -71,6 +75,7 @@ export default function AnimalFormPage() {
   const { data: granjasData } = useQuery({
     queryKey: ["granjas"],
     queryFn: () => granjasApi.list(),
+    enabled: granjasEnabled,
   });
 
   const { data: lotesData } = useQuery({
@@ -92,7 +97,7 @@ export default function AnimalFormPage() {
       }
       reset({
         numero_anilla: animal.numero_anilla,
-        anio_nacimiento: animal.anio_nacimiento,
+        fecha_nacimiento: animal.fecha_nacimiento,
         sexo: animal.sexo,
         variedad: animal.variedad,
         fecha_incubacion: animal.fecha_incubacion ?? "",
@@ -138,7 +143,9 @@ export default function AnimalFormPage() {
       isEdit ? animalsApi.update(id!, data) : animalsApi.create(data),
     onSuccess: (savedAnimal) => {
       qc.invalidateQueries({ queryKey: ["animals"] });
-      if (isEdit) {
+      if (isGestionCreate) {
+        navigate(`/socios/${socioId}`);
+      } else if (isEdit) {
         navigate("/mis-animales");
       } else {
         // After creation redirect to edit so the user can add photos immediately
@@ -172,7 +179,7 @@ export default function AnimalFormPage() {
     setServerError("");
     const payload: any = {
       numero_anilla: data.numero_anilla,
-      anio_nacimiento: data.anio_nacimiento,
+      fecha_nacimiento: data.fecha_nacimiento,
       sexo: data.sexo,
       variedad: data.variedad,
       fecha_incubacion: data.fecha_incubacion || null,
@@ -180,6 +187,7 @@ export default function AnimalFormPage() {
       ganaderia_actual: data.ganaderia_actual,
       candidato_reproductor: data.candidato_reproductor,
       granja: data.granja || null,
+      ...(isGestionCreate && { socio: socioId }),
     };
 
     // Genealogy: send by anilla+año if provided, otherwise clear
@@ -270,14 +278,13 @@ export default function AnimalFormPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Año de Nacimiento *
+                Fecha de Nacimiento *
               </label>
               <input
-                type="number"
+                type="date"
                 className="input-field"
-                min={2000}
-                max={new Date().getFullYear()}
-                {...register("anio_nacimiento", { required: true, valueAsNumber: true })}
+                max={new Date().toISOString().slice(0, 10)}
+                {...register("fecha_nacimiento", { required: true })}
               />
             </div>
           </div>
@@ -428,17 +435,21 @@ export default function AnimalFormPage() {
           </div>
 
           {/* Farm & candidato */}
-          <div className="border-t pt-4 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Granja</label>
-              <select className="input-field" {...register("granja")}>
-                <option value="">Sin asignar</option>
-                {granjasData?.results.map((g) => (
-                  <option key={g.id} value={g.id}>{g.nombre}</option>
-                ))}
-              </select>
+          {granjasEnabled && (
+            <div className="border-t pt-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Granja</label>
+                <select className="input-field" {...register("granja")}>
+                  <option value="">Sin asignar</option>
+                  {granjasData?.results.map((g) => (
+                    <option key={g.id} value={g.id}>{g.nombre}</option>
+                  ))}
+                </select>
+              </div>
             </div>
+          )}
 
+          <div className="border-t pt-4 space-y-4">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"

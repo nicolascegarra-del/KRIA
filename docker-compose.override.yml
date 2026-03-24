@@ -1,0 +1,17 @@
+# Override local para Windows con Google Drive (unidad G:)
+# Docker Desktop no puede montar drives de red como volúmenes.
+# El código ya está copiado en las imágenes vía Dockerfile COPY . .
+# Este override elimina los volume mounts que causarían carpetas vacías.
+services:
+  backend:
+    volumes:
+      - static_files:/app/staticfiles
+
+  celery:
+    volumes: []
+
+  celery-beat:
+    volumes: []
+
+  frontend:
+    volumes: []

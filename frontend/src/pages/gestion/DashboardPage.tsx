@@ -5,11 +5,9 @@ import {
   CheckSquare,
   AlertTriangle,
   Upload,
-  TrendingUp,
   Bird,
   RefreshCw,
   Bell,
-  FolderOpen,
 } from "lucide-react";
 import type { DashboardStats } from "../../types";
 
@@ -36,14 +34,14 @@ export default function DashboardPage() {
       value: stats?.conflictos_pendientes ?? 0,
       icon: <AlertTriangle size={22} />,
       color: "bg-amber-500",
-      href: "/conflictos",
+      href: "/validaciones",
     },
     {
       label: "Candidatos Reproductor",
       value: stats?.candidatos_reproductor ?? 0,
       icon: <Bird size={22} />,
       color: "bg-emerald-600",
-      href: "/reproductores/candidatos",
+      href: "/validaciones",
     },
     {
       label: "Solicitudes Re-alta",
@@ -102,39 +100,6 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Quick actions */}
-      <div className="card">
-        <h2 className="text-base font-semibold text-gray-800 mb-4">Acciones Rápidas</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <Link to="/validaciones" className="btn-secondary justify-start gap-2 text-sm">
-            <CheckSquare size={16} /> Validar animales
-          </Link>
-          <Link to="/reproductores/candidatos" className="btn-secondary justify-start gap-2 text-sm">
-            <Bird size={16} /> Candidatos reproductor
-          </Link>
-          <Link to="/solicitudes-realta" className="btn-secondary justify-start gap-2 text-sm">
-            <RefreshCw size={16} /> Solicitudes re-alta
-          </Link>
-          <Link to="/conflictos" className="btn-secondary justify-start gap-2 text-sm">
-            <AlertTriangle size={16} /> Resolver conflictos
-          </Link>
-          <Link to="/documentos" className="btn-secondary justify-start gap-2 text-sm">
-            <FolderOpen size={16} /> Gestor documental
-          </Link>
-          <Link to="/importar" className="btn-secondary justify-start gap-2 text-sm">
-            <Upload size={16} /> Importar socios
-          </Link>
-          <Link to="/reportes" className="btn-secondary justify-start gap-2 text-sm">
-            <TrendingUp size={16} /> Generar reportes
-          </Link>
-          <Link to="/socios" className="btn-secondary justify-start gap-2 text-sm">
-            <CheckSquare size={16} /> Gestionar socios
-          </Link>
-          <Link to="/evaluaciones/nuevo" className="btn-secondary justify-start gap-2 text-sm">
-            <TrendingUp size={16} /> Nueva evaluación
-          </Link>
-        </div>
-      </div>
     </div>
   );
 }

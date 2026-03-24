@@ -9,10 +9,6 @@ from core.models import UUIDModel
 
 
 class EntregaAnillas(UUIDModel):
-    class Diametro(models.TextChoices):
-        MM_18 = "18", "18 mm (Hembra)"
-        MM_20 = "20", "20 mm (Macho)"
-
     tenant = models.ForeignKey(
         "tenants.Tenant",
         on_delete=models.CASCADE,
@@ -36,9 +32,8 @@ class EntregaAnillas(UUIDModel):
         help_text="Último número de anilla del rango asignado.",
     )
     diametro = models.CharField(
-        max_length=2,
-        choices=Diametro.choices,
-        help_text="18 mm para hembras, 20 mm para machos.",
+        max_length=10,
+        help_text="Diámetro de la anilla en mm (configurable por asociación).",
     )
     created_by = models.ForeignKey(
         "accounts.User",

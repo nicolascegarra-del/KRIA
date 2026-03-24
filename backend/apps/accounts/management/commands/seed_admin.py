@@ -38,6 +38,7 @@ class Command(BaseCommand):
                 "is_active": True,
                 "primary_color": "#1565C0",
                 "secondary_color": "#FBC02D",
+                "max_socios": 50,
             },
         )
         action = "Created" if t_created else "Updated"
@@ -46,10 +47,16 @@ class Command(BaseCommand):
         ))
 
         # ── 2. Superadmin (gestión) ────────────────────────────────────────────
+        # Los superadmins deben pertenecer al tenant "system" para que la
+        # guardia IsSuperAdmin (tenant.slug == "system") funcione correctamente.
+        system_tenant, _ = Tenant.objects.get_or_create(
+            slug="system",
+            defaults={"name": "System", "is_active": True, "max_socios": 0},
+        )
         admin_user, u_created = User.objects.update_or_create(
-            tenant=tenant,
             email=email,
             defaults={
+                "tenant": system_tenant,
                 "is_gestion": True,
                 "is_superadmin": True,
                 "is_staff": True,
@@ -72,9 +79,9 @@ class Command(BaseCommand):
         socio_password = "kria2024!"
 
         socio_user1, su_created = User.objects.update_or_create(
-            tenant=tenant,
             email=socio_email,
             defaults={
+                "tenant": tenant,
                 "is_gestion": False,
                 "is_superadmin": False,
                 "is_staff": False,
@@ -110,9 +117,9 @@ class Command(BaseCommand):
 
         # ── 4. Socios adicionales ──────────────────────────────────────────────
         socio_user2, _ = User.objects.update_or_create(
-            tenant=tenant,
             email="socio2@kria.es",
             defaults={
+                "tenant": tenant,
                 "is_gestion": False,
                 "is_active": True,
                 "first_name": "Ana",
@@ -138,9 +145,9 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"Upserted socio: {socio2.nombre_razon_social}"))
 
         socio_user3, _ = User.objects.update_or_create(
-            tenant=tenant,
             email="socio3@kria.es",
             defaults={
+                "tenant": tenant,
                 "is_gestion": False,
                 "is_active": True,
                 "first_name": "Pedro",
@@ -169,6 +176,7 @@ class Command(BaseCommand):
         self._seed_granjas(tenant, socio1, socio2)
 
         # ── 6. Animales ────────────────────────────────────────────────────────
+        self._seed_motivos_baja(tenant)
         animals = self._seed_animals(tenant, socio1, socio2, socio3)
 
         # ── 7. Evaluaciones ────────────────────────────────────────────────────
@@ -228,7 +236,23 @@ class Command(BaseCommand):
             if created:
                 self.stdout.write(f"  Created granja: {obj.nombre}")
 
+    def _seed_motivos_baja(self, tenant):
+        from apps.animals.models import MotivoBaja
+        defaults = [
+            ("Fallecimiento", 0),
+            ("Venta", 1),
+            ("Cesión", 2),
+        ]
+        for nombre, orden in defaults:
+            MotivoBaja.all_objects.get_or_create(
+                tenant=tenant,
+                nombre=nombre,
+                defaults={"orden": orden, "is_active": True},
+            )
+        self.stdout.write("  Motivos de baja creados.")
+
     def _seed_animals(self, tenant, socio1, socio2, socio3):
+        import datetime
         from apps.animals.models import Animal
 
         fotos_demo = [
@@ -238,23 +262,23 @@ class Command(BaseCommand):
         ]
 
         specs = [
-            # (numero_anilla, anio, sexo, estado, candidato, aprobado, socio, fotos)
-            ("ES-001-24", 2024, Animal.Sexo.MACHO,   Animal.Estado.AÑADIDO,   False, False, socio1, []),
-            ("ES-002-24", 2024, Animal.Sexo.HEMBRA,  Animal.Estado.AÑADIDO,   False, False, socio1, []),
-            ("ES-003-23", 2023, Animal.Sexo.MACHO,   Animal.Estado.APROBADO,  True,  False, socio1, fotos_demo),
-            ("ES-004-23", 2023, Animal.Sexo.HEMBRA,  Animal.Estado.EVALUADO,  True,  False, socio1, fotos_demo),
-            ("ES-005-22", 2022, Animal.Sexo.MACHO,   Animal.Estado.APROBADO,  True,  True,  socio1, fotos_demo),
-            ("ES-006-22", 2022, Animal.Sexo.HEMBRA,  Animal.Estado.RECHAZADO, False, False, socio1, []),
-            ("ES-007-23", 2023, Animal.Sexo.MACHO,   Animal.Estado.AÑADIDO,   False, False, socio2, []),
-            ("ES-008-21", 2021, Animal.Sexo.HEMBRA,  Animal.Estado.EVALUADO,  True,  True,  socio3, fotos_demo),
+            # (numero_anilla, fecha, sexo, estado, candidato, aprobado, socio, fotos)
+            ("ES-001-24", datetime.date(2024, 3, 15), Animal.Sexo.MACHO,   Animal.Estado.AÑADIDO,   False, False, socio1, []),
+            ("ES-002-24", datetime.date(2024, 5, 20), Animal.Sexo.HEMBRA,  Animal.Estado.AÑADIDO,   False, False, socio1, []),
+            ("ES-003-23", datetime.date(2023, 4, 10), Animal.Sexo.MACHO,   Animal.Estado.APROBADO,  True,  False, socio1, fotos_demo),
+            ("ES-004-23", datetime.date(2023, 6, 1),  Animal.Sexo.HEMBRA,  Animal.Estado.EVALUADO,  True,  False, socio1, fotos_demo),
+            ("ES-005-22", datetime.date(2022, 2, 28), Animal.Sexo.MACHO,   Animal.Estado.APROBADO,  True,  True,  socio1, fotos_demo),
+            ("ES-006-22", datetime.date(2022, 7, 14), Animal.Sexo.HEMBRA,  Animal.Estado.RECHAZADO, False, False, socio1, []),
+            ("ES-007-23", datetime.date(2023, 1, 8),  Animal.Sexo.MACHO,   Animal.Estado.AÑADIDO,   False, False, socio2, []),
+            ("ES-008-21", datetime.date(2021, 9, 3),  Animal.Sexo.HEMBRA,  Animal.Estado.EVALUADO,  True,  True,  socio3, fotos_demo),
         ]
 
         created_animals = {}
-        for (anilla, anio, sexo, estado, candidato, aprobado, socio, fotos) in specs:
+        for (anilla, fecha, sexo, estado, candidato, aprobado, socio, fotos) in specs:
             obj, created = Animal.all_objects.get_or_create(
                 tenant=tenant,
                 numero_anilla=anilla,
-                anio_nacimiento=anio,
+                fecha_nacimiento=fecha,
                 defaults={
                     "socio": socio,
                     "sexo": sexo,
@@ -266,7 +290,7 @@ class Command(BaseCommand):
                 },
             )
             if created:
-                self.stdout.write(f"  Created animal: {anilla}/{anio}")
+                self.stdout.write(f"  Created animal: {anilla}/{fecha}")
             created_animals[anilla] = obj
 
         return created_animals
@@ -333,10 +357,10 @@ class Command(BaseCommand):
         from apps.anillas.models import EntregaAnillas
 
         entregas = [
-            {"socio": socio1, "anio": 2024, "inicio": "ES001", "fin": "ES050", "diametro": EntregaAnillas.Diametro.MM_18},
-            {"socio": socio1, "anio": 2024, "inicio": "ES051", "fin": "ES100", "diametro": EntregaAnillas.Diametro.MM_20},
-            {"socio": socio2, "anio": 2023, "inicio": "ES101", "fin": "ES150", "diametro": EntregaAnillas.Diametro.MM_18},
-            {"socio": socio3, "anio": 2024, "inicio": "ES201", "fin": "ES250", "diametro": EntregaAnillas.Diametro.MM_20},
+            {"socio": socio1, "anio": 2024, "inicio": "ES001", "fin": "ES050", "diametro": "18"},
+            {"socio": socio1, "anio": 2024, "inicio": "ES051", "fin": "ES100", "diametro": "20"},
+            {"socio": socio2, "anio": 2023, "inicio": "ES101", "fin": "ES150", "diametro": "18"},
+            {"socio": socio3, "anio": 2024, "inicio": "ES201", "fin": "ES250", "diametro": "20"},
         ]
         for e in entregas:
             exists = EntregaAnillas.all_objects.filter(

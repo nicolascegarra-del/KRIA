@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  AGAMUR — Obtener certificado SSL con Let's Encrypt (primera vez)
-#  Ejecutar desde /opt/agamur:
+#  Kria — Obtener certificado SSL con Let's Encrypt (primera vez)
+#  Ejecutar desde /opt/kria:
 #    bash scripts/init-ssl.sh
 # =============================================================================
 set -euo pipefail

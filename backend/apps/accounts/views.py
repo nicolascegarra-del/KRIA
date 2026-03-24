@@ -8,6 +8,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.utils import timezone
 from rest_framework import generics, status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -136,9 +137,15 @@ class ChangePasswordView(APIView):
         return Response({"detail": "Contraseña actualizada correctamente."})
 
 
+class SocioPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = "page_size"
+    max_page_size = 200
+
+
 class SocioListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsGestion]
-    ordering = ["nombre_razon_social"]
+    pagination_class = SocioPagination
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -146,7 +153,71 @@ class SocioListCreateView(generics.ListCreateAPIView):
         return SocioSerializer
 
     def get_queryset(self):
-        return Socio.objects.select_related("user").order_by("nombre_razon_social")
+        from django.db.models import Q
+        qs = Socio.objects.select_related("user")
+
+        search = self.request.query_params.get("search", "").strip()
+        if search:
+            qs = qs.filter(
+                Q(nombre_razon_social__icontains=search)
+                | Q(dni_nif__icontains=search)
+                | Q(numero_socio__icontains=search)
+                | Q(user__email__icontains=search)  # null user → no match, safe with LEFT JOIN
+            )
+
+        estado = self.request.query_params.get("estado", "")
+        if estado in ("ALTA", "BAJA"):
+            qs = qs.filter(estado=estado)
+
+        cuota = self.request.query_params.get("cuota", "")
+        if cuota:
+            try:
+                qs = qs.filter(cuota_anual_pagada=int(cuota))
+            except ValueError:
+                pass
+
+        from django.db.models.expressions import RawSQL
+
+        # Normalize accented Spanish characters for correct alphabetical ordering
+        _NOMBRE_SORT = RawSQL(
+            "LOWER(TRANSLATE(nombre_razon_social,"
+            " 'ÁÉÍÓÚáéíóúÀÈÌÒÙàèìòùÄËÏÖÜäëïöüÑñ',"
+            " 'AEIOUaeiouAEIOUaeiouAEIOUaeiouNn'))",
+            [],
+        )
+
+        ordering = self.request.query_params.get("ordering", "nombre_razon_social")
+        if ordering in ("numero_socio", "-numero_socio"):
+            # Safe cast: only integers (purely numeric values); anything else → NULL (last)
+            _NUM_SORT = RawSQL(
+                "CASE WHEN numero_socio ~ '^[0-9]+$' THEN numero_socio::integer ELSE NULL END",
+                [],
+            )
+            qs = qs.annotate(numero_socio_int=_NUM_SORT)
+            direction = "" if ordering == "numero_socio" else "-"
+            return qs.order_by(f"{direction}numero_socio_int")
+        elif ordering == "-nombre_razon_social":
+            return qs.annotate(nombre_sort=_NOMBRE_SORT).order_by("-nombre_sort")
+        else:
+            return qs.annotate(nombre_sort=_NOMBRE_SORT).order_by("nombre_sort")
+
+    def create(self, request, *args, **kwargs):
+        tenant = getattr(request, "tenant", None)
+        if tenant and tenant.max_socios > 0:
+            current_count = Socio.all_objects.filter(
+                tenant=tenant, estado=Socio.Estado.ALTA
+            ).count()
+            if current_count >= tenant.max_socios:
+                return Response(
+                    {
+                        "detail": (
+                            f"Límite de socios alcanzado ({tenant.max_socios}). "
+                            "Contacte con el administrador de la plataforma para ampliar la suscripción."
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        return super().create(request, *args, **kwargs)
 
 
 class SocioDetailView(generics.RetrieveUpdateAPIView):
@@ -189,3 +260,23 @@ class SocioDarBajaView(APIView):
         socio.save()
 
         return Response({"detail": "Socio dado de baja correctamente."})
+
+
+class SocioReactivarView(APIView):
+    permission_classes = [IsGestion]
+
+    def post(self, request, pk):
+        try:
+            socio = Socio.objects.get(pk=pk)
+        except Socio.DoesNotExist:
+            return Response({"detail": "Not found."}, status=404)
+
+        if socio.estado == Socio.Estado.ALTA:
+            return Response({"detail": "Socio ya está en ALTA."}, status=400)
+
+        socio.estado = Socio.Estado.ALTA
+        socio.razon_baja = ""
+        socio.fecha_baja = None
+        socio.save(update_fields=["estado", "razon_baja", "fecha_baja"])
+
+        return Response({"detail": "Socio reactivado correctamente."})

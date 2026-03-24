@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  AGAMUR — Script de despliegue (VPS)
-#  Ejecutar desde /opt/agamur en el servidor:
+#  Kria — Script de despliegue (VPS)
+#  Ejecutar desde /opt/kria en el servidor:
 #    bash scripts/deploy.sh
 #
 #  También invocado por GitHub Actions vía SSH.
@@ -20,7 +20,7 @@ BRANCH="${DEPLOY_BRANCH:-Dev}"
 cd "$APP_DIR"
 
 info "═══════════════════════════════════════════════"
-info "  Iniciando deploy AGAMUR — rama: $BRANCH"
+info "  Iniciando deploy Kria — rama: $BRANCH"
 info "═══════════════════════════════════════════════"
 
 # ── 1. Git pull ───────────────────────────────────────────────────────────────

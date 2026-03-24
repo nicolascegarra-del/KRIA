@@ -3,7 +3,7 @@ import type { Animal, PaginatedResponse } from "../types";
 
 export const reproductoresApi = {
   /** GET /reproductores/ — catálogo público (animales aprobados + evaluados) */
-  catalogo: async (params?: { page?: number }) => {
+  catalogo: async (params?: { page?: number; page_size?: number }) => {
     const { data } = await apiClient.get<PaginatedResponse<Animal>>("/reproductores/", { params });
     return data;
   },

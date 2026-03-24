@@ -72,4 +72,9 @@ export const animalsApi = {
     const { data } = await apiClient.post(`/animals/${id}/pesaje/`, { fecha, peso });
     return data;
   },
+
+  darBaja: async (id: string, fecha_baja: string, motivo_baja: string): Promise<Animal> => {
+    const { data } = await apiClient.post(`/animals/${id}/dar-baja/`, { fecha_baja, motivo_baja });
+    return data;
+  },
 };

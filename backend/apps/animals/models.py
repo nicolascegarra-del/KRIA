@@ -9,6 +9,31 @@ from core.managers import TenantManager
 from core.models import UUIDModel
 
 
+class MotivoBaja(UUIDModel):
+    """Motivos configurables para dar de baja un animal (por tenant)."""
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="motivos_baja",
+        db_index=True,
+    )
+    nombre = models.CharField(max_length=150)
+    is_active = models.BooleanField(default=True)
+    orden = models.PositiveSmallIntegerField(default=0)
+
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        db_table = "animals_motivobaja"
+        ordering = ["orden", "nombre"]
+        verbose_name = "Motivo de Baja"
+        verbose_name_plural = "Motivos de Baja"
+
+    def __str__(self):
+        return self.nombre
+
+
 class Animal(UUIDModel):
     class Estado(models.TextChoices):
         AÑADIDO = "AÑADIDO", "Añadido"
@@ -16,6 +41,7 @@ class Animal(UUIDModel):
         EVALUADO = "EVALUADO", "Evaluado"
         RECHAZADO = "RECHAZADO", "Rechazado"
         SOCIO_EN_BAJA = "SOCIO_EN_BAJA", "Socio en baja"
+        BAJA = "BAJA", "Baja"
 
     class Sexo(models.TextChoices):
         MACHO = "M", "Macho"
@@ -41,7 +67,7 @@ class Animal(UUIDModel):
 
     # Identification (unique within tenant)
     numero_anilla = models.CharField(max_length=100)
-    anio_nacimiento = models.PositiveSmallIntegerField()
+    fecha_nacimiento = models.DateField()
 
     # Biological data
     sexo = models.CharField(max_length=1, choices=Sexo.choices)
@@ -75,12 +101,20 @@ class Animal(UUIDModel):
     estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.AÑADIDO)
     razon_rechazo = models.TextField(blank=True, default="")
 
+    # Baja
+    fecha_baja = models.DateField(null=True, blank=True)
+    motivo_baja = models.ForeignKey(
+        MotivoBaja,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="animales",
+    )
+
     # Reproductor flags
     candidato_reproductor = models.BooleanField(default=False)
     reproductor_aprobado = models.BooleanField(default=False)
 
-    # Alerta de anilla (computed on save, non-blocking warning except for APROBADO transition)
-    # "" = sin alerta, "FUERA_RANGO" = fuera del rango asignado, "DIAMETRO" = diámetro no corresponde al sexo
+    # Alerta de anilla
     alerta_anilla = models.CharField(max_length=20, blank=True, default="")
 
     # Breeding data
@@ -104,7 +138,7 @@ class Animal(UUIDModel):
 
     class Meta:
         db_table = "animals_animal"
-        unique_together = [("tenant", "numero_anilla", "anio_nacimiento")]
+        unique_together = [("tenant", "numero_anilla", "fecha_nacimiento")]
         verbose_name = "Animal"
         verbose_name_plural = "Animales"
         indexes = [
@@ -114,7 +148,7 @@ class Animal(UUIDModel):
         ]
 
     def __str__(self):
-        return f"{self.numero_anilla}/{self.anio_nacimiento} ({self.get_sexo_display()})"
+        return f"{self.numero_anilla}/{self.fecha_nacimiento} ({self.get_sexo_display()})"
 
     def clean(self):
         from django.core.exceptions import ValidationError

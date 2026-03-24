@@ -1,4 +1,8 @@
 // ─── Tenant ──────────────────────────────────────────────────────────────────
+export interface AnillaSize {
+  mm: string;
+}
+
 export interface TenantBranding {
   id: string;
   name: string;
@@ -6,6 +10,8 @@ export interface TenantBranding {
   logo_url: string;
   primary_color: string;
   secondary_color: string;
+  granjas_enabled: boolean;
+  anilla_sizes: AnillaSize[];
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -31,14 +37,20 @@ export interface Socio {
   nombre_razon_social: string;
   dni_nif: string;
   telefono: string;
-  direccion: string;
+  domicilio: string;
+  municipio: string;
+  codigo_postal: string;
+  provincia: string;
+  numero_cuenta: string;
   numero_socio: string;
   codigo_rega: string;
+  fecha_alta: string | null;
   estado: "ALTA" | "BAJA";
   razon_baja: string;
   fecha_baja: string | null;
   email: string;
   full_name: string;
+  cuota_anual_pagada?: number | null;
 }
 
 // ─── Granja ───────────────────────────────────────────────────────────────────
@@ -52,16 +64,23 @@ export interface Granja {
 }
 
 // ─── Animal ───────────────────────────────────────────────────────────────────
-export type AnimalEstado = "AÑADIDO" | "APROBADO" | "EVALUADO" | "RECHAZADO" | "SOCIO_EN_BAJA";
+export type AnimalEstado = "AÑADIDO" | "APROBADO" | "EVALUADO" | "RECHAZADO" | "SOCIO_EN_BAJA" | "BAJA";
 export type AnimalSexo = "M" | "H";
 export type AnimalVariedad = "SALMON" | "PLATA" | "OTRA";
 
 export type FotoTipo = "PERFIL" | "CABEZA" | "ANILLA";
 
+export interface MotivoBaja {
+  id: string;
+  nombre: string;
+  is_active: boolean;
+  orden: number;
+}
+
 export interface Animal {
   id: string;
   numero_anilla: string;
-  anio_nacimiento: number;
+  fecha_nacimiento: string;
   sexo: AnimalSexo;
   variedad: AnimalVariedad;
   fecha_incubacion: string | null;
@@ -70,6 +89,9 @@ export interface Animal {
   estado: AnimalEstado;
   alerta_anilla: "FUERA_RANGO" | "DIAMETRO" | "" | null;
   razon_rechazo: string;
+  fecha_baja: string | null;
+  motivo_baja: string | null;
+  motivo_baja_nombre: string | null;
   candidato_reproductor: boolean;
   reproductor_aprobado: boolean;
   socio_nombre: string;
@@ -216,6 +238,7 @@ export interface ImportValidateResult {
   filas_ok: number;
   filas_con_error: number;
   errores: { fila: number; errores: string[] }[];
+  columnas_faltantes?: string[];
   preview: ImportPreviewRow[];
   temp_key: string;
 }
@@ -262,6 +285,76 @@ export interface Tenant {
   secondary_color: string;
   is_active: boolean;
   logo_url: string | null;
+  max_socios: number;
+  socios_count?: number;  // anotado por el backend, solo lectura
+  // Datos de contacto opcionales
+  nombre_completo?: string;
+  cif?: string;
+  domicilio?: string;
+  email_asociacion?: string;
+  telefono1?: string;
+  telefono1_nombre?: string;
+  telefono1_cargo?: string;
+  telefono2?: string;
+  telefono2_nombre?: string;
+  telefono2_cargo?: string;
+  // Features
+  granjas_enabled?: boolean;
+  anilla_sizes?: AnillaSize[];
+  email_notificaciones?: string;
+  // SMTP por asociación
+  smtp_host?: string;
+  smtp_port?: number;
+  smtp_user?: string;
+  smtp_password?: string;
+  smtp_from_email?: string;
+  smtp_from_name?: string;
+  smtp_use_tls?: boolean;
+  smtp_use_ssl?: boolean;
+}
+
+// ─── Platform Settings ────────────────────────────────────────────────────────
+export interface PlatformSettings {
+  smtp_host: string;
+  smtp_port: number;
+  smtp_user: string;
+  smtp_password: string;
+  smtp_from_email: string;
+  smtp_from_name: string;
+  smtp_use_tls: boolean;
+  smtp_use_ssl: boolean;
+}
+
+// ─── Impersonation ────────────────────────────────────────────────────────────
+export interface ImpersonationTarget {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface ImpersonateResponse {
+  access: string;
+  tenant: ImpersonationTarget;
+}
+
+export interface GestionUserCreate {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  password: string;
+}
+
+export interface GestionUser {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_active: boolean;
+  date_joined: string;
+}
+
+export interface TenantCreatePayload extends Partial<Tenant> {
+  gestion_user?: GestionUserCreate;
 }
 
 // ─── Pagination ───────────────────────────────────────────────────────────────

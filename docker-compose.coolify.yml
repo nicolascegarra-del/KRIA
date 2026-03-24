@@ -1,10 +1,10 @@
 # ═══════════════════════════════════════════════════════════════════
-#  AGAMUR — Docker Compose para Coolify
+#  Kria — Docker Compose para Coolify
 #
 #  Arquitectura:
 #  - frontend (nginx): puerto 80, sirve la SPA React Y hace proxy
 #    de /api/ y /admin/ al backend internamente.
-#    Coolify/Traefik enruta agamur.klyp.es y admin-agamur.klyp.es
+#    Coolify/Traefik enruta kria.klyp.es y admin-kria.klyp.es
 #    a este servicio.
 #  - backend (gunicorn): interno, sin puerto expuesto al host.
 #  - celery / celery-beat: workers internos.
@@ -23,13 +23,13 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-agamur}
-      POSTGRES_USER: ${POSTGRES_USER:-agamur}
+      POSTGRES_DB: ${POSTGRES_DB:-kria}
+      POSTGRES_USER: ${POSTGRES_USER:-kria}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data_v2:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agamur}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kria}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -50,7 +50,7 @@ services:
   # ── MinIO ───────────────────────────────────────────────────────
   # MinIO es un servicio INTERNO (sin expose ni ports).
   # El frontend (nginx) lo proxia en /media/ → minio:9000.
-  # En Coolify definir: MINIO_EXTERNAL_ENDPOINT=https://agamur.klyp.es/media
+  # En Coolify definir: MINIO_EXTERNAL_ENDPOINT=https://kria.klyp.es/media
   minio:
     image: minio/minio:latest
     restart: unless-stopped
@@ -80,13 +80,13 @@ services:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
       DJANGO_SETTINGS_MODULE: config.settings.production
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
-      DATABASE_URL: postgres://${POSTGRES_USER:-agamur}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-agamur}
+      DATABASE_URL: postgres://${POSTGRES_USER:-kria}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-kria}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-agamur}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-kria}
       MINIO_USE_HTTPS: "false"
       MINIO_EXTERNAL_ENDPOINT: ${MINIO_EXTERNAL_ENDPOINT}
       EMAIL_HOST: ${EMAIL_HOST:-localhost}
@@ -94,7 +94,7 @@ services:
       EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
       EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
       EMAIL_USE_TLS: ${EMAIL_USE_TLS:-true}
-      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-AGAMUR <noreply@agamur.es>}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-Kria <noreply@kria.es>}
       FRONTEND_URL: ${FRONTEND_URL}
       TENANT_DOMAIN_SUFFIX: ${TENANT_DOMAIN_SUFFIX:-.klyp.es}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
@@ -127,13 +127,13 @@ services:
     environment:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
       DJANGO_SETTINGS_MODULE: config.settings.production
-      DATABASE_URL: postgres://${POSTGRES_USER:-agamur}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-agamur}
+      DATABASE_URL: postgres://${POSTGRES_USER:-kria}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-kria}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-agamur}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-kria}
       MINIO_USE_HTTPS: "false"
       MINIO_EXTERNAL_ENDPOINT: ${MINIO_EXTERNAL_ENDPOINT}
     depends_on:
@@ -154,7 +154,7 @@ services:
     environment:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
       DJANGO_SETTINGS_MODULE: config.settings.production
-      DATABASE_URL: postgres://${POSTGRES_USER:-agamur}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-agamur}
+      DATABASE_URL: postgres://${POSTGRES_USER:-kria}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-kria}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
     depends_on:
@@ -168,12 +168,12 @@ services:
 
   # ── Frontend: nginx SPA + proxy API ───────────────────────────
   # Coolify/Traefik enruta aquí AMBOS dominios:
-  #   agamur.klyp.es       → SPA React
-  #   admin-agamur.klyp.es → /admin/ (Django admin) + /api/
+  #   kria.klyp.es       → SPA React
+  #   admin-kria.klyp.es → /admin/ (Django admin) + /api/
   #
   # IMPORTANTE: NO exponer "ports: 80:80" aquí.
   # Coolify/Traefik gestiona el routing por dominio externamente.
-  # Exponer el puerto directamente al host haría que AGAMUR
+  # Exponer el puerto directamente al host haría que Kria
   # interceptara TODO el tráfico HTTP del servidor (incluyendo
   # dominios de otras apps como kronos.klyp.es).
   frontend:
@@ -184,7 +184,7 @@ services:
     restart: unless-stopped
     # expose declara el puerto del contenedor a Traefik sin enlazarlo al host.
     # Necesario para que SERVICE_FQDN_FRONTEND sepa a qué puerto enrutar.
-    # Correcto: Traefik enruta solo los dominios configurados (agamur.klyp.es).
+    # Correcto: Traefik enruta solo los dominios configurados (kria.klyp.es).
     # Incorrecto habría sido "ports: 80:80" que captura TODO el tráfico del host.
     expose:
       - "80"
@@ -192,7 +192,7 @@ services:
       # Dominios que este nginx debe aceptar.
       # El bloque default_server del nginx rechaza cualquier otro dominio.
       # Separar múltiples dominios con espacio: "dominio1.com dominio2.com"
-      NGINX_HOSTS: "${NGINX_HOSTS:-agamur.klyp.es admin-agamur.klyp.es}"
+      NGINX_HOSTS: "${NGINX_HOSTS:-kria.klyp.es admin-kria.klyp.es}"
     volumes:
       - static_files:/app/staticfiles:ro
     depends_on:

@@ -1,5 +1,6 @@
 /**
- * Axios client with JWT interceptors and tenant slug header injection.
+ * Axios client with JWT interceptors.
+ * Tenant is resolved on the backend from the JWT token — no slug header needed.
  * API calls use relative paths — nginx proxies /api/ to backend internally.
  */
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
@@ -9,16 +10,18 @@ export const apiClient = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// ── Request interceptor: inject auth + tenant headers ──────────────────────
+// ── Request interceptor: inject auth header ────────────────────────────────
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem("access_token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  const impersonationToken = localStorage.getItem("impersonation_token");
 
-  const slug = localStorage.getItem("tenant_slug");
-  if (slug) {
-    config.headers["X-Tenant-Slug"] = slug;
+  if (impersonationToken) {
+    // Impersonation mode: use short-lived token (tenant_id already embedded in it)
+    config.headers.Authorization = `Bearer ${impersonationToken}`;
+  } else {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
 
   return config;
@@ -42,6 +45,12 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // If we are in impersonation mode, the short-lived token expired → notify
+      if (localStorage.getItem("impersonation_token")) {
+        window.dispatchEvent(new Event("impersonation:expired"));
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });

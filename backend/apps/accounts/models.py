@@ -1,5 +1,5 @@
 """
-Custom User + Socio models for AGAMUR.
+Custom User + Socio models for Kria.
 
 User: email-based auth, tenant-scoped, dual role (socio / gestión).
 Socio: profile attached to User, carries ARCA/Ministerio fields.
@@ -30,7 +30,7 @@ class UserManager(BaseUserManager):
         # Get or create a system tenant for superadmins
         tenant, _ = Tenant.objects.get_or_create(
             slug="system",
-            defaults={"name": "System", "is_active": True},
+            defaults={"name": "System", "is_active": True, "max_socios": 0},
         )
         extra.setdefault("is_gestion", True)
         extra.setdefault("is_superadmin", True)
@@ -46,7 +46,7 @@ class User(AbstractBaseUser, PermissionsMixin, UUIDModel):
         related_name="users",
         db_index=True,
     )
-    email = models.EmailField()
+    email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
     is_gestion = models.BooleanField(default=False)
@@ -66,7 +66,6 @@ class User(AbstractBaseUser, PermissionsMixin, UUIDModel):
 
     class Meta:
         db_table = "accounts_user"
-        unique_together = [("tenant", "email")]
         verbose_name = "User"
         verbose_name_plural = "Users"
 
@@ -91,15 +90,23 @@ class Socio(UUIDModel):
     )
     user = models.OneToOneField(
         User,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name="socio",
+        null=True,
+        blank=True,
     )
     nombre_razon_social = models.CharField(max_length=300)
     dni_nif = models.CharField(max_length=20)
     telefono = models.CharField(max_length=20, blank=True, default="")
-    direccion = models.TextField(blank=True, default="")
+    domicilio = models.TextField(blank=True, default="")
+    municipio = models.CharField(max_length=100, blank=True, default="")
+    codigo_postal = models.CharField(max_length=10, blank=True, default="")
+    provincia = models.CharField(max_length=100, blank=True, default="")
+    numero_cuenta = models.CharField(max_length=34, blank=True, default="", help_text="IBAN / número de cuenta bancaria")
     numero_socio = models.CharField(max_length=50, blank=True, default="")
     codigo_rega = models.CharField(max_length=50, blank=True, default="")
+    fecha_alta = models.DateField(null=True, blank=True, help_text="Fecha de alta del socio en la asociación")
+    cuota_anual_pagada = models.PositiveIntegerField(null=True, blank=True, help_text="Año hasta el cual el socio tiene pagada la cuota anual")
     estado = models.CharField(max_length=10, choices=Estado.choices, default=Estado.ALTA)
     razon_baja = models.TextField(blank=True, default="")
     fecha_baja = models.DateField(null=True, blank=True)
@@ -109,9 +116,18 @@ class Socio(UUIDModel):
 
     class Meta:
         db_table = "accounts_socio"
-        unique_together = [
-            ("tenant", "dni_nif"),
-            ("tenant", "numero_socio"),
+        # Unicidad solo cuando el campo no está vacío (permite múltiples socios sin DNI/nº)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "dni_nif"],
+                condition=models.Q(dni_nif__gt=""),
+                name="unique_socio_tenant_dni_nif",
+            ),
+            models.UniqueConstraint(
+                fields=["tenant", "numero_socio"],
+                condition=models.Q(numero_socio__gt=""),
+                name="unique_socio_tenant_numero_socio",
+            ),
         ]
         verbose_name = "Socio"
         verbose_name_plural = "Socios"

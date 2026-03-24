@@ -1,4 +1,4 @@
-# PLAN DE DESARROLLO — AGAMUR
+# PLAN DE DESARROLLO — Kria
 > Basado en auditoría del 2026-03-01
 
 ---

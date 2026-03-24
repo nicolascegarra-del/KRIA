@@ -2,7 +2,13 @@ import { apiClient } from "./client";
 import type { Socio, PaginatedResponse } from "../types";
 
 export const sociosApi = {
-  list: async (params?: { search?: string; estado?: string; page?: number }): Promise<PaginatedResponse<Socio>> => {
+  list: async (params?: {
+    search?: string;
+    estado?: string;
+    cuota?: string;
+    ordering?: string;
+    page?: number;
+  }): Promise<PaginatedResponse<Socio>> => {
     const { data } = await apiClient.get("/socios/", { params });
     return data;
   },
@@ -24,6 +30,10 @@ export const sociosApi = {
 
   darBaja: async (id: string, razon_baja: string): Promise<void> => {
     await apiClient.post(`/socios/${id}/dar-baja/`, { razon_baja });
+  },
+
+  reactivar: async (id: string): Promise<void> => {
+    await apiClient.post(`/socios/${id}/reactivar/`);
   },
 
   import: async (file: File): Promise<{ job_id: string; status: string }> => {

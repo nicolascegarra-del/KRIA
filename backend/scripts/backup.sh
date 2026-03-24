@@ -1,17 +1,17 @@
 #!/bin/bash
-# AGAMUR daily backup script
-# Cron: 0 3 * * * /app/scripts/backup.sh >> /var/log/agamur_backup.log 2>&1
+# Kria daily backup script
+# Cron: 0 3 * * * /app/scripts/backup.sh >> /var/log/kria_backup.log 2>&1
 
 set -e
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/tmp/agamur_backups"
-DB_BACKUP="agamur_db_${TIMESTAMP}.dump"
-MINIO_BUCKET="${MINIO_BUCKET_NAME:-agamur}"
+BACKUP_DIR="/tmp/kria_backups"
+DB_BACKUP="kria_db_${TIMESTAMP}.dump"
+MINIO_BUCKET="${MINIO_BUCKET_NAME:-kria}"
 MINIO_ENDPOINT="${MINIO_ENDPOINT:-minio:9000}"
 RETENTION_DAYS=30
 
-echo "[${TIMESTAMP}] Starting AGAMUR backup..."
+echo "[${TIMESTAMP}] Starting Kria backup..."
 
 mkdir -p "${BACKUP_DIR}"
 

@@ -60,7 +60,6 @@ services:
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
     volumes:
-      - ./backend:/app
       - static_files:/app/staticfiles
     ports:
       - "8000:8000"
@@ -74,7 +73,6 @@ services:
     command: >
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
-             python manage.py seed_admin &&
              python manage.py runserver 0.0.0.0:8000"
 
   celery:
@@ -87,8 +85,6 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-kria}:${POSTGRES_PASSWORD:-kria_dev_password}@db:5432/${POSTGRES_DB:-kria}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
-    volumes:
-      - ./backend:/app
     depends_on:
       db:
         condition: service_healthy
@@ -106,8 +102,6 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-kria}:${POSTGRES_PASSWORD:-kria_dev_password}@db:5432/${POSTGRES_DB:-kria}
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
-    volumes:
-      - ./backend:/app
     depends_on:
       db:
         condition: service_healthy
@@ -123,9 +117,6 @@ services:
     restart: unless-stopped
     environment:
       BACKEND_URL: http://backend:8000
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     ports:
       - "5173:5173"
     depends_on:

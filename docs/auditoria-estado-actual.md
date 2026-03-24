@@ -1,4 +1,4 @@
-# INFORME DE AUDITORÍA — AGAMUR
+# INFORME DE AUDITORÍA — Kria
 > Generado: 2026-03-01
 
 ---
@@ -66,7 +66,7 @@ El stack elegido es **completamente adecuado** para los requisitos. Django + DRF
 ### A. Lo que FUNCIONA correctamente
 
 #### Multi-tenant
-- `TenantMiddleware` resuelve tenant por: subdominio (`slug.agamur.es`) → header `X-Tenant-Slug` → dominio custom.
+- `TenantMiddleware` resuelve tenant por: subdominio (`slug.kria.es`) → header `X-Tenant-Slug` → dominio custom.
 - `TenantManager` filtra automáticamente todos los querysets al tenant activo.
 - El JWT embebe `tenant_id`, `tenant_slug`, `is_gestion` para resolver el modo dual en cada request.
 

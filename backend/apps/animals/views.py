@@ -52,12 +52,13 @@ import django_filters
 
 from core.permissions import IsGestion, IsSocioOrGestion, IsSocioOwner, get_effective_is_gestion
 from core.throttles import UploadRateThrottle
-from .models import Animal
+from .models import Animal, MotivoBaja
 from .serializers import (
     AnimalDetailSerializer,
     AnimalListSerializer,
     AnimalWriteSerializer,
     GenealogySerializer,
+    MotivoBajaSerializer,
 )
 from apps.conflicts.models import Conflicto
 
@@ -68,7 +69,7 @@ def _update_alerta_anilla(animal):
         from apps.anillas.utils import compute_alerta_anilla
         alerta = compute_alerta_anilla(
             numero_anilla=animal.numero_anilla,
-            anio=animal.anio_nacimiento,
+            anio=animal.fecha_nacimiento.year if animal.fecha_nacimiento else 0,
             sexo=animal.sexo,
             socio_id=animal.socio_id,
             tenant_id=animal.tenant_id,
@@ -84,19 +85,19 @@ class AnimalFilter(django_filters.FilterSet):
     estado = django_filters.CharFilter()
     variedad = django_filters.CharFilter()
     sexo = django_filters.CharFilter()
-    anio = django_filters.NumberFilter(field_name="anio_nacimiento")
+    anio = django_filters.NumberFilter(field_name="fecha_nacimiento", lookup_expr="year")
     socio_id = django_filters.UUIDFilter(field_name="socio__id")
 
     class Meta:
         model = Animal
-        fields = ["estado", "variedad", "sexo", "anio_nacimiento", "socio"]
+        fields = ["estado", "variedad", "sexo", "socio"]
 
 
 class AnimalListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     filterset_class = AnimalFilter
     search_fields = ["numero_anilla"]
-    ordering_fields = ["created_at", "anio_nacimiento", "numero_anilla"]
+    ordering_fields = ["created_at", "fecha_nacimiento", "numero_anilla"]
     ordering = ["-created_at"]
 
     def get_serializer_class(self):
@@ -137,15 +138,15 @@ class AnimalListCreateView(generics.ListCreateAPIView):
                 return Response({"detail": "No socio profile found."}, status=400)
 
         anilla = request.data.get("numero_anilla")
-        anio = request.data.get("anio_nacimiento")
+        fecha_nacimiento = request.data.get("fecha_nacimiento")
 
-        if not anilla or not anio:
-            return Response({"detail": "numero_anilla and anio_nacimiento are required."}, status=400)
+        if not anilla or not fecha_nacimiento:
+            return Response({"detail": "numero_anilla and fecha_nacimiento are required."}, status=400)
 
         # Global search (bypass tenant filter)
         existing = Animal.all_objects.filter(
             numero_anilla=anilla,
-            anio_nacimiento=anio,
+            fecha_nacimiento=fecha_nacimiento,
         ).first()
 
         ctx = {"request": request}
@@ -181,10 +182,11 @@ class AnimalListCreateView(generics.ListCreateAPIView):
             return Response(AnimalDetailSerializer(existing).data, status=200)
 
         # Scenario 4: Conflict — current owner is ALTA
+        anio_conflicto = int(str(fecha_nacimiento)[:4]) if fecha_nacimiento else 0
         conflict, _ = Conflicto.objects.get_or_create(
             tenant=tenant,
             numero_anilla=anilla,
-            anio_nacimiento=anio,
+            anio_nacimiento=anio_conflicto,
             socio_reclamante=socio,
             defaults={
                 "socio_actual": current_socio,
@@ -305,7 +307,7 @@ class AnimalGlobalSearchView(APIView):
             return Response({"detail": "anilla and anio params required."}, status=400)
 
         animal = Animal.all_objects.filter(
-            numero_anilla=anilla, anio_nacimiento=anio
+            numero_anilla=anilla, fecha_nacimiento__year=anio
         ).select_related("socio", "tenant").first()
 
         if animal is None:
@@ -576,3 +578,62 @@ class AnimalSolicitarRealtaView(APIView):
 
         from apps.conflicts.serializers import SolicitudRealtaSerializer
         return Response(SolicitudRealtaSerializer(solicitud).data, status=201)
+
+
+class AnimalDarBajaView(APIView):
+    """POST /api/v1/animals/:id/dar-baja/ — gestión o el propio socio da de baja un animal."""
+    permission_classes = [IsSocioOrGestion]
+
+    def post(self, request, pk):
+        try:
+            animal = Animal.objects.get(pk=pk, tenant=request.tenant)
+        except Animal.DoesNotExist:
+            return Response({"detail": "Not found."}, status=404)
+
+        # Socios sólo pueden dar de baja sus propios animales
+        if not get_effective_is_gestion(request):
+            if not hasattr(request.user, "socio") or animal.socio != request.user.socio:
+                return Response({"detail": "No tienes permiso para dar de baja este animal."}, status=403)
+
+        if animal.estado == Animal.Estado.BAJA:
+            return Response({"detail": "El animal ya está dado de baja."}, status=400)
+
+        fecha_baja = request.data.get("fecha_baja")
+        motivo_baja_id = request.data.get("motivo_baja")
+
+        if not fecha_baja:
+            return Response({"detail": "fecha_baja es obligatorio."}, status=400)
+        if not motivo_baja_id:
+            return Response({"detail": "motivo_baja es obligatorio."}, status=400)
+
+        try:
+            motivo = MotivoBaja.objects.get(pk=motivo_baja_id, tenant=request.tenant)
+        except MotivoBaja.DoesNotExist:
+            return Response({"detail": "Motivo de baja no encontrado."}, status=404)
+
+        animal.estado = Animal.Estado.BAJA
+        animal.fecha_baja = fecha_baja
+        animal.motivo_baja = motivo
+        animal.save(update_fields=["estado", "fecha_baja", "motivo_baja"])
+        return Response(AnimalDetailSerializer(animal).data)
+
+
+class MotivoBajaListCreateView(generics.ListCreateAPIView):
+    """GET/POST /api/v1/configuracion/motivos-baja/"""
+    serializer_class = MotivoBajaSerializer
+    permission_classes = [IsGestion]
+
+    def get_queryset(self):
+        return MotivoBaja.objects.filter(tenant=self.request.tenant)
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.tenant)
+
+
+class MotivoBajaDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """GET/PUT/PATCH/DELETE /api/v1/configuracion/motivos-baja/:id/"""
+    serializer_class = MotivoBajaSerializer
+    permission_classes = [IsGestion]
+
+    def get_queryset(self):
+        return MotivoBaja.objects.filter(tenant=self.request.tenant)

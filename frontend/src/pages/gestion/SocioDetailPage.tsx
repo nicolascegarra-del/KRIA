@@ -1,45 +1,44 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { sociosApi } from "../../api/socios";
 import { animalsApi } from "../../api/animals";
 import { granjasApi } from "../../api/granjas";
-import { documentosApi } from "../../api/documentos";
+import { configuracionApi } from "../../api/configuracion";
+import { useTenantStore } from "../../store/tenantStore";
 import AnimalStateChip from "../../components/AnimalStateChip";
 import SuccessToast from "../../components/SuccessToast";
-import ErrorAlert from "../../components/ErrorAlert";
-import { useAutoCloseError } from "../../hooks/useAutoCloseError";
 import {
   ArrowLeft,
   Bird,
   Building2,
-  FileText,
-  Upload,
-  Download,
-  Trash2,
+  Plus,
   Loader2,
+  AlertTriangle,
+  UserCheck,
 } from "lucide-react";
-import type { Documento } from "../../types";
+import type { Animal, AnimalEstado } from "../../types";
 import clsx from "clsx";
 
-type Tab = "animales" | "granjas" | "documentos";
+const ACTIVO_STATES: AnimalEstado[] = ["AÑADIDO", "APROBADO", "EVALUADO"];
+const NO_ACTIVO_STATES: AnimalEstado[] = ["RECHAZADO", "SOCIO_EN_BAJA", "BAJA"];
 
-function formatBytes(b: number) {
-  if (b < 1024) return `${b} B`;
-  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
-  return `${(b / 1024 / 1024).toFixed(1)} MB`;
-}
+type Tab = "animales" | "granjas";
 
 export default function SocioDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { branding } = useTenantStore();
+  const granjasEnabled = branding?.granjas_enabled !== false;
   const [tab, setTab] = useState<Tab>("animales");
+  const [animalesSubTab, setAnimalesSubTab] = useState<"activos" | "no_activos">("activos");
   const [successMsg, setSuccessMsg] = useState("");
-  const [uploadError, setUploadError, clearUploadError] = useAutoCloseError();
-  const [uploading, setUploading] = useState(false);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Dar de baja inline form
+  const [bajaAnimalId, setBajaAnimalId] = useState<string | null>(null);
+  const [bajaFecha, setBajaFecha] = useState(new Date().toISOString().slice(0, 10));
+  const [bajaMotivoId, setBajaMotivoId] = useState("");
 
   const { data: socio, isLoading } = useQuery({
     queryKey: ["socio", id],
@@ -59,55 +58,34 @@ export default function SocioDetailPage() {
     enabled: tab === "granjas" && !!id,
   });
 
-  const { data: docs = [], isLoading: loadingDocs } = useQuery<Documento[]>({
-    queryKey: ["documentos-socio", id],
-    queryFn: () => documentosApi.listSocio(id!),
-    enabled: tab === "documentos" && !!id,
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: documentosApi.delete,
+  const reactivarMutation = useMutation({
+    mutationFn: () => sociosApi.reactivar(id!),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["documentos-socio", id] });
-      setSuccessMsg("Documento eliminado.");
+      qc.invalidateQueries({ queryKey: ["socio", id] });
+      setSuccessMsg("Socio reactivado correctamente.");
     },
   });
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !id) return;
-    clearUploadError();
-    setUploading(true);
-    try {
-      await documentosApi.uploadSocio(id, file);
-      qc.invalidateQueries({ queryKey: ["documentos-socio", id] });
-      setSuccessMsg("Documento subido correctamente.");
-    } catch (err: any) {
-      setUploadError(err?.response?.data?.detail ?? "Error al subir el archivo.");
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
+  const darBajaMutation = useMutation({
+    mutationFn: ({ animalId, fecha_baja, motivo_baja }: { animalId: string; fecha_baja: string; motivo_baja: string }) =>
+      animalsApi.darBaja(animalId, fecha_baja, motivo_baja),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["animals", { socio_id: id }] });
+      setBajaAnimalId(null);
+      setBajaMotivoId("");
+      setSuccessMsg("Animal dado de baja correctamente.");
+    },
+  });
 
-  const handleDownload = async (doc: Documento) => {
-    setDownloadingId(doc.id);
-    try {
-      const { download_url, nombre_archivo } = await documentosApi.downloadUrl(doc.id);
-      const a = document.createElement("a");
-      a.href = download_url;
-      a.download = nombre_archivo;
-      a.target = "_blank";
-      a.click();
-    } finally {
-      setDownloadingId(null);
-    }
-  };
+  const { data: motivosBaja = [] } = useQuery({
+    queryKey: ["motivos-baja"],
+    queryFn: configuracionApi.listMotivosBaja,
+    enabled: tab === "animales",
+  });
 
   const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: "animales", label: "Animales", icon: <Bird size={15} /> },
-    { key: "granjas", label: "Granjas", icon: <Building2 size={15} /> },
-    { key: "documentos", label: "Documentos", icon: <FileText size={15} /> },
+    ...(granjasEnabled ? [{ key: "granjas" as Tab, label: "Granjas", icon: <Building2 size={15} /> }] : []),
   ];
 
   if (isLoading) {
@@ -126,6 +104,8 @@ export default function SocioDetailPage() {
 
   const animales = animalesData?.results ?? [];
   const granjas = granjasData?.results ?? [];
+  const animalesActivos = animales.filter((a: Animal) => ACTIVO_STATES.includes(a.estado));
+  const animalesNoActivos = animales.filter((a: Animal) => NO_ACTIVO_STATES.includes(a.estado));
 
   return (
     <div className="space-y-4 max-w-3xl">
@@ -152,18 +132,40 @@ export default function SocioDetailPage() {
         >
           {socio.estado}
         </span>
+        {socio.estado === "BAJA" && (
+          <button
+            onClick={() => reactivarMutation.mutate()}
+            disabled={reactivarMutation.isPending}
+            className="btn-secondary flex items-center gap-2 text-sm text-green-700 border-green-300 hover:bg-green-50 disabled:opacity-40"
+          >
+            {reactivarMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <UserCheck size={14} />}
+            Reactivar
+          </button>
+        )}
+        <button
+          onClick={() => navigate(`/socios/${id}/nuevo-animal`)}
+          className="btn-primary gap-2 flex items-center text-sm"
+        >
+          <Plus size={15} /> Dar de alta animal
+        </button>
       </div>
 
       {/* Datos del socio */}
       <div className="card">
         <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
           {[
-            { label: "DNI / NIF", value: socio.dni_nif },
+            { label: "DNI / NIF", value: socio.dni_nif || "—" },
             { label: "Nº Socio", value: socio.numero_socio || "—" },
             { label: "Código REGA", value: socio.codigo_rega || "—" },
+            { label: "Fecha de alta", value: socio.fecha_alta ? new Date(socio.fecha_alta).toLocaleDateString("es-ES") : "—" },
             { label: "Teléfono", value: socio.telefono || "—" },
-            { label: "Dirección", value: socio.direccion || "—" },
             { label: "Nombre", value: socio.full_name || "—" },
+            { label: "Cuota pagada hasta", value: socio.cuota_anual_pagada ? String(socio.cuota_anual_pagada) : "—" },
+            { label: "Domicilio", value: socio.domicilio || "—" },
+            { label: "Municipio", value: socio.municipio || "—" },
+            { label: "Código postal", value: socio.codigo_postal || "—" },
+            { label: "Provincia", value: socio.provincia || "—" },
+            { label: "Nº Cuenta (IBAN)", value: socio.numero_cuenta || "—" },
           ].map(({ label, value }) => (
             <div key={label}>
               <dt className="text-xs text-gray-400">{label}</dt>
@@ -198,27 +200,142 @@ export default function SocioDetailPage() {
 
       {/* Tab: Animales */}
       {tab === "animales" && (
-        <div className="card">
-          {animales.length === 0 ? (
-            <div className="text-center py-10 text-gray-400">
-              <Bird size={36} className="mx-auto mb-2 text-gray-300" />
-              <p>No hay animales registrados.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-100">
-              {animales.map((a) => (
-                <div key={a.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                  <div>
-                    <span className="font-mono font-medium text-gray-900">{a.numero_anilla}</span>
-                    <span className="text-sm text-gray-500 ml-2">/ {a.anio_nacimiento}</span>
+        <div className="card space-y-3">
+          {/* Sub-tabs activos / no activos */}
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+            <button
+              onClick={() => setAnimalesSubTab("activos")}
+              className={clsx(
+                "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                animalesSubTab === "activos" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
+              )}
+            >
+              Activos ({animalesActivos.length})
+            </button>
+            <button
+              onClick={() => setAnimalesSubTab("no_activos")}
+              className={clsx(
+                "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                animalesSubTab === "no_activos" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
+              )}
+            >
+              No activos ({animalesNoActivos.length})
+            </button>
+          </div>
+
+          {animalesSubTab === "activos" && (
+            animalesActivos.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <Bird size={36} className="mx-auto mb-2 text-gray-300" />
+                <p>No hay animales activos.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {animalesActivos.map((a: Animal) => (
+                  <div key={a.id} className="py-3 first:pt-0 last:pb-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <span className="font-mono font-medium text-gray-900">{a.numero_anilla}</span>
+                        <span className="text-sm text-gray-500 ml-2">
+                          / {a.fecha_nacimiento ? new Date(a.fecha_nacimiento).getFullYear() : "—"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">{a.variedad}</span>
+                        <AnimalStateChip estado={a.estado} />
+                        <button
+                          onClick={() => {
+                            setBajaAnimalId(a.id);
+                            setBajaFecha(new Date().toISOString().slice(0, 10));
+                            setBajaMotivoId("");
+                          }}
+                          className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-800 px-2 py-1 rounded hover:bg-orange-50"
+                          title="Dar de baja"
+                        >
+                          <AlertTriangle size={12} />
+                          Dar de baja
+                        </button>
+                      </div>
+                    </div>
+                    {/* Inline dar de baja form */}
+                    {bajaAnimalId === a.id && (
+                      <div className="mt-2 bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-2">
+                        <p className="text-xs font-medium text-orange-800">Confirmar baja del animal</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Fecha de baja</label>
+                            <input
+                              type="date"
+                              className="input-field text-xs"
+                              value={bajaFecha}
+                              onChange={(e) => setBajaFecha(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Motivo</label>
+                            <select
+                              className="input-field text-xs"
+                              value={bajaMotivoId}
+                              onChange={(e) => setBajaMotivoId(e.target.value)}
+                            >
+                              <option value="">Seleccionar...</option>
+                              {motivosBaja.filter(m => m.is_active).map((m) => (
+                                <option key={m.id} value={m.id}>{m.nombre}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => darBajaMutation.mutate({ animalId: a.id, fecha_baja: bajaFecha, motivo_baja: bajaMotivoId })}
+                            disabled={!bajaFecha || !bajaMotivoId || darBajaMutation.isPending}
+                            className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1"
+                          >
+                            {darBajaMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : null}
+                            Confirmar
+                          </button>
+                          <button
+                            onClick={() => { setBajaAnimalId(null); setBajaMotivoId(""); }}
+                            className="btn-secondary text-xs py-1.5 px-3"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">{a.variedad}</span>
-                    <AnimalStateChip estado={a.estado} />
+                ))}
+              </div>
+            )
+          )}
+
+          {animalesSubTab === "no_activos" && (
+            animalesNoActivos.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <Bird size={36} className="mx-auto mb-2 text-gray-300" />
+                <p>No hay animales no activos.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {animalesNoActivos.map((a: Animal) => (
+                  <div key={a.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                    <div>
+                      <span className="font-mono font-medium text-gray-900">{a.numero_anilla}</span>
+                      <span className="text-sm text-gray-500 ml-2">
+                        / {a.fecha_nacimiento ? new Date(a.fecha_nacimiento).getFullYear() : "—"}
+                      </span>
+                      {a.estado === "BAJA" && a.motivo_baja_nombre && (
+                        <span className="text-xs text-gray-400 ml-2">({a.motivo_baja_nombre})</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">{a.variedad}</span>
+                      <AnimalStateChip estado={a.estado} />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )
           )}
         </div>
       )}
@@ -246,82 +363,6 @@ export default function SocioDetailPage() {
         </div>
       )}
 
-      {/* Tab: Documentos */}
-      {tab === "documentos" && (
-        <div className="card space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-800">Buzón del socio</h2>
-            <label className="btn-primary gap-2 cursor-pointer text-sm py-2">
-              {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-              {uploading ? "Subiendo…" : "Subir documento"}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                className="sr-only"
-                onChange={handleUpload}
-                disabled={uploading}
-              />
-            </label>
-          </div>
-
-          <ErrorAlert message={uploadError} onDismiss={clearUploadError} />
-
-          {loadingDocs ? (
-            <div className="space-y-2">
-              {[1, 2].map((i) => (
-                <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />
-              ))}
-            </div>
-          ) : docs.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
-              <FileText size={36} className="mx-auto mb-2 text-gray-300" />
-              <p className="text-sm">Sin documentos en el buzón.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-100">
-              {docs.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
-                >
-                  <FileText size={18} className="text-blue-600 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-gray-900 truncate">{doc.nombre_archivo}</div>
-                    <div className="text-xs text-gray-400">
-                      v{doc.version} · {formatBytes(doc.tamanio_bytes)} ·{" "}
-                      {new Date(doc.created_at).toLocaleDateString("es-ES")}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleDownload(doc)}
-                    disabled={downloadingId === doc.id}
-                    className="text-gray-400 hover:text-blue-600 p-2 min-h-[40px] min-w-[40px] flex items-center justify-center"
-                    aria-label="Descargar"
-                  >
-                    {downloadingId === doc.id ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <Download size={16} />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm(`¿Eliminar "${doc.nombre_archivo}"?`)) {
-                        deleteMutation.mutate(doc.id);
-                      }
-                    }}
-                    className="text-gray-400 hover:text-red-600 p-2 min-h-[40px] min-w-[40px] flex items-center justify-center"
-                    aria-label="Eliminar"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

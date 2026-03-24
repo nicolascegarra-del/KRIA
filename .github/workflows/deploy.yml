@@ -22,12 +22,12 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: agamur_test
-          POSTGRES_USER: agamur
+          POSTGRES_DB: kria_test
+          POSTGRES_USER: kria
           POSTGRES_PASSWORD: test_password
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U agamur"
+          --health-cmd "pg_isready -U kria"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -39,14 +39,14 @@ jobs:
 
     env:
       DJANGO_SETTINGS_MODULE: config.settings.development
-      DATABASE_URL: postgres://agamur:test_password@localhost:5432/agamur_test
+      DATABASE_URL: postgres://kria:test_password@localhost:5432/kria_test
       REDIS_URL: redis://localhost:6379/0
       CELERY_BROKER_URL: redis://localhost:6379/1
       DJANGO_SECRET_KEY: ci-test-secret-key-not-for-production
       MINIO_ENDPOINT: localhost:9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
-      MINIO_BUCKET_NAME: agamur-test
+      MINIO_BUCKET_NAME: kria-test
       MINIO_USE_HTTPS: "false"
       MINIO_EXTERNAL_ENDPOINT: http://localhost:9000
 
@@ -107,10 +107,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build backend image
-        run: docker build ./backend --file backend/Dockerfile --tag agamur-backend:ci
+        run: docker build ./backend --file backend/Dockerfile --tag kria-backend:ci
 
       - name: Build frontend image
-        run: docker build ./frontend --file frontend/Dockerfile --target production --tag agamur-frontend:ci
+        run: docker build ./frontend --file frontend/Dockerfile --target production --tag kria-frontend:ci
 
   # ─────────────────────────────────────────────────────────────────
   #  DEPLOY — SSH al VPS y ejecuta scripts/deploy.sh
@@ -133,11 +133,11 @@ jobs:
           timeout:    10m
           script: |
             export DEPLOY_BRANCH=Dev
-            cd /opt/agamur
-            bash scripts/deploy.sh 2>&1 | tee /tmp/agamur-deploy.log
+            cd /opt/kria
+            bash scripts/deploy.sh 2>&1 | tee /tmp/kria-deploy.log
             echo "Exit code: $?"
 
       - name: Notify on failure
         if: failure()
         run: |
-          echo "::error::Deploy failed. Check the VPS logs at /tmp/agamur-deploy.log"
+          echo "::error::Deploy failed. Check the VPS logs at /tmp/kria-deploy.log"

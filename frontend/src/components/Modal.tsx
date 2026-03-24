@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from "react";
+import { useCallback, useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 
 interface ModalProps {
@@ -14,28 +14,34 @@ interface ModalProps {
 export default function Modal({ title, onClose, children, maxWidth = "max-w-lg" }: ModalProps) {
   const titleId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
+  // Use a ref for onClose so the focus-trap effect never re-runs on re-renders
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
-  // Focus trap + cierre con Escape
-  useEffect(() => {
+  const getFocusable = useCallback(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!el) return [];
+    const sel = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    return Array.from(el.querySelectorAll<HTMLElement>(sel));
+  }, []);
 
-    const focusableSelectors =
-      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-    const focusable = Array.from(el.querySelectorAll<HTMLElement>(focusableSelectors));
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-
-    // Llevar el foco al primer elemento interactivo
-    first?.focus();
+  // Focus trap + cierre con Escape — runs once on mount only
+  useEffect(() => {
+    // Focus first input (not the close button) on open
+    const focusable = getFocusable();
+    const firstInput = focusable.find((el) => el.tagName !== "BUTTON");
+    (firstInput ?? focusable[0])?.focus();
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== "Tab") return;
-      if (focusable.length === 0) { e.preventDefault(); return; }
+      const items = getFocusable();
+      if (items.length === 0) { e.preventDefault(); return; }
+      const first = items[0];
+      const last = items[items.length - 1];
       if (e.shiftKey) {
         if (document.activeElement === first) { e.preventDefault(); last?.focus(); }
       } else {
@@ -45,7 +51,8 @@ export default function Modal({ title, onClose, children, maxWidth = "max-w-lg" 
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Evitar scroll del body mientras el modal está abierto
   useEffect(() => {

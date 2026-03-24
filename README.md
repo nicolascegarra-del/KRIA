@@ -1,4 +1,4 @@
-# AGAMUR — Plataforma de Gestión de Libros Genealógicos Avícolas
+# Kria — Plataforma de Gestión de Libros Genealógicos Avícolas
 
 SaaS multi-tenant PWA para asociaciones avícolas. Gestión de socios, registro genealógico de aves, evaluaciones morfológicas, generación de certificados PDF y catálogos de reproductores.
 
@@ -22,8 +22,8 @@ SaaS multi-tenant PWA para asociaciones avícolas. Gestión de socios, registro 
 
 ```bash
 # 1. Clonar
-git clone https://github.com/nicolascegarra-del/AGAMUR-V2.git -b Dev
-cd AGAMUR-V2
+git clone https://github.com/nicolascegarra-del/Kria-V2.git -b Dev
+cd Kria-V2
 
 # 2. Variables de entorno
 cp .env.example .env         # editar si es necesario (valores por defecto funcionan en local)
@@ -44,8 +44,8 @@ docker compose exec backend python manage.py seed_admin
 |-------|-------|
 | URL | http://localhost:5173 |
 | Código de asociación | `demo` |
-| Email | admin@agamur.es |
-| Contraseña | agamur2024! |
+| Email | admin@kria.es |
+| Contraseña | kria2024! |
 
 ---
 
@@ -64,7 +64,7 @@ En `Settings → Secrets → Actions` del repositorio, añade:
 | Secret | Descripción |
 |--------|-------------|
 | `VPS_HOST` | IP pública del servidor Contabo |
-| `VPS_USER` | Usuario SSH (ej. `agamur` o `root`) |
+| `VPS_USER` | Usuario SSH (ej. `kria` o `root`) |
 | `VPS_SSH_KEY` | Clave privada SSH (contenido completo del `id_ed25519`) |
 | `VPS_PORT` | Puerto SSH (opcional, por defecto `22`) |
 
@@ -74,21 +74,21 @@ Conectarse al VPS y ejecutar:
 
 ```bash
 # Copiar y ejecutar el script de setup
-curl -fsSL https://raw.githubusercontent.com/nicolascegarra-del/AGAMUR-V2/Dev/scripts/setup-vps.sh | bash
+curl -fsSL https://raw.githubusercontent.com/nicolascegarra-del/Kria-V2/Dev/scripts/setup-vps.sh | bash
 ```
 
 O manualmente:
 
 ```bash
-git clone https://github.com/nicolascegarra-del/AGAMUR-V2.git -b Dev /opt/agamur
-cd /opt/agamur
+git clone https://github.com/nicolascegarra-del/Kria-V2.git -b Dev /opt/kria
+cd /opt/kria
 bash scripts/setup-vps.sh
 ```
 
 ### Paso 3 — Variables de entorno de producción
 
 ```bash
-cd /opt/agamur
+cd /opt/kria
 cp .env.production.example .env
 nano .env          # Rellenar TODOS los valores marcados con CHANGE_ME
 ```
@@ -110,7 +110,7 @@ FRONTEND_URL=https://tudominio.es
 ### Paso 4 — Obtener certificado SSL
 
 ```bash
-cd /opt/agamur
+cd /opt/kria
 bash scripts/init-ssl.sh
 ```
 
@@ -122,7 +122,7 @@ Este script:
 ### Paso 5 — Primer deploy
 
 ```bash
-cd /opt/agamur
+cd /opt/kria
 bash scripts/deploy.sh
 ```
 
@@ -149,7 +149,7 @@ El deploy actualiza el código sin tiempo de inactividad (rolling restart de Doc
 ## Comandos útiles en el VPS
 
 ```bash
-cd /opt/agamur
+cd /opt/kria
 
 # Ver logs en tiempo real
 docker compose -f docker-compose.prod.yml logs -f
@@ -162,11 +162,11 @@ docker compose -f docker-compose.prod.yml exec backend python manage.py shell
 
 # Backup manual de base de datos
 docker compose -f docker-compose.prod.yml exec db \
-  pg_dump -U agamur agamur > backup_$(date +%Y%m%d).sql
+  pg_dump -U kria kria > backup_$(date +%Y%m%d).sql
 
 # Aplicar políticas RLS de PostgreSQL (solo una vez)
 docker compose -f docker-compose.prod.yml exec db \
-  psql -U agamur agamur < backend/scripts/rls_policies.sql
+  psql -U kria kria < backend/scripts/rls_policies.sql
 
 # Crear nuevo tenant
 docker compose -f docker-compose.prod.yml exec backend python manage.py shell -c "
@@ -191,7 +191,7 @@ La resolución de tenant se hace por este orden de prioridad:
 ## Estructura del proyecto
 
 ```
-agamur/
+kria/
 ├── backend/              # Django 5.1 + DRF
 │   ├── apps/
 │   │   ├── tenants/      # Modelo Tenant, branding
@@ -224,4 +224,4 @@ agamur/
 
 ## Licencia
 
-Propietario — © AGAMUR. Todos los derechos reservados.
+Propietario — © Kria. Todos los derechos reservados.

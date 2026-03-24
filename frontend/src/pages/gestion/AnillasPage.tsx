@@ -6,7 +6,8 @@ import Modal from "../../components/Modal";
 import ErrorAlert from "../../components/ErrorAlert";
 import SuccessToast from "../../components/SuccessToast";
 import { useAutoCloseError } from "../../hooks/useAutoCloseError";
-import { Tag, Plus, Trash2, Loader2, AlertCircle } from "lucide-react";
+import { useTenantStore } from "../../store/tenantStore";
+import { Tag, Plus, Trash2, Loader2 } from "lucide-react";
 import type { Socio } from "../../types";
 
 interface EntregaForm {
@@ -14,7 +15,7 @@ interface EntregaForm {
   anio_campana: string;
   rango_inicio: string;
   rango_fin: string;
-  diametro: "18" | "20";
+  diametro: string;
 }
 
 const FORM_DEFAULTS: EntregaForm = {
@@ -22,11 +23,13 @@ const FORM_DEFAULTS: EntregaForm = {
   anio_campana: String(new Date().getFullYear()),
   rango_inicio: "",
   rango_fin: "",
-  diametro: "18",
+  diametro: "",
 };
 
 export default function AnillasPage() {
   const qc = useQueryClient();
+  const { branding } = useTenantStore();
+  const anillaSizes = branding?.anilla_sizes ?? [];
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EntregaForm>(FORM_DEFAULTS);
   const [filterAnio, setFilterAnio] = useState(String(new Date().getFullYear()));
@@ -78,8 +81,6 @@ export default function AnillasPage() {
   const entregas = entregasData?.results ?? [];
   const socios: Socio[] = sociosData?.results ?? [];
 
-  const diametroLabel = (d: "18" | "20") => (d === "18" ? "18mm (Hembra)" : "20mm (Macho)");
-
   return (
     <div className="space-y-4 max-w-4xl">
       <SuccessToast message={successMsg} onDismiss={() => setSuccessMsg("")} />
@@ -114,18 +115,6 @@ export default function AnillasPage() {
           ))}
         </select>
         <span className="text-sm text-gray-500">{entregas.length} entregas</span>
-      </div>
-
-      {/* Leyenda diámetros */}
-      <div className="flex gap-4 text-xs text-gray-500">
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-pink-400 inline-block" />
-          18mm — Hembras
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-blue-400 inline-block" />
-          20mm — Machos
-        </span>
       </div>
 
       {/* Tabla */}
@@ -165,14 +154,8 @@ export default function AnillasPage() {
                       </span>
                     </td>
                     <td className="py-3 pr-4">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                          e.diametro === "18"
-                            ? "bg-pink-100 text-pink-700"
-                            : "bg-blue-100 text-blue-700"
-                        }`}
-                      >
-                        {diametroLabel(e.diametro)}
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                        {e.diametro}mm
                       </span>
                     </td>
                     <td className="py-3 pr-4 text-gray-400 text-xs">{e.created_by_nombre ?? "—"}</td>
@@ -258,35 +241,21 @@ export default function AnillasPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Diámetro *</label>
-              <div className="flex gap-3">
-                {(["18", "20"] as const).map((d) => (
-                  <label
-                    key={d}
-                    className={`flex-1 flex items-center justify-center gap-2 border-2 rounded-lg px-3 py-3 cursor-pointer transition-colors ${
-                      form.diametro === d
-                        ? d === "18"
-                          ? "border-pink-500 bg-pink-50 text-pink-800"
-                          : "border-blue-500 bg-blue-50 text-blue-800"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="diametro"
-                      value={d}
-                      checked={form.diametro === d}
-                      onChange={() => setForm((f) => ({ ...f, diametro: d }))}
-                      className="sr-only"
-                    />
-                    <span className="font-medium">{diametroLabel(d)}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2 text-sm text-amber-800">
-              <AlertCircle size={16} className="shrink-0 mt-0.5" />
-              <span>18mm se asigna a hembras, 20mm a machos. El sistema alertará si hay discordancia.</span>
+              {anillaSizes.length === 0 ? (
+                <p className="text-sm text-amber-600">Esta asociación no tiene tamaños de anilla configurados. Configúralos desde el panel SuperAdmin.</p>
+              ) : (
+                <select
+                  className="input-field"
+                  value={form.diametro}
+                  onChange={(e) => setForm((f) => ({ ...f, diametro: e.target.value }))}
+                  required
+                >
+                  <option value="">Seleccionar...</option>
+                  {anillaSizes.map((sz) => (
+                    <option key={sz.mm} value={sz.mm}>{sz.mm}mm</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <ErrorAlert message={error} onDismiss={clearError} />

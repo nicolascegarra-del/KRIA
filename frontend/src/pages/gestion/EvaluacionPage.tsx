@@ -225,12 +225,12 @@ export default function EvaluacionPage() {
                             className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex items-center justify-between gap-2"
                             onClick={() => {
                               setAnimalId(a.id);
-                              setAnimalLabel(`${a.numero_anilla} / ${a.anio_nacimiento} — ${a.socio_nombre}`);
+                              setAnimalLabel(`${a.numero_anilla} / ${a.fecha_nacimiento ? new Date(a.fecha_nacimiento).getFullYear() : "—"} — ${a.socio_nombre}`);
                               setAnillaSearch("");
                             }}
                           >
                             <span className="font-mono">{a.numero_anilla}</span>
-                            <span className="text-gray-500">{a.anio_nacimiento} · {a.socio_nombre}</span>
+                            <span className="text-gray-500">{a.fecha_nacimiento ? new Date(a.fecha_nacimiento).getFullYear() : "—"} · {a.socio_nombre}</span>
                           </button>
                         </li>
                       ))}

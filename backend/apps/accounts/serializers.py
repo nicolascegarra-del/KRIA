@@ -48,45 +48,37 @@ def _validate_dni_nif(value: str) -> bool:
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
-    Extends JWT payload with:
-      - tenant_id, tenant_slug
-      - is_gestion flag
-      - access_as_gestion (boolean from request body)
+    Extends JWT payload with tenant_id, tenant_slug, is_gestion, is_superadmin.
+    Email is globally unique — no tenant slug required at login for any user.
     """
 
-    access_as_gestion = serializers.BooleanField(default=False, write_only=True)
-
     def validate(self, attrs):
-        access_as_gestion = attrs.pop("access_as_gestion", False)
-        data = super().validate(attrs)
+        # Email is globally unique: use standard Django auth (works for all roles)
+        data = super().validate(attrs)  # sets self.user, validates password
 
         user = self.user
-        # If user is not gestión but tries to access as gestión — reject
-        if access_as_gestion and not (user.is_gestion or user.is_superadmin):
-            raise serializers.ValidationError(
-                {"access_as_gestion": "You do not have gestión access."}
-            )
+        effective_is_gestion = user.is_gestion or user.is_superadmin
 
-        # Embed custom claims in tokens
         refresh = self.get_token(user)
         refresh["tenant_id"] = str(user.tenant_id)
         refresh["tenant_slug"] = user.tenant.slug
-        refresh["is_gestion"] = access_as_gestion and (user.is_gestion or user.is_superadmin)
+        refresh["is_gestion"] = effective_is_gestion
         refresh["is_superadmin"] = user.is_superadmin
         refresh["full_name"] = user.full_name
 
-        data["access"] = str(refresh.access_token)
-        data["refresh"] = str(refresh)
-        data["user"] = {
-            "id": str(user.id),
-            "email": user.email,
-            "full_name": user.full_name,
-            "is_gestion": refresh["is_gestion"],
-            "is_superadmin": user.is_superadmin,
-            "tenant_id": str(user.tenant_id),
-            "tenant_slug": user.tenant.slug,
+        return {
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "full_name": user.full_name,
+                "is_gestion": effective_is_gestion,
+                "is_superadmin": user.is_superadmin,
+                "tenant_id": str(user.tenant_id),
+                "tenant_slug": user.tenant.slug,
+            },
         }
-        return data
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -101,13 +93,16 @@ class SocioSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(write_only=True, required=False)
     first_name = serializers.CharField(write_only=True, required=False)
     last_name = serializers.CharField(write_only=True, required=False)
+    initial_password = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = Socio
         fields = [
-            "id", "nombre_razon_social", "dni_nif", "telefono", "direccion",
-            "numero_socio", "codigo_rega", "estado", "razon_baja", "fecha_baja",
-            "user", "email", "first_name", "last_name",
+            "id", "nombre_razon_social", "dni_nif", "telefono",
+            "domicilio", "municipio", "codigo_postal", "provincia", "numero_cuenta",
+            "numero_socio", "codigo_rega", "fecha_alta", "cuota_anual_pagada",
+            "estado", "razon_baja", "fecha_baja",
+            "user", "email", "first_name", "last_name", "initial_password",
         ]
         read_only_fields = ["id"]
 
@@ -120,38 +115,40 @@ class SocioSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         tenant = self.context["request"].tenant
-        email = validated_data.pop("email")
+        email = validated_data.pop("email", None)
+        initial_password = validated_data.pop("initial_password", None)
         first_name = validated_data.pop("first_name", "")
         last_name = validated_data.pop("last_name", "")
 
-        user, created = User.objects.get_or_create(
-            tenant=tenant,
-            email=email,
-            defaults={"first_name": first_name, "last_name": last_name},
-        )
-        if not created:
-            user.first_name = first_name
-            user.last_name = last_name
-            user.save(update_fields=["first_name", "last_name"])
-        else:
-            password = secrets.token_urlsafe(12)
-            user.set_password(password)
-            user.save(update_fields=["password"])
-            send_mail(
-                subject="Bienvenido a KRIA — tus credenciales de acceso",
-                message=(
-                    f"Hola {first_name or email},\n\n"
-                    f"Tu cuenta en KRIA ha sido creada.\n\n"
-                    f"Email: {email}\n"
-                    f"Contraseña: {password}\n\n"
-                    f"Accede en: {settings.FRONTEND_URL}\n\n"
-                    f"Te recomendamos cambiar la contraseña tras el primer acceso.\n\n"
-                    f"Un saludo,\nEquipo KRIA"
-                ),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=True,
+        user = None
+        if email:
+            user, created = User.objects.get_or_create(
+                email=email,
+                defaults={"tenant": tenant, "first_name": first_name, "last_name": last_name},
             )
+            if not created:
+                user.first_name = first_name
+                user.last_name = last_name
+                user.save(update_fields=["first_name", "last_name"])
+            else:
+                password = initial_password if initial_password else secrets.token_urlsafe(12)
+                user.set_password(password)
+                user.save(update_fields=["password"])
+                send_mail(
+                    subject="Bienvenido a KRIA — tus credenciales de acceso",
+                    message=(
+                        f"Hola {first_name or email},\n\n"
+                        f"Tu cuenta en KRIA ha sido creada.\n\n"
+                        f"Email: {email}\n"
+                        f"Contraseña: {password}\n\n"
+                        f"Accede en: {settings.FRONTEND_URL}\n\n"
+                        f"Te recomendamos cambiar la contraseña tras el primer acceso.\n\n"
+                        f"Un saludo,\nEquipo KRIA"
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email],
+                    fail_silently=True,
+                )
 
         socio = Socio.objects.create(
             tenant=tenant, user=user, **validated_data
@@ -161,14 +158,23 @@ class SocioSerializer(serializers.ModelSerializer):
 
 class SocioListSerializer(serializers.ModelSerializer):
     """Lighter serializer for list views."""
-    email = serializers.CharField(source="user.email", read_only=True)
-    full_name = serializers.CharField(source="user.full_name", read_only=True)
+    email = serializers.SerializerMethodField()
+    full_name = serializers.SerializerMethodField()
+
+    def get_email(self, obj):
+        return obj.user.email if obj.user_id else ""
+
+    def get_full_name(self, obj):
+        return obj.user.full_name if obj.user_id else ""
 
     class Meta:
         model = Socio
         fields = [
             "id", "nombre_razon_social", "dni_nif", "numero_socio",
-            "codigo_rega", "estado", "email", "full_name",
+            "codigo_rega", "telefono", "domicilio", "municipio", "codigo_postal",
+            "provincia", "numero_cuenta", "fecha_alta",
+            "cuota_anual_pagada", "estado", "razon_baja", "fecha_baja",
+            "email", "full_name",
         ]
 
 

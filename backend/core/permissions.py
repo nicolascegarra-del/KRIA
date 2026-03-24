@@ -1,5 +1,5 @@
 """
-Custom DRF permissions for AGAMUR.
+Custom DRF permissions for Kria.
 """
 from rest_framework.permissions import BasePermission, IsAuthenticated
 
@@ -59,14 +59,21 @@ class IsSocioOrGestion(BasePermission):
 
 
 class IsSuperAdmin(BasePermission):
-    """Platform-level superadmin — has access across all tenants."""
+    """
+    Platform-level superadmin — has access across all tenants.
+    Requires BOTH is_superadmin=True AND tenant.slug == "system" as
+    defense-in-depth: a tenant user accidentally flagged as superadmin
+    must not gain platform-level access.
+    """
 
     def has_permission(self, request, view):
-        return bool(
-            request.user
-            and request.user.is_authenticated
-            and getattr(request.user, "is_superadmin", False)
-        )
+        user = request.user
+        if not (user and user.is_authenticated and getattr(user, "is_superadmin", False)):
+            return False
+        try:
+            return user.tenant.slug == "system"
+        except Exception:
+            return False
 
 
 class IsSocioOwner(BasePermission):

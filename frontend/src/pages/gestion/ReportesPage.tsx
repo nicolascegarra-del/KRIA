@@ -56,12 +56,12 @@ function AnimalPicker({
                 type="button"
                 className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 flex gap-2 items-center"
                 onClick={() => {
-                  onSelect(a.id, `${a.numero_anilla} / ${a.anio_nacimiento}`);
+                  onSelect(a.id, `${a.numero_anilla} / ${a.fecha_nacimiento ? new Date(a.fecha_nacimiento).getFullYear() : "—"}`);
                   setAnilla("");
                 }}
               >
                 <span className="font-mono font-medium">{a.numero_anilla}</span>
-                <span className="text-gray-400">{a.anio_nacimiento} · {a.socio_nombre}</span>
+                <span className="text-gray-400">{a.fecha_nacimiento ? new Date(a.fecha_nacimiento).getFullYear() : "—"} · {a.socio_nombre}</span>
               </button>
             </li>
           ))}

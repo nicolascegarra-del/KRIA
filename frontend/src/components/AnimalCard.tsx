@@ -37,7 +37,7 @@ export default function AnimalCard({ animal, showSocio = false }: Props) {
                 {animal.numero_anilla}
               </div>
               <div className="text-xs text-gray-500">
-                Año {animal.anio_nacimiento} · {sexoLabel} · {variedadLabel}
+                {animal.fecha_nacimiento ? new Date(animal.fecha_nacimiento).getFullYear() : "—"} · {sexoLabel} · {variedadLabel}
               </div>
             </div>
             <AnimalStateChip estado={animal.estado} />

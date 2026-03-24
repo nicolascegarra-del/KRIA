@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  AGAMUR — Setup inicial del VPS (Ubuntu 22.04 / Debian 12)
+#  Kria — Setup inicial del VPS (Ubuntu 22.04 / Debian 12)
 #  Ejecutar como root una sola vez en el servidor Contabo:
 #    bash setup-vps.sh
 # =============================================================================
@@ -13,9 +13,9 @@ warning() { echo -e "${YELLOW}[WARN]${NC} $*"; }
 error()   { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
 
 # ── Variables ────────────────────────────────────────────────────────────────
-APP_USER="agamur"
-APP_DIR="/opt/agamur"
-REPO_URL="https://github.com/nicolascegarra-del/AGAMUR-V2.git"
+APP_USER="kria"
+APP_DIR="/opt/kria"
+REPO_URL="https://github.com/nicolascegarra-del/kria.git"
 BRANCH="Dev"
 
 # ── 1. Actualizar sistema ────────────────────────────────────────────────────
