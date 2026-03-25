@@ -4,7 +4,7 @@ import type { MotivoBaja } from "../types";
 export const configuracionApi = {
   listMotivosBaja: async (): Promise<MotivoBaja[]> => {
     const { data } = await apiClient.get("/configuracion/motivos-baja/");
-    return data;
+    return Array.isArray(data) ? data : (data.results ?? []);
   },
 
   createMotivoBaja: async (nombre: string): Promise<MotivoBaja> => {

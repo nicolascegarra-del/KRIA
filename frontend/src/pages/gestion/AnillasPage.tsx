@@ -54,8 +54,12 @@ export default function AnillasPage() {
       setForm(FORM_DEFAULTS);
       setSuccessMsg("Entrega de anillas registrada.");
     },
-    onError: (e: any) =>
-      setError(e?.response?.data?.detail ?? "Error al registrar la entrega."),
+    onError: (e: any) => {
+      const d = e?.response?.data;
+      if (d?.rango_inicio) setError(d.rango_inicio);
+      else if (d?.rango_fin) setError(d.rango_fin);
+      else setError(d?.detail ?? "Error al registrar la entrega.");
+    },
   });
 
   const deleteMutation = useMutation({

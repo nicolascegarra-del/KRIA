@@ -70,6 +70,10 @@ class PlatformSettings(models.Model):
     smtp_from_name = models.CharField(max_length=255, blank=True, default="KRIA Platform")
     smtp_use_tls = models.BooleanField(default=True)
     smtp_use_ssl = models.BooleanField(default=False)
+    inactivity_timeout_minutes = models.PositiveIntegerField(
+        default=30,
+        help_text="Minutos de inactividad antes de cerrar sesión automáticamente. 0 = desactivado.",
+    )
 
     class Meta:
         db_table = "tenants_platformsettings"

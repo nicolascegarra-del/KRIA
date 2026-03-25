@@ -94,6 +94,7 @@ class SocioSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(write_only=True, required=False)
     last_name = serializers.CharField(write_only=True, required=False)
     initial_password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    new_password = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = Socio
@@ -102,9 +103,12 @@ class SocioSerializer(serializers.ModelSerializer):
             "domicilio", "municipio", "codigo_postal", "provincia", "numero_cuenta",
             "numero_socio", "codigo_rega", "fecha_alta", "cuota_anual_pagada",
             "estado", "razon_baja", "fecha_baja",
-            "user", "email", "first_name", "last_name", "initial_password",
+            "user", "email", "first_name", "last_name", "initial_password", "new_password",
         ]
         read_only_fields = ["id"]
+        extra_kwargs = {
+            "dni_nif": {"required": False, "allow_blank": True},
+        }
 
     def validate_dni_nif(self, value):
         if value and not _validate_dni_nif(value):
@@ -154,6 +158,30 @@ class SocioSerializer(serializers.ModelSerializer):
             tenant=tenant, user=user, **validated_data
         )
         return socio
+
+    def update(self, instance, validated_data):
+        email = validated_data.pop("email", None)
+        validated_data.pop("first_name", None)
+        validated_data.pop("last_name", None)
+        validated_data.pop("initial_password", None)
+        new_password = validated_data.pop("new_password", None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if instance.user_id:
+            user_fields = []
+            if email:
+                instance.user.email = email
+                user_fields.append("email")
+            if new_password:
+                instance.user.set_password(new_password)
+                user_fields.append("password")
+            if user_fields:
+                instance.user.save(update_fields=user_fields)
+
+        return instance
 
 
 class SocioListSerializer(serializers.ModelSerializer):

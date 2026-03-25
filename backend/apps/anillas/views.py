@@ -2,6 +2,7 @@
 API views para gestión de rangos de anillas (solo Gestión).
 """
 from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -9,6 +10,23 @@ from core.permissions import IsGestion
 from .models import EntregaAnillas
 from .serializers import EntregaAnillasSerializer
 from .utils import compute_alerta_anilla
+
+
+class MisAnillasView(generics.ListAPIView):
+    """GET /api/v1/anillas/mis-anillas/ — devuelve los rangos asignados al socio autenticado."""
+    serializer_class = EntregaAnillasSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        from apps.accounts.models import Socio
+        try:
+            socio = Socio.objects.get(user=self.request.user, tenant=self.request.tenant)
+        except Socio.DoesNotExist:
+            return EntregaAnillas.objects.none()
+        return EntregaAnillas.objects.filter(
+            tenant=self.request.tenant,
+            socio=socio,
+        ).order_by("-anio_campana", "rango_inicio")
 
 
 class EntregaAnillasListCreateView(generics.ListCreateAPIView):

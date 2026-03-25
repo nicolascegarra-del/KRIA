@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../store/authStore";
 import { useTenantStore } from "../store/tenantStore";
+import { notificacionesApi } from "../api/notificaciones";
+import type { Notificacion } from "../types";
 import {
   Bird,
   LayoutDashboard,
@@ -15,13 +18,20 @@ import {
   LogOut,
   Menu,
   X,
-  RefreshCw,
   Tag,
   BookOpen,
   User,
   UserX,
   Settings,
   Wrench,
+  ScrollText,
+  Bell,
+  CheckCircle2,
+  XCircle,
+  RotateCcw,
+  Star,
+  ClipboardCheck,
+  AlertCircle,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -41,8 +51,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/dashboard",                label: "Dashboard",             icon: <LayoutDashboard size={18} />, gestionOnly: true },
   { to: "/validaciones",             label: "Validaciones",          icon: <CheckSquare size={18} />,     gestionOnly: true },
   { to: "/reproductores/catalogo",   label: "Catálogo Reprod.",      icon: <BookOpen size={18} />,        gestionOnly: true },
-  { to: "/solicitudes-realta",       label: "Re-altas",              icon: <RefreshCw size={18} />,       gestionOnly: true },
-  { to: "/socios",                   label: "Socios",                icon: <Users size={18} />,           gestionOnly: true },
+{ to: "/socios",                   label: "Socios",                icon: <Users size={18} />,           gestionOnly: true },
   { to: "/granjas",                  label: "Granjas",               icon: <Building2 size={18} />,       gestionOnly: true, requiresGranjas: true },
   { to: "/anillas",                  label: "Anillas",               icon: <Tag size={18} />,             gestionOnly: true },
   { to: "/importar",                 label: "Importar",              icon: <Upload size={18} />,          gestionOnly: true },
@@ -52,10 +61,12 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/superadmin/asociaciones",  label: "Asociaciones",          icon: <Building size={18} />,        superadminOnly: true },
   { to: "/superadmin/configuracion",        label: "Configuración",          icon: <Settings size={18} />,  superadminOnly: true },
   { to: "/superadmin/gestiones-avanzadas", label: "Gestiones Avanzadas",    icon: <Wrench size={18} />,    superadminOnly: true },
+  { to: "/superadmin/log",               label: "Log de Accesos",          icon: <ScrollText size={18} />, superadminOnly: true },
   // Socio
   { to: "/mis-animales",             label: "Mis Animales",          icon: <Bird size={18} />,            socioOnly: true },
   { to: "/mis-granjas",              label: "Mis Granjas",           icon: <Building size={18} />,        socioOnly: true, requiresGranjas: true },
   { to: "/mis-lotes",                label: "Mis Lotes",             icon: <Layers size={18} />,          socioOnly: true },
+  { to: "/mis-anillas",              label: "Mis Anillas",           icon: <Tag size={18} />,             socioOnly: true },
 ];
 
 // Bottom nav items for socios (mobile)
@@ -66,16 +77,135 @@ const SOCIO_BOTTOM_NAV_BASE = [
   { to: "/perfil",        label: "Perfil",     icon: (size: number) => <User size={size} />,    requiresGranjas: false },
 ];
 
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Ahora mismo";
+  if (mins < 60) return `Hace ${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `Hace ${hrs} h`;
+  return `Hace ${Math.floor(hrs / 24)} días`;
+}
+
+function NotificationDropdown({
+  notifications,
+  onClose,
+  onNavigate,
+  primaryColor,
+  upward = false,
+}: {
+  notifications: Notificacion[];
+  onClose: () => void;
+  onNavigate: (animalId: string) => void;
+  primaryColor: string;
+  upward?: boolean;
+}) {
+  return (
+    <>
+      {/* Overlay to close on outside click */}
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div
+        className={clsx(
+          "absolute right-0 z-50 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden",
+          upward ? "bottom-full mb-2" : "top-full mt-2"
+        )}
+      >
+        <div
+          className="px-4 py-3 flex items-center justify-between"
+          style={{ background: primaryColor }}
+        >
+          <div className="flex items-center gap-2 text-white font-semibold text-sm">
+            <Bell size={15} />
+            Notificaciones
+          </div>
+          <button onClick={onClose} className="text-white/70 hover:text-white">
+            <X size={16} />
+          </button>
+        </div>
+
+        {notifications.length === 0 ? (
+          <div className="px-4 py-8 text-center text-gray-400 text-sm">
+            No hay notificaciones nuevas
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
+            {notifications.map((n) => (
+              <button
+                key={n.id}
+                onClick={() => n.tipo !== "CUOTA_PENDIENTE" && n.animal_id && onNavigate(n.animal_id)}
+                className={`w-full text-left px-4 py-3 transition-colors flex items-start gap-3 ${
+                  n.tipo === "CUOTA_PENDIENTE"
+                    ? "bg-amber-50 hover:bg-amber-100 cursor-default"
+                    : "hover:bg-gray-50"
+                }`}
+              >
+                <div className="mt-0.5 shrink-0">
+                  {n.tipo === "CUOTA_PENDIENTE" ? (
+                    <AlertCircle size={18} className="text-amber-500" />
+                  ) : n.tipo === "ANIMAL_APROBADO" ? (
+                    <CheckCircle2 size={18} className="text-green-500" />
+                  ) : n.tipo === "REALTA_APROBADA" ? (
+                    <RotateCcw size={18} className="text-green-500" />
+                  ) : n.tipo === "REPRODUCTOR_APROBADO" ? (
+                    <Star size={18} className="text-emerald-500" />
+                  ) : n.tipo === "CAMBIO_DATOS_APROBADO" ? (
+                    <ClipboardCheck size={18} className="text-sky-500" />
+                  ) : n.tipo === "CAMBIO_DATOS_DENEGADO" ? (
+                    <ClipboardCheck size={18} className="text-red-400" />
+                  ) : (
+                    <XCircle size={18} className="text-red-500" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm ${n.tipo === "CUOTA_PENDIENTE" ? "text-amber-800 font-medium" : "text-gray-800"}`}>
+                    {n.mensaje}
+                  </p>
+                  {n.tipo !== "CUOTA_PENDIENTE" && (
+                    <p className="text-xs text-gray-400 mt-0.5">{timeAgo(n.created_at)}</p>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, clearAuth, impersonatingTenant, endImpersonation } = useAuthStore();
   const { branding } = useTenantStore();
   const location = useLocation();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [bellOpen, setBellOpen] = useState(false);
 
   const isGestion = !!impersonatingTenant || (user?.is_gestion ?? false);
   const isSuperadmin = user?.is_superadmin ?? false;
   const isSocio = !isGestion && !isSuperadmin;
+
+  // ── Notifications (socios only) ──────────────────────────────────────────
+  const { data: notifData } = useQuery({
+    queryKey: ["notificaciones"],
+    queryFn: notificacionesApi.list,
+    enabled: isSocio,
+    refetchInterval: 60_000,
+  });
+  const markReadMutation = useMutation({
+    mutationFn: notificacionesApi.marcarLeidas,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notificaciones"] }),
+  });
+  const unreadCount = notifData?.count ?? 0;
+  const notifications: Notificacion[] = notifData?.results ?? [];
+
+  const handleBellClick = () => {
+    if (!bellOpen && unreadCount > 0) {
+      markReadMutation.mutate();
+    }
+    setBellOpen((v) => !v);
+  };
 
   const handleEndImpersonation = () => {
     endImpersonation();
@@ -237,27 +367,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           )}
         </nav>
 
-        {/* User footer */}
+        {/* User footer — info only, actions moved to top bar */}
         <div className="px-4 py-4 border-t border-white/20">
-          <div className="text-xs text-white/60 truncate mb-0.5">{user?.email}</div>
-          <div className="text-sm font-medium text-white truncate mb-3">{user?.full_name}</div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => { navigate("/perfil"); setSidebarOpen(false); }}
-              className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors flex-1 min-h-[40px]"
-              aria-label="Mi perfil"
-            >
-              <User size={15} />
-              Mi perfil
-            </button>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors min-h-[40px]"
-              aria-label="Cerrar sesión"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
+          <div className="text-xs text-white/60 truncate">{user?.email}</div>
+          <div className="text-sm font-medium text-white truncate">{user?.full_name}</div>
         </div>
       </aside>
 
@@ -279,40 +392,75 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <div className={clsx("flex-1 flex flex-col min-w-0 overflow-hidden", impersonatingTenant && "mt-10")}>
-        {/* Mobile top bar */}
-        <header className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3"
-          style={isSocio ? { borderBottomColor: `${primaryColor}30` } : undefined}
-        >
-          {isSocio ? (
-            /* Socios: logo + nombre de la asociación, sin hamburguesa */
-            <>
-              {branding?.logo_url ? (
-                <img src={branding.logo_url} alt="Logo" className="w-7 h-7 rounded object-cover" />
-              ) : (
-                <Bird size={20} style={{ color: primaryColor }} />
-              )}
-              <span className="font-semibold text-gray-800 flex-1">{branding?.name ?? "KRIA"}</span>
-              <button
-                onClick={handleLogout}
-                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                aria-label="Cerrar sesión"
-              >
-                <LogOut size={18} />
-              </button>
-            </>
-          ) : (
-            /* Gestión: hamburguesa normal */
-            <>
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                aria-label="Abrir menú"
-              >
-                <Menu size={20} />
-              </button>
-              <span className="font-semibold text-gray-800">{branding?.name ?? "KRIA"}</span>
-            </>
+        {/* Top bar — always visible except pure superadmin on desktop */}
+        <header
+          className={clsx(
+            "bg-white border-b border-gray-200 px-4 h-14 flex items-center gap-2 shrink-0",
+            isSuperadmin && !impersonatingTenant && "lg:hidden"
           )}
+          style={{ borderBottomColor: `${primaryColor}20` }}
+        >
+          {/* Left: hamburger (gestión mobile) + logo + name */}
+          {!isSocio && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Abrir menú"
+            >
+              <Menu size={20} />
+            </button>
+          )}
+          {branding?.logo_url ? (
+            <img src={branding.logo_url} alt="Logo" className="w-7 h-7 rounded object-cover shrink-0" />
+          ) : (
+            <Bird size={20} className="shrink-0" style={{ color: primaryColor }} />
+          )}
+          <span className="font-semibold text-gray-800 flex-1 min-w-0 truncate">
+            {branding?.name ?? "KRIA"}
+          </span>
+
+          {/* Right: bell (socios) + perfil + logout */}
+          <div className="flex items-center gap-1 shrink-0">
+            {isSocio && (
+              <div className="relative">
+                <button
+                  onClick={handleBellClick}
+                  className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center relative"
+                  aria-label="Notificaciones"
+                >
+                  <Bell size={18} />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+                {bellOpen && (
+                  <NotificationDropdown
+                    notifications={notifications}
+                    onClose={() => setBellOpen(false)}
+                    onNavigate={(animalId) => { setBellOpen(false); navigate(`/mis-animales/${animalId}`); }}
+                    primaryColor={primaryColor}
+                  />
+                )}
+              </div>
+            )}
+            <button
+              onClick={() => { navigate("/perfil"); setSidebarOpen(false); }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 min-h-[44px] transition-colors"
+              aria-label="Mi perfil"
+            >
+              <User size={16} />
+              <span className="hidden sm:inline">Mi perfil</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Cerrar sesión"
+            >
+              <LogOut size={18} />
+            </button>
+          </div>
         </header>
 
         {/* Page content — socios en mobile necesitan padding inferior para la bottom nav */}

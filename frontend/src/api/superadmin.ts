@@ -21,6 +21,10 @@ export const superadminApi = {
     const { data } = await apiClient.post(`/superadmin/tenants/${id}/delete-socios/`);
     return data;
   },
+  deleteTenantAnillas: async (id: string): Promise<{ detail: string; count: number }> => {
+    const { data } = await apiClient.post(`/superadmin/tenants/${id}/delete-anillas/`);
+    return data;
+  },
   suspendTenant: async (id: string) => {
     const { data } = await apiClient.post<Tenant>(`/superadmin/tenants/${id}/suspend/`);
     return data;
@@ -120,5 +124,13 @@ export const superadminApi = {
   },
   deleteSuperAdmin: async (id: string): Promise<void> => {
     await apiClient.delete(`/superadmin/superadmins/${id}/`);
+  },
+
+  getLogs: async (params?: { tenant_id?: string; role?: string; search?: string; date_from?: string; date_to?: string; page?: number }) => {
+    const { data } = await apiClient.get<{
+      count: number; next: string | null; previous: string | null;
+      results: { id: number; timestamp: string; user_email: string; user_role: string; tenant_id: string | null; tenant_name: string; ip_address: string | null }[];
+    }>("/superadmin/logs/", { params });
+    return data;
   },
 };

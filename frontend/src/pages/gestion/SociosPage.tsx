@@ -118,8 +118,6 @@ interface SocioFormData {
   nombre_razon_social: string;
   dni_nif: string;
   email: string;
-  first_name: string;
-  last_name: string;
   telefono: string;
   numero_socio: string;
   codigo_rega: string;
@@ -130,6 +128,7 @@ interface SocioFormData {
   numero_cuenta: string;
   fecha_alta?: string;
   initial_password?: string;
+  new_password?: string;
   cuota_anual_pagada?: string;
 }
 
@@ -146,7 +145,6 @@ function SocioModal({
       nombre_razon_social: socio.nombre_razon_social ?? "",
       dni_nif: socio.dni_nif ?? "",
       email: socio.email ?? "",
-      first_name: "", last_name: "",
       telefono: socio.telefono ?? "",
       numero_socio: socio.numero_socio ?? "",
       codigo_rega: socio.codigo_rega ?? "",
@@ -183,7 +181,6 @@ function SocioModal({
     clearError();
     const payload: any = {
       nombre_razon_social: data.nombre_razon_social, dni_nif: data.dni_nif,
-      first_name: data.first_name, last_name: data.last_name,
       telefono: data.telefono || undefined, numero_socio: data.numero_socio || undefined,
       codigo_rega: data.codigo_rega || undefined,
       domicilio: data.domicilio || undefined,
@@ -195,10 +192,12 @@ function SocioModal({
       cuota_anual_pagada: data.cuota_anual_pagada ? parseInt(data.cuota_anual_pagada) : undefined,
     };
     if (mode === "create") {
-      payload.email = data.email;
+      if (data.email) payload.email = data.email;
       if (data.initial_password) payload.initial_password = data.initial_password;
       createMutation.mutate(payload);
     } else {
+      if (data.email) payload.email = data.email;
+      if (data.new_password) payload.new_password = data.new_password;
       editMutation.mutate(payload);
     }
   };
@@ -213,22 +212,20 @@ function SocioModal({
             {errors.nombre_razon_social && <p className="text-xs text-red-600 mt-1">Requerido</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">DNI / NIF *</label>
-            <input className="input-field" {...register("dni_nif", { required: true })} />
-            {errors.dni_nif && <p className="text-xs text-red-600 mt-1">Requerido</p>}
+            <label className="block text-sm font-medium text-gray-700 mb-1">DNI / NIF</label>
+            <input className="input-field" {...register("dni_nif")} />
+            {errors.dni_nif && <p className="text-xs text-red-600 mt-1">Formato inválido</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email {mode === "create" ? "*" : "(no editable)"}</label>
-            <input type="email" className="input-field" disabled={mode === "edit"} {...register("email", { required: mode === "create" })} />
-            {errors.email && <p className="text-xs text-red-600 mt-1">Requerido</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
-            <input className="input-field" {...register("first_name")} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Apellidos</label>
-            <input className="input-field" {...register("last_name")} />
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email{mode === "create" && <span className="font-normal text-gray-400"> (opcional — para acceso al portal)</span>}
+              {mode === "edit" && <span className="font-normal text-gray-400"> (credencial de acceso)</span>}
+            </label>
+            <input
+              type="email"
+              className="input-field"
+              {...register("email")}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
@@ -271,10 +268,15 @@ function SocioModal({
             <input type="number" className="input-field" placeholder="p.ej. 2025" min="2000" max="2100" {...register("cuota_anual_pagada")} />
           </div>
         </div>
-        {mode === "create" && (
+        {mode === "create" ? (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña inicial <span className="font-normal text-gray-400">(vacío = auto)</span></label>
-            <input type="text" className="input-field" {...register("initial_password")} placeholder="Dejar vacío para generar" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña inicial <span className="font-normal text-gray-400">(vacío = auto-generar y enviar por email)</span></label>
+            <input type="text" className="input-field" {...register("initial_password")} placeholder="Dejar vacío para generar automáticamente" />
+          </div>
+        ) : (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nueva contraseña <span className="font-normal text-gray-400">(vacío = sin cambios)</span></label>
+            <input type="text" className="input-field" {...register("new_password")} placeholder="Dejar vacío para no cambiar" />
           </div>
         )}
         <ErrorAlert message={error} onDismiss={clearError} />
@@ -370,7 +372,7 @@ export default function SociosPage() {
   const [search, setSearch] = useState("");
   const [filterEstado, setFilterEstado] = useState("");
   const [filterCuota, setFilterCuota] = useState("");
-  const [ordering, setOrdering] = useState("nombre_razon_social");
+  const [ordering, setOrdering] = useState("numero_socio");
   const [page, setPage] = useState(1);
   const [bajaModal, setBajaModal] = useState<Socio | null>(null);
   const [razonBaja, setRazonBaja] = useState("");

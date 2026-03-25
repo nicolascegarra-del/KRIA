@@ -19,6 +19,8 @@ from .superadmin_views import (
     PlatformSmtpTestView,
     TenantSmtpTestView,
     SuperAdminTenantDeleteSociosView,
+    SuperAdminTenantDeleteAnillasView,
+    SuperAdminLogsView,
 )
 
 urlpatterns = [
@@ -32,6 +34,7 @@ urlpatterns = [
     path("tenants/<uuid:pk>/users/", SuperAdminTenantUsersView.as_view(), name="superadmin-tenants-users"),
     path("tenants/<uuid:pk>/test-smtp/", TenantSmtpTestView.as_view(), name="superadmin-tenants-test-smtp"),
     path("tenants/<uuid:pk>/delete-socios/", SuperAdminTenantDeleteSociosView.as_view(), name="superadmin-tenant-delete-socios"),
+    path("tenants/<uuid:pk>/delete-anillas/", SuperAdminTenantDeleteAnillasView.as_view(), name="superadmin-tenant-delete-anillas"),
     # Usuarios admin (gestión, no superadmin)
     path("admin-users/", SuperAdminAdminUsersListView.as_view(), name="superadmin-admin-users-list"),
     path("users/<uuid:pk>/", SuperAdminUserDetailView.as_view(), name="superadmin-user-detail"),
@@ -46,4 +49,6 @@ urlpatterns = [
     # Platform settings (SMTP global)
     path("settings/", PlatformSettingsView.as_view(), name="superadmin-platform-settings"),
     path("settings/test-smtp/", PlatformSmtpTestView.as_view(), name="superadmin-platform-test-smtp"),
+    # Access logs
+    path("logs/", SuperAdminLogsView.as_view(), name="superadmin-logs"),
 ]

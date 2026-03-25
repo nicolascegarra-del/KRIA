@@ -9,15 +9,20 @@ from .views import (
     AnimalListCreateView,
     AnimalMotivosRechazoView,
     AnimalPesajeView,
+    AnimalReactivarView,
     AnimalRejectView,
     AnimalReproductorApproveView,
     AnimalSolicitarRealtaView,
+    GanaderiasNacimientoView,
+    LotesExternosView,
 )
 
 urlpatterns = [
     path("", AnimalListCreateView.as_view(), name="animals-list"),
     path("search-global/", AnimalGlobalSearchView.as_view(), name="animals-search-global"),
     path("motivos-rechazo/", AnimalMotivosRechazoView.as_view(), name="animals-motivos-rechazo"),
+    path("ganaderias-nacimiento/", GanaderiasNacimientoView.as_view(), name="animals-ganaderias-nacimiento"),
+    path("lotes-externos/", LotesExternosView.as_view(), name="animals-lotes-externos"),
     path("<uuid:pk>/", AnimalDetailView.as_view(), name="animals-detail"),
     path("<uuid:pk>/approve/", AnimalApproveView.as_view(), name="animals-approve"),
     path("<uuid:pk>/reject/", AnimalRejectView.as_view(), name="animals-reject"),
@@ -27,4 +32,5 @@ urlpatterns = [
     path("<uuid:pk>/aprobar-reproductor/", AnimalReproductorApproveView.as_view(), name="animals-aprobar-reproductor"),
     path("<uuid:pk>/solicitar-realta/", AnimalSolicitarRealtaView.as_view(), name="animals-solicitar-realta"),
     path("<uuid:pk>/dar-baja/", AnimalDarBajaView.as_view(), name="animals-dar-baja"),
+    path("<uuid:pk>/reactivar/", AnimalReactivarView.as_view(), name="animals-reactivar"),
 ]

@@ -52,15 +52,45 @@ import django_filters
 
 from core.permissions import IsGestion, IsSocioOrGestion, IsSocioOwner, get_effective_is_gestion
 from core.throttles import UploadRateThrottle
-from .models import Animal, MotivoBaja
+from .models import Animal, GanaderiaNacimientoMap, LoteExternoMap, MotivoBaja
 from .serializers import (
     AnimalDetailSerializer,
     AnimalListSerializer,
     AnimalWriteSerializer,
+    GanaderiaNacimientoMapSerializer,
+    LoteExternoMapSerializer,
     GenealogySerializer,
     MotivoBajaSerializer,
 )
 from apps.conflicts.models import Conflicto
+
+
+def _create_notificacion(tenant, socio, tipo, animal):
+    """Create a notification for the socio's user. Never raises."""
+    try:
+        if not socio or not getattr(socio, "user_id", None):
+            return
+        from apps.accounts.models import Notificacion
+        anilla = animal.numero_anilla if animal else ""
+        mensajes = {
+            "ANIMAL_APROBADO": f"Tu animal {anilla} ha sido aprobado.",
+            "ANIMAL_RECHAZADO": f"Tu animal {anilla} ha sido rechazado.",
+            "REALTA_APROBADA": f"La solicitud de re-alta de tu animal {anilla} ha sido aprobada.",
+            "REALTA_DENEGADA": f"La solicitud de re-alta de tu animal {anilla} ha sido denegada.",
+            "REPRODUCTOR_APROBADO": f"Tu animal {anilla} ha sido aprobado como reproductor.",
+            "REPRODUCTOR_DENEGADO": f"Tu animal {anilla} no ha sido aprobado como reproductor.",
+        }
+        mensaje = mensajes.get(tipo, "")
+        Notificacion.objects.create(
+            tenant=tenant,
+            usuario_id=socio.user_id,
+            tipo=tipo,
+            animal_id_str=str(animal.id) if animal else "",
+            animal_anilla=anilla,
+            mensaje=mensaje,
+        )
+    except Exception:
+        pass
 
 
 def _update_alerta_anilla(animal):
@@ -214,6 +244,10 @@ class AnimalDetailView(generics.RetrieveUpdateAPIView):
         return Animal.objects.select_related("socio", "padre", "madre_animal", "madre_lote")
 
     def perform_update(self, serializer):
+        from rest_framework.exceptions import PermissionDenied
+        if not get_effective_is_gestion(self.request):
+            if serializer.instance.estado == Animal.Estado.RECHAZADO:
+                raise PermissionDenied("No puedes editar un animal rechazado. Contacta con la gestión.")
         serializer.instance._editing_user = self.request.user
         animal = serializer.save()
         _update_alerta_anilla(animal)
@@ -234,15 +268,6 @@ class AnimalApproveView(APIView):
         if animal.estado not in (Animal.Estado.AÑADIDO, Animal.Estado.RECHAZADO):
             return Response({"detail": f"Cannot approve animal in state {animal.estado}."}, status=400)
 
-        # Validate that all 3 required photo types are present
-        tipos_presentes = {f.get("tipo") for f in (animal.fotos or []) if f.get("tipo")}
-        faltantes = FOTO_TIPOS_REQUERIDOS - tipos_presentes
-        if faltantes:
-            return Response(
-                {"detail": f"Faltan fotos obligatorias: {', '.join(sorted(faltantes))}."},
-                status=400,
-            )
-
         # Bloquear aprobación si hay alerta de diámetro (anilla no corresponde al sexo)
         if animal.alerta_anilla == "DIAMETRO":
             return Response(
@@ -253,6 +278,7 @@ class AnimalApproveView(APIView):
         animal.estado = Animal.Estado.APROBADO
         animal.razon_rechazo = ""
         animal.save(update_fields=["estado", "razon_rechazo"])
+        _create_notificacion(request.tenant, animal.socio, "ANIMAL_APROBADO", animal)
         return Response(AnimalDetailSerializer(animal).data)
 
 
@@ -269,6 +295,7 @@ class AnimalRejectView(APIView):
         animal.estado = Animal.Estado.RECHAZADO
         animal.razon_rechazo = razon
         animal.save(update_fields=["estado", "razon_rechazo"])
+        _create_notificacion(request.tenant, animal.socio, "ANIMAL_RECHAZADO", animal)
         return Response(AnimalDetailSerializer(animal).data)
 
 
@@ -492,6 +519,8 @@ class AnimalReproductorApproveView(APIView):
             update_fields.append("razon_rechazo")
 
         animal.save(update_fields=update_fields)
+        tipo_notif = "REPRODUCTOR_APROBADO" if aprobado else "REPRODUCTOR_DENEGADO"
+        _create_notificacion(request.tenant, animal.socio, tipo_notif, animal)
         return Response(AnimalDetailSerializer(animal).data)
 
 
@@ -555,9 +584,14 @@ class AnimalSolicitarRealtaView(APIView):
         if animal.socio != socio:
             return Response({"detail": "Permission denied."}, status=403)
 
-        if animal.estado != Animal.Estado.SOCIO_EN_BAJA:
+        ESTADOS_NO_ACTIVOS = {
+            Animal.Estado.SOCIO_EN_BAJA,
+            Animal.Estado.BAJA,
+            Animal.Estado.RECHAZADO,
+        }
+        if animal.estado not in ESTADOS_NO_ACTIVOS:
             return Response(
-                {"detail": f"Solo se puede solicitar re-alta de animales en estado SOCIO_EN_BAJA. Estado actual: {animal.estado}."},
+                {"detail": f"Solo se puede solicitar reactivación de animales no activos. Estado actual: {animal.estado}."},
                 status=400,
             )
 
@@ -618,10 +652,38 @@ class AnimalDarBajaView(APIView):
         return Response(AnimalDetailSerializer(animal).data)
 
 
-class MotivoBajaListCreateView(generics.ListCreateAPIView):
-    """GET/POST /api/v1/configuracion/motivos-baja/"""
-    serializer_class = MotivoBajaSerializer
+class AnimalReactivarView(APIView):
+    """POST /api/v1/animals/:id/reactivar/ — gestión reactiva directamente un animal en baja."""
     permission_classes = [IsGestion]
+
+    def post(self, request, pk):
+        try:
+            animal = Animal.all_objects.get(pk=pk, tenant=request.tenant)
+        except Animal.DoesNotExist:
+            return Response({"detail": "Not found."}, status=404)
+
+        if animal.estado not in (Animal.Estado.BAJA, Animal.Estado.RECHAZADO, Animal.Estado.SOCIO_EN_BAJA):
+            return Response({"detail": f"No se puede reactivar un animal en estado {animal.estado}."}, status=400)
+
+        animal.estado = Animal.Estado.AÑADIDO
+        animal.fecha_baja = None
+        animal.motivo_baja = None
+        animal.razon_rechazo = ""
+        animal.save(update_fields=["estado", "fecha_baja", "motivo_baja", "razon_rechazo"])
+        return Response(AnimalDetailSerializer(animal).data)
+
+
+class MotivoBajaListCreateView(generics.ListCreateAPIView):
+    """GET/POST /api/v1/configuracion/motivos-baja/
+    GET: socios y gestión pueden leer (para el formulario de baja).
+    POST: solo gestión puede crear.
+    """
+    serializer_class = MotivoBajaSerializer
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [IsSocioOrGestion()]
+        return [IsGestion()]
 
     def get_queryset(self):
         return MotivoBaja.objects.filter(tenant=self.request.tenant)
@@ -637,3 +699,147 @@ class MotivoBajaDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return MotivoBaja.objects.filter(tenant=self.request.tenant)
+
+
+# ── Ganadería de nacimiento remapping ─────────────────────────────────────────
+
+class GanaderiasNacimientoView(APIView):
+    """
+    GET  /api/v1/animals/ganaderias-nacimiento/
+         Returns all unique ganaderia_nacimiento values with animal count and current mapping.
+    POST /api/v1/animals/ganaderias-nacimiento/
+         Create or update a mapping: { ganaderia_nombre, socio_real (uuid|null) }
+    """
+    permission_classes = [IsGestion]
+
+    def get(self, request):
+        from django.db.models import Count, OuterRef, Subquery
+        tenant = request.tenant
+
+        # All unique ganaderia_nacimiento values (non-empty) with counts
+        rows = (
+            Animal.objects
+            .filter(ganaderia_nacimiento__gt="")
+            .values("ganaderia_nacimiento")
+            .annotate(animal_count=Count("id"))
+            .order_by("ganaderia_nacimiento")
+        )
+
+        # Fetch existing mappings
+        maps = {
+            m.ganaderia_nombre: m
+            for m in GanaderiaNacimientoMap.objects.filter(tenant=tenant).select_related("socio_real")
+        }
+
+        result = []
+        for row in rows:
+            nombre = row["ganaderia_nombre"]
+            mapping = maps.get(nombre)
+            result.append({
+                "ganaderia_nombre": nombre,
+                "animal_count": row["animal_count"],
+                "map_id": str(mapping.id) if mapping else None,
+                "socio_real": str(mapping.socio_real_id) if mapping and mapping.socio_real_id else None,
+                "socio_nombre": mapping.socio_real.nombre_razon_social if mapping and mapping.socio_real else None,
+            })
+
+        return Response(result)
+
+    def post(self, request):
+        tenant = request.tenant
+        ganaderia_nombre = request.data.get("ganaderia_nombre", "").strip()
+        socio_real_id = request.data.get("socio_real")  # uuid or null
+
+        if not ganaderia_nombre:
+            return Response({"detail": "ganaderia_nombre es obligatorio."}, status=400)
+
+        from apps.accounts.models import Socio
+        socio_real = None
+        if socio_real_id:
+            try:
+                socio_real = Socio.objects.get(pk=socio_real_id, tenant=tenant)
+            except Socio.DoesNotExist:
+                return Response({"detail": "Socio no encontrado."}, status=404)
+
+        mapping, _ = GanaderiaNacimientoMap.objects.update_or_create(
+            tenant=tenant,
+            ganaderia_nombre=ganaderia_nombre,
+            defaults={"socio_real": socio_real},
+        )
+        return Response({
+            "id": str(mapping.id),
+            "ganaderia_nombre": mapping.ganaderia_nombre,
+            "socio_real": str(mapping.socio_real_id) if mapping.socio_real_id else None,
+            "socio_nombre": mapping.socio_real.nombre_razon_social if mapping.socio_real else None,
+        })
+
+
+# ── Lote externo remapping ─────────────────────────────────────────────────────
+
+class LotesExternosView(APIView):
+    """
+    GET  /api/v1/animals/lotes-externos/
+         Returns all unique madre_lote_externo values with animal count and current mapping.
+    POST /api/v1/animals/lotes-externos/
+         Create or update a mapping: { descripcion, lote_real (uuid|null) }
+    """
+    permission_classes = [IsGestion]
+
+    def get(self, request):
+        from django.db.models import Count
+        tenant = request.tenant
+
+        rows = (
+            Animal.objects
+            .filter(madre_lote_externo__gt="")
+            .values("madre_lote_externo")
+            .annotate(animal_count=Count("id"))
+            .order_by("madre_lote_externo")
+        )
+
+        maps = {
+            m.descripcion: m
+            for m in LoteExternoMap.objects.filter(tenant=tenant).select_related("lote_real")
+        }
+
+        result = []
+        for row in rows:
+            desc = row["madre_lote_externo"]
+            mapping = maps.get(desc)
+            result.append({
+                "descripcion": desc,
+                "animal_count": row["animal_count"],
+                "map_id": str(mapping.id) if mapping else None,
+                "lote_real": str(mapping.lote_real_id) if mapping and mapping.lote_real_id else None,
+                "lote_nombre": mapping.lote_real.nombre if mapping and mapping.lote_real else None,
+            })
+
+        return Response(result)
+
+    def post(self, request):
+        tenant = request.tenant
+        descripcion = request.data.get("descripcion", "").strip()
+        lote_real_id = request.data.get("lote_real")
+
+        if not descripcion:
+            return Response({"detail": "descripcion es obligatorio."}, status=400)
+
+        from apps.lotes.models import Lote
+        lote_real = None
+        if lote_real_id:
+            try:
+                lote_real = Lote.objects.get(pk=lote_real_id, tenant=tenant)
+            except Lote.DoesNotExist:
+                return Response({"detail": "Lote no encontrado."}, status=404)
+
+        mapping, _ = LoteExternoMap.objects.update_or_create(
+            tenant=tenant,
+            descripcion=descripcion,
+            defaults={"lote_real": lote_real},
+        )
+        return Response({
+            "id": str(mapping.id),
+            "descripcion": mapping.descripcion,
+            "lote_real": str(mapping.lote_real_id) if mapping.lote_real_id else None,
+            "lote_nombre": mapping.lote_real.nombre if mapping.lote_real else None,
+        })

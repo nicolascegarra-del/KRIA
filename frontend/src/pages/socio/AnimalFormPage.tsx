@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { animalsApi } from "../../api/animals";
@@ -8,7 +8,7 @@ import { lotesApi } from "../../api/lotes";
 import { useTenantStore } from "../../store/tenantStore";
 import AnimalStateChip from "../../components/AnimalStateChip";
 import GenealogyTooltip from "../../components/GenealogyTooltip";
-import { Loader2, ArrowLeft, Info, Camera, X, Scale, Plus, CheckCircle2, Circle } from "lucide-react";
+import { Loader2, ArrowLeft, Info, Camera, X, Scale, Plus, CheckCircle2, Circle, XCircle, AlertCircle } from "lucide-react";
 import type { Animal, FotoTipo } from "../../types";
 
 const FOTO_TIPOS: { tipo: FotoTipo; label: string }[] = [
@@ -21,20 +21,19 @@ interface FormData {
   numero_anilla: string;
   fecha_nacimiento: string;
   sexo: "M" | "H";
-  variedad: "SALMON" | "PLATA" | "OTRA";
+  variedad: "SALMON" | "PLATA" | "SIN_DEFINIR";
   fecha_incubacion: string;
   ganaderia_nacimiento: string;
-  ganaderia_actual: string;
   padre_anilla: string;
-  padre_anio: string;
   madre_anilla: string;
-  madre_anio: string;
   candidato_reproductor: boolean;
   granja: string;
 }
 
 export default function AnimalFormPage() {
   const { id, socioId } = useParams<{ id?: string; socioId?: string }>();
+  const [searchParams] = useSearchParams();
+  const readonly = searchParams.get("readonly") === "true";
   const isEdit = !!id;
   const isGestionCreate = !!socioId; // gestion admin creating for a specific socio
   const navigate = useNavigate();
@@ -44,8 +43,9 @@ export default function AnimalFormPage() {
   const [showGenealogia, setShowGenealogia] = useState(false);
   const [conflictError, setConflictError] = useState("");
   const [serverError, setServerError] = useState("");
-  const [madreMode, setMadreMode] = useState<"individual" | "lote">("individual");
+  const [madreMode, setMadreMode] = useState<"individual" | "lote" | "externo">("individual");
   const [madreLoteId, setMadreLoteId] = useState("");
+  const [madreLoteExterno, setMadreLoteExterno] = useState("");
 
   // Foto upload state: which tipo is being uploaded
   const [uploadingTipo, setUploadingTipo] = useState<FotoTipo | null>(null);
@@ -66,6 +66,12 @@ export default function AnimalFormPage() {
     enabled: isEdit,
   });
 
+  // RECHAZADO animals are read-only for socios until admin reactivates
+  const isRechazado = !isGestionCreate && animal?.estado === "RECHAZADO";
+  const effectiveReadonly = readonly || isRechazado;
+  // Solo se puede proponer como candidato si el animal está APROBADO (y no es gestión)
+  const canProponerCandidato = isGestionCreate || !isEdit || animal?.estado === "APROBADO";
+
   const { data: genealogy } = useQuery({
     queryKey: ["genealogy", id],
     queryFn: () => animalsApi.genealogy(id!),
@@ -81,32 +87,35 @@ export default function AnimalFormPage() {
   const { data: lotesData } = useQuery({
     queryKey: ["lotes"],
     queryFn: lotesApi.list,
-    enabled: madreMode === "lote",
+    enabled: madreMode === "lote" || madreMode === "externo",
   });
 
-  const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm<FormData>();
+  const { register, handleSubmit, reset, watch, setValue, formState: { isSubmitting } } = useForm<FormData>();
 
   useEffect(() => {
     if (animal) {
       if (animal.madre_lote) {
         setMadreMode("lote");
         setMadreLoteId(animal.madre_lote);
+        setMadreLoteExterno("");
+      } else if (animal.madre_lote_externo) {
+        setMadreMode("externo");
+        setMadreLoteId("");
+        setMadreLoteExterno(animal.madre_lote_externo);
       } else {
         setMadreMode("individual");
         setMadreLoteId("");
+        setMadreLoteExterno("");
       }
       reset({
         numero_anilla: animal.numero_anilla,
         fecha_nacimiento: animal.fecha_nacimiento,
         sexo: animal.sexo,
-        variedad: animal.variedad,
+        variedad: (animal.variedad as any) === "OTRA" ? "SIN_DEFINIR" : animal.variedad,
         fecha_incubacion: animal.fecha_incubacion ?? "",
         ganaderia_nacimiento: animal.ganaderia_nacimiento ?? "",
-        ganaderia_actual: animal.ganaderia_actual ?? "",
         padre_anilla: animal.padre_anilla ?? "",
-        padre_anio: animal.padre_anio_nacimiento ? String(animal.padre_anio_nacimiento) : "",
         madre_anilla: animal.madre_anilla ?? "",
-        madre_anio: animal.madre_anio_nacimiento ? String(animal.madre_anio_nacimiento) : "",
         candidato_reproductor: animal.candidato_reproductor,
         granja: animal.granja ?? "",
       });
@@ -184,31 +193,34 @@ export default function AnimalFormPage() {
       variedad: data.variedad,
       fecha_incubacion: data.fecha_incubacion || null,
       ganaderia_nacimiento: data.ganaderia_nacimiento,
-      ganaderia_actual: data.ganaderia_actual,
       candidato_reproductor: data.candidato_reproductor,
       granja: data.granja || null,
       ...(isGestionCreate && { socio: socioId }),
     };
 
-    // Genealogy: send by anilla+año if provided, otherwise clear
-    if (data.padre_anilla && data.padre_anio) {
+    // Padre: send by anilla if provided, otherwise clear
+    if (data.padre_anilla) {
       payload.padre_anilla = data.padre_anilla;
-      payload.padre_anio = parseInt(data.padre_anio, 10);
-    } else if (!data.padre_anilla) {
+    } else {
       payload.padre = null;
     }
 
     if (madreMode === "lote") {
       payload.madre_lote = madreLoteId || null;
       payload.madre_animal = null;
+      payload.madre_lote_externo = "";
+    } else if (madreMode === "externo") {
+      payload.madre_lote_externo = madreLoteExterno;
+      payload.madre_animal = null;
+      payload.madre_lote = null;
     } else {
-      if (data.madre_anilla && data.madre_anio) {
+      if (data.madre_anilla) {
         payload.madre_anilla = data.madre_anilla;
-        payload.madre_anio = parseInt(data.madre_anio, 10);
-      } else if (!data.madre_anilla) {
+      } else {
         payload.madre_animal = null;
       }
       payload.madre_lote = null;
+      payload.madre_lote_externo = "";
     }
 
     mutation.mutate(payload);
@@ -244,7 +256,13 @@ export default function AnimalFormPage() {
         </button>
         <div>
           <h1 className="text-xl font-bold text-gray-900">
-            {isEdit ? `Editar Animal ${animal?.numero_anilla}` : "Registrar Animal"}
+            {isEdit
+              ? isRechazado
+                ? `Animal ${animal?.numero_anilla}`
+                : effectiveReadonly
+                ? `Animal ${animal?.numero_anilla}`
+                : `Editar Animal ${animal?.numero_anilla}`
+              : "Registrar Animal"}
           </h1>
           {animal && (
             <div className="flex items-center gap-2 mt-1">
@@ -260,6 +278,22 @@ export default function AnimalFormPage() {
         </div>
       </div>
 
+      {/* Rejection reason banner */}
+      {isRechazado && (
+        <div className="bg-red-50 border border-red-300 rounded-xl p-4 space-y-1">
+          <div className="flex items-center gap-2 text-red-700 font-semibold text-sm">
+            <XCircle size={16} />
+            Animal rechazado
+          </div>
+          {animal?.razon_rechazo && (
+            <p className="text-sm text-red-700">{animal.razon_rechazo}</p>
+          )}
+          <p className="text-xs text-red-400 mt-1">
+            Contacta con la gestión de la asociación para más información.
+          </p>
+        </div>
+      )}
+
       {/* Main form */}
       <div className="card space-y-5">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -273,6 +307,7 @@ export default function AnimalFormPage() {
                 type="text"
                 className="input-field font-mono"
                 placeholder="ES-2024-XXXX"
+                disabled={effectiveReadonly}
                 {...register("numero_anilla", { required: true })}
               />
             </div>
@@ -284,6 +319,7 @@ export default function AnimalFormPage() {
                 type="date"
                 className="input-field"
                 max={new Date().toISOString().slice(0, 10)}
+                disabled={effectiveReadonly}
                 {...register("fecha_nacimiento", { required: true })}
               />
             </div>
@@ -293,7 +329,7 @@ export default function AnimalFormPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Sexo *</label>
-              <select className="input-field" {...register("sexo", { required: true })}>
+              <select className="input-field" disabled={effectiveReadonly} {...register("sexo", { required: true })}>
                 <option value="">Seleccionar...</option>
                 <option value="M">♂ Macho</option>
                 <option value="H">♀ Hembra</option>
@@ -301,10 +337,10 @@ export default function AnimalFormPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Variedad</label>
-              <select className="input-field" {...register("variedad")}>
+              <select className="input-field" disabled={effectiveReadonly} {...register("variedad")}>
                 <option value="SALMON">Salmón</option>
                 <option value="PLATA">Plata</option>
-                <option value="OTRA">Otra</option>
+                <option value="SIN_DEFINIR">Sin Definir</option>
               </select>
             </div>
           </div>
@@ -318,28 +354,19 @@ export default function AnimalFormPage() {
                 <input
                   type="date"
                   className="input-field"
+                  disabled={effectiveReadonly}
                   {...register("fecha_incubacion")}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Ganadería de Nacimiento</label>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="Nombre de la ganadería de origen"
-                    {...register("ganaderia_nacimiento")}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Ganadería Actual</label>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="Nombre de la ganadería actual"
-                    {...register("ganaderia_actual")}
-                  />
-                </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Ganadería de Nacimiento</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Nombre de la ganadería de origen"
+                  disabled={effectiveReadonly}
+                  {...register("ganaderia_nacimiento")}
+                />
               </div>
             </div>
           </div>
@@ -349,38 +376,26 @@ export default function AnimalFormPage() {
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Genealogía</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Padre (anilla + año)</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    className="input-field font-mono flex-1"
-                    placeholder="Nº anilla del padre"
-                    {...register("padre_anilla")}
-                  />
-                  <input
-                    type="number"
-                    className="input-field w-24"
-                    placeholder="Año"
-                    min={2000}
-                    max={new Date().getFullYear()}
-                    {...register("padre_anio")}
-                  />
-                </div>
+                <label className="block text-xs text-gray-500 mb-1">Padre</label>
+                <input
+                  type="text"
+                  className="input-field font-mono"
+                  placeholder="Nº anilla del padre"
+                  {...register("padre_anilla")}
+                />
               </div>
               <div>
-                <div className="flex items-center gap-4 mb-2">
+                <div className="flex items-center gap-4 mb-2 flex-wrap">
                   <label className="text-xs text-gray-500">Madre</label>
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 flex-wrap">
                     <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                       <input
                         type="radio"
                         name="madreMode"
                         checked={madreMode === "individual"}
-                        onChange={() => {
-                          setMadreMode("individual");
-                          setMadreLoteId("");
-                        }}
+                        onChange={() => { setMadreMode("individual"); setMadreLoteId(""); setMadreLoteExterno(""); }}
                         className="accent-blue-700"
+                        disabled={effectiveReadonly}
                       />
                       Individual
                     </label>
@@ -389,35 +404,39 @@ export default function AnimalFormPage() {
                         type="radio"
                         name="madreMode"
                         checked={madreMode === "lote"}
-                        onChange={() => setMadreMode("lote")}
+                        onChange={() => { setMadreMode("lote"); setMadreLoteExterno(""); }}
                         className="accent-blue-700"
+                        disabled={effectiveReadonly}
                       />
                       Lote de Cría
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                      <input
+                        type="radio"
+                        name="madreMode"
+                        checked={madreMode === "externo"}
+                        onChange={() => { setMadreMode("externo"); setMadreLoteId(""); }}
+                        className="accent-blue-700"
+                        disabled={effectiveReadonly}
+                      />
+                      Lote de otra ganadería
                     </label>
                   </div>
                 </div>
 
                 {madreMode === "individual" ? (
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      className="input-field font-mono flex-1"
-                      placeholder="Nº anilla de la madre"
-                      {...register("madre_anilla")}
-                    />
-                    <input
-                      type="number"
-                      className="input-field w-24"
-                      placeholder="Año"
-                      min={2000}
-                      max={new Date().getFullYear()}
-                      {...register("madre_anio")}
-                    />
-                  </div>
-                ) : (
+                  <input
+                    type="text"
+                    className="input-field font-mono"
+                    placeholder="Nº anilla de la madre"
+                    disabled={effectiveReadonly}
+                    {...register("madre_anilla")}
+                  />
+                ) : madreMode === "lote" ? (
                   <select
                     className="input-field"
                     value={madreLoteId}
+                    disabled={effectiveReadonly}
                     onChange={(e) => setMadreLoteId(e.target.value)}
                   >
                     <option value="">Sin lote asignado</option>
@@ -429,6 +448,15 @@ export default function AnimalFormPage() {
                       </option>
                     ))}
                   </select>
+                ) : (
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Descripción del lote externo (ej: Ganadería García 2023)"
+                    value={madreLoteExterno}
+                    disabled={effectiveReadonly}
+                    onChange={(e) => setMadreLoteExterno(e.target.value)}
+                  />
                 )}
               </div>
             </div>
@@ -439,7 +467,7 @@ export default function AnimalFormPage() {
             <div className="border-t pt-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Granja</label>
-                <select className="input-field" {...register("granja")}>
+                <select className="input-field" disabled={effectiveReadonly} {...register("granja")}>
                   <option value="">Sin asignar</option>
                   {granjasData?.results.map((g) => (
                     <option key={g.id} value={g.id}>{g.nombre}</option>
@@ -449,15 +477,47 @@ export default function AnimalFormPage() {
             </div>
           )}
 
-          <div className="border-t pt-4 space-y-4">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                className="w-4 h-4 accent-blue-700"
-                {...register("candidato_reproductor")}
-              />
-              <span className="text-sm text-gray-700">Proponer como candidato a reproductor</span>
-            </label>
+          <div className="border-t pt-4">
+            {/* Campo oculto para react-hook-form */}
+            <input type="hidden" {...register("candidato_reproductor")} />
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Candidato a reproductor</p>
+            {watch("candidato_reproductor") ? (
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-violet-700 bg-violet-50 border border-violet-200 rounded-lg px-3 py-2">
+                  <CheckCircle2 size={15} />
+                  Propuesto como candidato
+                </span>
+                {!effectiveReadonly && (
+                  <button
+                    type="button"
+                    onClick={() => setValue("candidato_reproductor", false)}
+                    className="text-xs text-gray-500 hover:text-red-600 underline"
+                  >
+                    Retirar propuesta
+                  </button>
+                )}
+              </div>
+            ) : canProponerCandidato && !effectiveReadonly ? (
+              <button
+                type="button"
+                onClick={() => setValue("candidato_reproductor", true)}
+                className="btn-secondary flex items-center gap-2 text-sm"
+              >
+                <CheckCircle2 size={15} />
+                Proponer como candidato a reproductor
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <Circle size={15} />
+                <span>No propuesto</span>
+                {!canProponerCandidato && !effectiveReadonly && (
+                  <span className="ml-1 text-xs text-amber-600 flex items-center gap-1">
+                    <AlertCircle size={11} />
+                    Requiere estado <strong className="ml-0.5">Aprobado</strong>
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {conflictError && (
@@ -474,19 +534,31 @@ export default function AnimalFormPage() {
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => navigate(-1)} className="btn-secondary flex-1">
-              Cancelar
+              {effectiveReadonly ? "Volver" : "Cancelar"}
             </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || mutation.isPending}
-              className="btn-primary flex-1"
-            >
-              {mutation.isPending ? (
-                <><Loader2 size={16} className="animate-spin" /> Guardando...</>
-              ) : (
-                isEdit ? "Guardar cambios" : "Registrar animal"
-              )}
-            </button>
+            {!effectiveReadonly && (
+              <button
+                type="submit"
+                disabled={isSubmitting || mutation.isPending}
+                className="btn-primary flex-1"
+              >
+                {mutation.isPending ? (
+                  <><Loader2 size={16} className="animate-spin" /> Guardando...</>
+                ) : (
+                  isEdit ? "Guardar cambios" : "Registrar animal"
+                )}
+              </button>
+            )}
+            {/* Only show "Editar" when readonly via URL param, NOT when rechazado */}
+            {readonly && !isRechazado && (
+              <button
+                type="button"
+                onClick={() => navigate(`/mis-animales/${id}`)}
+                className="btn-primary flex-1"
+              >
+                Editar
+              </button>
+            )}
           </div>
         </form>
 
@@ -501,7 +573,7 @@ export default function AnimalFormPage() {
             </button>
             {showGenealogia && genealogy?.tree && (
               <div className="mt-3 overflow-x-auto">
-                <GenealogyTooltip tree={genealogy.tree} width={480} height={280} />
+                <GenealogyTooltip tree={genealogy.tree} />
               </div>
             )}
           </div>
@@ -544,37 +616,41 @@ export default function AnimalFormPage() {
                           alt={`Foto ${label}`}
                           className="w-full h-full object-cover rounded-lg"
                         />
-                        <button
-                          onClick={() => deleteFotoMutation.mutate(foto.key)}
-                          disabled={deleteFotoMutation.isPending}
-                          className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-700"
-                          title="Eliminar foto"
-                        >
-                          {deleteFotoMutation.isPending ? (
-                            <Loader2 size={10} className="animate-spin" />
-                          ) : (
-                            <X size={10} />
-                          )}
-                        </button>
+                        {!effectiveReadonly ? (
+                          <button
+                            onClick={() => deleteFotoMutation.mutate(foto.key)}
+                            disabled={deleteFotoMutation.isPending}
+                            className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-700"
+                            title="Eliminar foto"
+                          >
+                            {deleteFotoMutation.isPending ? (
+                              <Loader2 size={10} className="animate-spin" />
+                            ) : (
+                              <X size={10} />
+                            )}
+                          </button>
+                        ) : null}
                       </>
                     ) : (
-                      <button
-                        onClick={() => {
-                          setUploadingTipo(tipo);
-                          fileInputRefs.current[tipo]?.click();
-                        }}
-                        disabled={isUploading || uploadFotoMutation.isPending}
-                        className="w-full h-full rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors"
-                      >
-                        {isUploading ? (
-                          <Loader2 size={20} className="animate-spin" />
-                        ) : (
-                          <>
-                            <Camera size={20} />
-                            <span className="text-xs mt-1">Añadir</span>
-                          </>
-                        )}
-                      </button>
+                      !effectiveReadonly ? (
+                        <button
+                          onClick={() => {
+                            setUploadingTipo(tipo);
+                            fileInputRefs.current[tipo]?.click();
+                          }}
+                          disabled={isUploading || uploadFotoMutation.isPending}
+                          className="w-full h-full rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors"
+                        >
+                          {isUploading ? (
+                            <Loader2 size={20} className="animate-spin" />
+                          ) : (
+                            <>
+                              <Camera size={20} />
+                              <span className="text-xs mt-1">Añadir</span>
+                            </>
+                          )}
+                        </button>
+                      ) : null
                     )}
                   </div>
 
@@ -610,13 +686,15 @@ export default function AnimalFormPage() {
               <Scale size={16} className="text-gray-500" />
               <h3 className="text-sm font-semibold text-gray-700">Historial de Pesajes</h3>
             </div>
-            <button
-              onClick={() => setShowPesajeForm(!showPesajeForm)}
-              className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1"
-            >
-              <Plus size={14} />
-              Añadir pesaje
-            </button>
+            {!effectiveReadonly && (
+              <button
+                onClick={() => setShowPesajeForm(!showPesajeForm)}
+                className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1"
+              >
+                <Plus size={14} />
+                Añadir pesaje
+              </button>
+            )}
           </div>
 
           {/* Add weight form */}

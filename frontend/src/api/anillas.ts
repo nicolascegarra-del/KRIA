@@ -8,7 +8,8 @@ export interface EntregaAnillas {
   anio_campana: number;
   rango_inicio: string;
   rango_fin: string;
-  diametro: "18" | "20";
+  diametro: string;
+  sexo?: "M" | "H" | null;
   created_by_nombre?: string;
   created_at: string;
 }
@@ -46,5 +47,10 @@ export const anillasApi = {
       params: { anilla, anio, socio_id },
     });
     return data;
+  },
+
+  misAnillas: async (): Promise<EntregaAnillas[]> => {
+    const { data } = await apiClient.get("/anillas/mis-anillas/");
+    return Array.isArray(data) ? data : (data.results ?? []);
   },
 };

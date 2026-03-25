@@ -32,6 +32,7 @@ class PlatformSettingsSerializer(serializers.ModelSerializer):
         fields = [
             "smtp_host", "smtp_port", "smtp_user", "smtp_password",
             "smtp_from_email", "smtp_from_name", "smtp_use_tls", "smtp_use_ssl",
+            "inactivity_timeout_minutes",
         ]
 
 

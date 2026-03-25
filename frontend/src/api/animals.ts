@@ -6,7 +6,10 @@ export interface AnimalFilters {
   variedad?: string;
   sexo?: string;
   search?: string;
+  anio?: number;
+  ordering?: string;
   page?: number;
+  page_size?: number;
   socio_id?: string;
 }
 
@@ -75,6 +78,31 @@ export const animalsApi = {
 
   darBaja: async (id: string, fecha_baja: string, motivo_baja: string): Promise<Animal> => {
     const { data } = await apiClient.post(`/animals/${id}/dar-baja/`, { fecha_baja, motivo_baja });
+    return data;
+  },
+
+  reactivar: async (id: string): Promise<Animal> => {
+    const { data } = await apiClient.post(`/animals/${id}/reactivar/`);
+    return data;
+  },
+
+  getGanaderiasNacimiento: async () => {
+    const { data } = await apiClient.get("/animals/ganaderias-nacimiento/");
+    return data as { ganaderia_nombre: string; animal_count: number; map_id: string | null; socio_real: string | null; socio_nombre: string | null }[];
+  },
+
+  saveGanaderiaMap: async (ganaderia_nombre: string, socio_real: string | null) => {
+    const { data } = await apiClient.post("/animals/ganaderias-nacimiento/", { ganaderia_nombre, socio_real });
+    return data;
+  },
+
+  getLotesExternos: async () => {
+    const { data } = await apiClient.get("/animals/lotes-externos/");
+    return data as { descripcion: string; animal_count: number; map_id: string | null; lote_real: string | null; lote_nombre: string | null }[];
+  },
+
+  saveLoteExternoMap: async (descripcion: string, lote_real: string | null) => {
+    const { data } = await apiClient.post("/animals/lotes-externos/", { descripcion, lote_real });
     return data;
   },
 };

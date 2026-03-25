@@ -1,9 +1,11 @@
-import { useEffect } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { useAuthStore } from "./store/authStore";
 import { useTenantStore, applyBranding } from "./store/tenantStore";
 import { apiClient } from "./api/client";
+import { useInactivityLogout } from "./hooks/useInactivityLogout";
 import type { TenantBranding } from "./types";
+import { Clock } from "lucide-react";
 
 // Auth pages
 import LoginPage from "./pages/auth/LoginPage";
@@ -17,6 +19,7 @@ import MisAnimalesPage from "./pages/socio/MisAnimalesPage";
 import AnimalFormPage from "./pages/socio/AnimalFormPage";
 import GranjasPage from "./pages/socio/GranjasPage";
 import MisLotesPage from "./pages/socio/MisLotesPage";
+import MisAnillasPage from "./pages/socio/MisAnillasPage";
 
 // Gestion pages
 import GranjasGestionPage from "./pages/gestion/GranjasGestionPage";
@@ -29,7 +32,6 @@ import ReportesPage from "./pages/gestion/ReportesPage";
 import EvaluacionPage from "./pages/gestion/EvaluacionPage";
 import CandidatosReproductorPage from "./pages/gestion/CandidatosReproductorPage";
 import CatalogoReproductoresPage from "./pages/gestion/CatalogoReproductoresPage";
-import SolicitudesRealtaPage from "./pages/gestion/SolicitudesRealtaPage";
 import SuperAdminPage from "./pages/gestion/SuperAdminPage";
 import AnillasPage from "./pages/gestion/AnillasPage";
 
@@ -73,9 +75,48 @@ function LayoutRoute({ children, gestionOnly = false, socioOnly = false, superad
   );
 }
 
+// ── Inactivity Manager (must be inside BrowserRouter for useNavigate) ─────────
+function InactivityManager({ timeoutMinutes }: { timeoutMinutes: number }) {
+  const { user, clearAuth } = useAuthStore();
+  const navigate = useNavigate();
+  const [showWarning, setShowWarning] = useState(false);
+
+  const handleLogout = useCallback(() => {
+    clearAuth();
+    navigate("/login");
+  }, [clearAuth, navigate]);
+
+  const { reset } = useInactivityLogout({
+    timeoutMinutes,
+    enabled: !!user && timeoutMinutes > 0,
+    onLogout: handleLogout,
+    onWarn: () => setShowWarning(true),
+    onResetWarn: () => setShowWarning(false),
+  });
+
+  if (!showWarning) return null;
+
+  return (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-amber-500 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-4 max-w-sm w-[calc(100%-2rem)]">
+      <Clock size={18} className="shrink-0" />
+      <span className="text-sm font-medium flex-1">
+        Tu sesión expirará pronto por inactividad.
+      </span>
+      <button
+        onClick={reset}
+        className="bg-white text-amber-700 px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap hover:bg-amber-50 transition-colors"
+      >
+        Continuar
+      </button>
+    </div>
+  );
+}
+
+// ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
   const { user, clearAuth, endImpersonation } = useAuthStore();
   const { branding, setBranding } = useTenantStore();
+  const [inactivityTimeout, setInactivityTimeout] = useState(0);
 
   // Listen for forced logout
   useEffect(() => {
@@ -108,9 +149,18 @@ export default function App() {
     if (branding) applyBranding(branding);
   }, [branding]);
 
+  // Fetch inactivity timeout from public endpoint
+  useEffect(() => {
+    apiClient
+      .get<{ inactivity_timeout_minutes: number }>("/public-settings/")
+      .then(({ data }) => setInactivityTimeout(data.inactivity_timeout_minutes))
+      .catch(() => {/* ignore — keep default 0 (disabled) */});
+  }, []);
+
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <OfflineIndicator />
+      <InactivityManager timeoutMinutes={inactivityTimeout} />
       <Routes>
         {/* Public */}
         <Route path="/login" element={<LoginPage />} />
@@ -125,6 +175,7 @@ export default function App() {
         <Route path="/mis-animales/:id" element={<LayoutRoute socioOnly><AnimalFormPage /></LayoutRoute>} />
         <Route path="/mis-granjas" element={<LayoutRoute socioOnly><GranjasPage /></LayoutRoute>} />
         <Route path="/mis-lotes" element={<LayoutRoute socioOnly><MisLotesPage /></LayoutRoute>} />
+        <Route path="/mis-anillas" element={<LayoutRoute socioOnly><MisAnillasPage /></LayoutRoute>} />
 
         {/* Gestion routes */}
         <Route path="/dashboard" element={<LayoutRoute gestionOnly><DashboardPage /></LayoutRoute>} />
@@ -132,6 +183,7 @@ export default function App() {
         <Route path="/socios" element={<LayoutRoute gestionOnly><SociosPage /></LayoutRoute>} />
         <Route path="/socios/:id" element={<LayoutRoute gestionOnly><SocioDetailPage /></LayoutRoute>} />
         <Route path="/socios/:socioId/nuevo-animal" element={<LayoutRoute gestionOnly><AnimalFormPage /></LayoutRoute>} />
+        <Route path="/socios/:socioId/animales/:id" element={<LayoutRoute gestionOnly><AnimalFormPage /></LayoutRoute>} />
         <Route path="/granjas" element={<LayoutRoute gestionOnly><GranjasGestionPage /></LayoutRoute>} />
         <Route path="/anillas" element={<LayoutRoute gestionOnly><AnillasPage /></LayoutRoute>} />
         <Route path="/importar" element={<LayoutRoute gestionOnly><ImportPage /></LayoutRoute>} />
@@ -139,11 +191,11 @@ export default function App() {
         <Route path="/evaluaciones/nuevo" element={<LayoutRoute gestionOnly><EvaluacionPage /></LayoutRoute>} />
         <Route path="/reproductores/candidatos" element={<LayoutRoute gestionOnly><CandidatosReproductorPage /></LayoutRoute>} />
         <Route path="/reproductores/catalogo" element={<LayoutRoute gestionOnly><CatalogoReproductoresPage /></LayoutRoute>} />
-        <Route path="/solicitudes-realta" element={<LayoutRoute gestionOnly><SolicitudesRealtaPage /></LayoutRoute>} />
         <Route path="/superadmin" element={<LayoutRoute superadminOnly><SuperAdminPage /></LayoutRoute>} />
         <Route path="/superadmin/asociaciones" element={<LayoutRoute superadminOnly><SuperAdminPage /></LayoutRoute>} />
         <Route path="/superadmin/configuracion" element={<LayoutRoute superadminOnly><SuperAdminPage /></LayoutRoute>} />
         <Route path="/superadmin/gestiones-avanzadas" element={<LayoutRoute superadminOnly><SuperAdminPage /></LayoutRoute>} />
+        <Route path="/superadmin/log" element={<LayoutRoute superadminOnly><SuperAdminPage /></LayoutRoute>} />
 
         {/* Default redirects */}
         <Route

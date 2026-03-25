@@ -50,7 +50,7 @@ class Animal(UUIDModel):
     class Variedad(models.TextChoices):
         SALMON = "SALMON", "Salmón"
         PLATA = "PLATA", "Plata"
-        OTRA = "OTRA", "Otra"
+        SIN_DEFINIR = "SIN_DEFINIR", "Sin Definir"
 
     # Tenant + Socio
     tenant = models.ForeignKey(
@@ -91,6 +91,10 @@ class Animal(UUIDModel):
         null=True, blank=True,
         on_delete=models.SET_NULL,
         related_name="crias",
+    )
+    madre_lote_externo = models.CharField(
+        max_length=200, blank=True, default="",
+        help_text="Descripción libre del lote de cría externo de la madre (otra ganadería)",
     )
 
     # Media + history (JSONB)
@@ -152,5 +156,70 @@ class Animal(UUIDModel):
 
     def clean(self):
         from django.core.exceptions import ValidationError
-        if self.madre_animal_id and self.madre_lote_id:
-            raise ValidationError("madre_animal and madre_lote are mutually exclusive.")
+        madre_fields = sum([
+            bool(self.madre_animal_id),
+            bool(self.madre_lote_id),
+            bool(self.madre_lote_externo),
+        ])
+        if madre_fields > 1:
+            raise ValidationError("Solo puede especificarse un campo de madre: madre_animal, madre_lote o madre_lote_externo.")
+
+
+class GanaderiaNacimientoMap(UUIDModel):
+    """Maps a free-text ganadería de nacimiento to a real Socio within a tenant."""
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="ganaderia_maps",
+        db_index=True,
+    )
+    ganaderia_nombre = models.CharField(max_length=200, help_text="Nombre tal como lo escribió el socio")
+    socio_real = models.ForeignKey(
+        "accounts.Socio",
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="ganaderia_maps",
+        help_text="Socio/ganadería real a la que se redirige",
+    )
+
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        db_table = "animals_ganaderia_map"
+        unique_together = [("tenant", "ganaderia_nombre")]
+        verbose_name = "Mapa ganadería nacimiento"
+        verbose_name_plural = "Mapas ganadería nacimiento"
+
+    def __str__(self):
+        return f"{self.ganaderia_nombre} → {self.socio_real}"
+
+
+class LoteExternoMap(UUIDModel):
+    """Maps a free-text external lote description to a real Lote within a tenant."""
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="lote_externo_maps",
+        db_index=True,
+    )
+    descripcion = models.CharField(max_length=200, help_text="Descripción tal como la escribió el socio")
+    lote_real = models.ForeignKey(
+        "lotes.Lote",
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="lote_externo_maps",
+        help_text="Lote real al que se redirige",
+    )
+
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        db_table = "animals_lote_externo_map"
+        unique_together = [("tenant", "descripcion")]
+        verbose_name = "Mapa lote externo"
+        verbose_name_plural = "Mapas lote externo"
+
+    def __str__(self):
+        return f"{self.descripcion} → {self.lote_real}"

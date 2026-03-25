@@ -8,6 +8,29 @@ from .models import Conflicto, SolicitudRealta
 from .serializers import ConflictoSerializer, SolicitudRealtaSerializer
 
 
+def _notificar_realta(tenant, socio, tipo, animal):
+    """Crea notificación al socio sobre resolución de re-alta. Never raises."""
+    try:
+        if not socio or not getattr(socio, "user_id", None):
+            return
+        from apps.accounts.models import Notificacion
+        anilla = animal.numero_anilla if animal else ""
+        if tipo == "REALTA_APROBADA":
+            mensaje = f"La solicitud de re-alta de tu animal {anilla} ha sido aprobada."
+        else:
+            mensaje = f"La solicitud de re-alta de tu animal {anilla} ha sido denegada."
+        Notificacion.objects.create(
+            tenant=tenant,
+            usuario_id=socio.user_id,
+            tipo=tipo,
+            animal_id_str=str(animal.id) if animal else "",
+            animal_anilla=anilla,
+            mensaje=mensaje,
+        )
+    except Exception:
+        pass
+
+
 class ConflictoListView(generics.ListAPIView):
     serializer_class = ConflictoSerializer
     permission_classes = [IsGestion]
@@ -60,7 +83,7 @@ class SolicitudRealtaResolveView(APIView):
 
     def post(self, request, pk):
         try:
-            solicitud = SolicitudRealta.all_objects.get(pk=pk, tenant=request.tenant)
+            solicitud = SolicitudRealta.all_objects.select_related("animal", "solicitante").get(pk=pk, tenant=request.tenant)
         except SolicitudRealta.DoesNotExist:
             return Response({"detail": "Not found."}, status=404)
 
@@ -77,15 +100,18 @@ class SolicitudRealtaResolveView(APIView):
         if accion == "aprobar":
             solicitud.estado = SolicitudRealta.Estado.APROBADO
             solicitud.save()
-            # Reactivar animal: vuelve a AÑADIDO, se vacían fotos para exigir nuevas
+            # Reactivar animal: vuelve a AÑADIDO, se limpian baja y razon_rechazo
             animal = solicitud.animal
             animal.estado = "AÑADIDO"
-            animal.fotos = []
+            animal.fecha_baja = None
+            animal.motivo_baja = None
             animal.razon_rechazo = ""
-            animal.save(update_fields=["estado", "fotos", "razon_rechazo"])
+            animal.save(update_fields=["estado", "fecha_baja", "motivo_baja", "razon_rechazo"])
+            _notificar_realta(request.tenant, solicitud.solicitante, "REALTA_APROBADA", animal)
         else:
             solicitud.estado = SolicitudRealta.Estado.DENEGADO
             solicitud.save()
+            _notificar_realta(request.tenant, solicitud.solicitante, "REALTA_DENEGADA", solicitud.animal)
 
         return Response(SolicitudRealtaSerializer(solicitud).data)
 

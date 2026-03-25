@@ -48,7 +48,7 @@ export default function DashboardPage() {
       value: stats?.solicitudes_realta ?? 0,
       icon: <RefreshCw size={22} />,
       color: "bg-violet-600",
-      href: "/solicitudes-realta",
+      href: "/validaciones",
     },
     {
       label: "Alertas de Anilla",

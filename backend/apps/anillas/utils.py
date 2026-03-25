@@ -2,8 +2,8 @@
 Lógica de validación de anillas: rango y diámetro.
 """
 
-# Mapping diámetro → sexo esperado
-DIAMETRO_SEXO = {"18": "H", "20": "M"}
+# Mapping diámetro → sexo por defecto (usado solo si el tenant no tiene config)
+_DEFAULT_DIAMETRO_SEXO = {"18": "H", "20": "M"}
 
 
 def _to_int(value):
@@ -12,6 +12,21 @@ def _to_int(value):
         return int(value)
     except (ValueError, TypeError):
         return None
+
+
+def _get_diametro_sexo(tenant_id) -> dict:
+    """Devuelve el mapping diámetro→sexo configurado para el tenant.
+    Si el tenant no tiene anilla_sizes o algún tamaño no tiene sexo, usa los defaults."""
+    try:
+        from apps.tenants.models import Tenant
+        tenant = Tenant.objects.only("anilla_sizes").get(pk=tenant_id)
+        sizes = tenant.anilla_sizes or []
+        mapping = {sz["mm"]: sz["sexo"] for sz in sizes if sz.get("mm") and sz.get("sexo")}
+        if mapping:
+            return mapping
+    except Exception:
+        pass
+    return _DEFAULT_DIAMETRO_SEXO
 
 
 def _anilla_in_rango(numero_anilla: str, rango_inicio: str, rango_fin: str) -> bool:
@@ -53,10 +68,12 @@ def compute_alerta_anilla(numero_anilla: str, anio: int, sexo: str, socio_id, te
         # Sin rangos asignados para esta campaña → sin alerta
         return ""
 
+    diametro_sexo = _get_diametro_sexo(tenant_id)
+
     for entrega in entregas:
         if _anilla_in_rango(numero_anilla, entrega.rango_inicio, entrega.rango_fin):
             # Anilla encontrada en el rango — verificar diámetro
-            expected_sexo = DIAMETRO_SEXO.get(entrega.diametro)
+            expected_sexo = diametro_sexo.get(entrega.diametro)
             if expected_sexo and expected_sexo != sexo:
                 return "DIAMETRO"
             return ""  # Todo correcto

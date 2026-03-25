@@ -2,7 +2,7 @@
 Animal serializers including genealogy tree builder.
 """
 from rest_framework import serializers
-from .models import Animal, MotivoBaja
+from .models import Animal, GanaderiaNacimientoMap, LoteExternoMap, MotivoBaja
 
 FOTO_TIPOS = ("PERFIL", "CABEZA", "ANILLA")
 
@@ -35,6 +35,8 @@ class MotivoBajaSerializer(serializers.ModelSerializer):
 class AnimalListSerializer(serializers.ModelSerializer):
     socio_nombre = serializers.CharField(source="socio.nombre_razon_social", read_only=True)
     granja_nombre = serializers.CharField(source="granja.nombre", read_only=True, allow_null=True)
+    padre_anilla = serializers.CharField(source="padre.numero_anilla", read_only=True, allow_null=True)
+    madre_anilla = serializers.SerializerMethodField()
     fotos = serializers.SerializerMethodField()
 
     class Meta:
@@ -43,11 +45,22 @@ class AnimalListSerializer(serializers.ModelSerializer):
             "id", "numero_anilla", "fecha_nacimiento", "sexo", "variedad",
             "estado", "candidato_reproductor", "reproductor_aprobado",
             "alerta_anilla",
-            "socio_nombre", "granja", "granja_nombre", "fotos", "created_at",
+            "socio_nombre", "granja", "granja_nombre",
+            "padre_anilla", "madre_anilla",
+            "fotos", "created_at",
         ]
 
     def get_fotos(self, obj):
         return [_resolve_foto_url(f) for f in (obj.fotos or [])]
+
+    def get_madre_anilla(self, obj):
+        if obj.madre_animal_id:
+            return obj.madre_animal.numero_anilla if obj.madre_animal else None
+        if obj.madre_lote_id:
+            return obj.madre_lote.nombre if obj.madre_lote else None
+        if obj.madre_lote_externo:
+            return obj.madre_lote_externo
+        return None
 
 
 class AnimalDetailSerializer(serializers.ModelSerializer):
@@ -69,7 +82,8 @@ class AnimalDetailSerializer(serializers.ModelSerializer):
             "alerta_anilla",
             "fecha_baja", "motivo_baja", "motivo_baja_nombre",
             "padre", "padre_anilla", "padre_anio_nacimiento",
-            "madre_animal", "madre_anilla", "madre_anio_nacimiento", "madre_lote",
+            "madre_animal", "madre_anilla", "madre_anio_nacimiento",
+            "madre_lote", "madre_lote_externo",
             "granja", "granja_nombre",
             "fotos", "historico_pesos", "socio_nombre",
             "created_at", "updated_at",
@@ -91,57 +105,55 @@ class AnimalDetailSerializer(serializers.ModelSerializer):
 
 
 class AnimalWriteSerializer(serializers.ModelSerializer):
-    # Fields for resolving padre/madre by anilla+año instead of UUID
+    # Fields for resolving padre/madre by anilla (year embedded in ring number)
     padre_anilla = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    padre_anio = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     madre_anilla = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    madre_anio = serializers.IntegerField(write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = Animal
         fields = [
             "numero_anilla", "fecha_nacimiento", "sexo", "variedad",
-            "fecha_incubacion", "ganaderia_nacimiento", "ganaderia_actual",
-            "padre", "padre_anilla", "padre_anio",
-            "madre_animal", "madre_anilla", "madre_anio",
-            "madre_lote",
+            "fecha_incubacion", "ganaderia_nacimiento",
+            "padre", "padre_anilla",
+            "madre_animal", "madre_anilla",
+            "madre_lote", "madre_lote_externo",
             "granja",
             "historico_pesos", "candidato_reproductor",
         ]
 
-    def _resolve_parent(self, anilla, anio, field_label):
-        """Look up an Animal by anilla + year-of-birth within the current tenant."""
+    def _resolve_parent(self, anilla, field_label):
+        """Look up an Animal by anilla within the current tenant. Year is embedded in the ring."""
         request = self.context.get("request")
         if not request or not hasattr(request, "tenant"):
             raise serializers.ValidationError(
                 {field_label: "No se pudo determinar el tenant para resolver la anilla."}
             )
-        qs = Animal.objects.filter(
-            numero_anilla=anilla,
-            fecha_nacimiento__year=anio,
-            tenant=request.tenant,
-        )
+        qs = Animal.objects.filter(numero_anilla=anilla, tenant=request.tenant)
         animal = qs.first()
         if animal is None:
             raise serializers.ValidationError(
-                {field_label: f"No se encontró animal con anilla {anilla}/{anio}."}
+                {field_label: f"No se encontró animal con anilla '{anilla}' en esta asociación."}
             )
         return animal
 
     def validate(self, data):
         padre_anilla = data.pop("padre_anilla", None)
-        padre_anio = data.pop("padre_anio", None)
         madre_anilla = data.pop("madre_anilla", None)
-        madre_anio = data.pop("madre_anio", None)
 
-        if padre_anilla and padre_anio:
-            data["padre"] = self._resolve_parent(padre_anilla, padre_anio, "padre_anilla")
-        if madre_anilla and madre_anio:
-            data["madre_animal"] = self._resolve_parent(madre_anilla, madre_anio, "madre_anilla")
+        if padre_anilla:
+            data["padre"] = self._resolve_parent(padre_anilla, "padre_anilla")
+        if madre_anilla:
+            data["madre_animal"] = self._resolve_parent(madre_anilla, "madre_anilla")
 
-        if data.get("madre_animal") and data.get("madre_lote"):
+        # Validate exclusivity of madre fields
+        madre_count = sum([
+            bool(data.get("madre_animal")),
+            bool(data.get("madre_lote")),
+            bool(data.get("madre_lote_externo")),
+        ])
+        if madre_count > 1:
             raise serializers.ValidationError(
-                "madre_animal and madre_lote are mutually exclusive."
+                "Solo puede especificarse un campo de madre: madre_animal, madre_lote o madre_lote_externo."
             )
 
         request = self.context.get("request")
@@ -158,6 +170,15 @@ class AnimalWriteSerializer(serializers.ModelSerializer):
                 if has_eval:
                     raise serializers.ValidationError(
                         {"variedad": "No puedes cambiar la variedad de un animal ya evaluado."}
+                    )
+
+        # Un animal solo puede proponerse como candidato reproductor si está APROBADO
+        if data.get("candidato_reproductor") is True and self.instance is not None:
+            from core.permissions import get_effective_is_gestion
+            if request is None or not get_effective_is_gestion(request):
+                if self.instance.estado != Animal.Estado.APROBADO:
+                    raise serializers.ValidationError(
+                        {"candidato_reproductor": "Solo puedes proponer como reproductor un animal en estado Aprobado."}
                     )
 
         return data
@@ -184,6 +205,18 @@ def _build_genealogy_node(animal, depth=0, max_depth=3):
             "padre": _build_genealogy_node(lote.macho, depth + 1, max_depth) if lote.macho else None,
             "madre": None,
         }
+    elif animal.madre_lote_externo:
+        madre_node = {
+            "id": None,
+            "anilla": animal.madre_lote_externo,
+            "anio": None,
+            "sexo": None,
+            "variedad": None,
+            "estado": None,
+            "tipo": "LOTE_EXTERNO",
+            "padre": None,
+            "madre": None,
+        }
 
     return {
         "id": str(animal.id),
@@ -207,3 +240,21 @@ class GenealogySerializer(serializers.ModelSerializer):
 
     def get_tree(self, obj):
         return _build_genealogy_node(obj)
+
+
+class GanaderiaNacimientoMapSerializer(serializers.ModelSerializer):
+    socio_nombre = serializers.CharField(source="socio_real.nombre_razon_social", read_only=True, allow_null=True)
+    animal_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = GanaderiaNacimientoMap
+        fields = ["id", "ganaderia_nombre", "socio_real", "socio_nombre", "animal_count", "updated_at"]
+
+
+class LoteExternoMapSerializer(serializers.ModelSerializer):
+    lote_nombre = serializers.CharField(source="lote_real.nombre", read_only=True, allow_null=True)
+    animal_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = LoteExternoMap
+        fields = ["id", "descripcion", "lote_real", "lote_nombre", "animal_count", "updated_at"]

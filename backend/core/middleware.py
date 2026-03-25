@@ -27,6 +27,9 @@ TENANT_EXEMPT_PATHS = [
 ]
 
 
+_EXPIRED_TOKEN = object()  # sentinel: token present but couldn't be decoded
+
+
 class TenantMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -39,6 +42,14 @@ class TenantMiddleware:
             return self.get_response(request)
 
         tenant = self._resolve_tenant(request)
+
+        # Bearer token was present but expired/invalid — return 401 so the
+        # client's refresh interceptor can obtain a new access token.
+        if tenant is _EXPIRED_TOKEN:
+            return JsonResponse(
+                {"detail": "Authentication credentials expired."},
+                status=401,
+            )
 
         if tenant is None:
             # Allow public endpoints (branding, token obtain) even without tenant
@@ -117,6 +128,8 @@ class TenantMiddleware:
                     except Tenant.DoesNotExist:
                         pass
             except Exception:
-                pass
+                # Token present but expired or invalid — signal caller to return 401
+                # so the client's refresh interceptor can obtain a new token.
+                return _EXPIRED_TOKEN
 
         return None

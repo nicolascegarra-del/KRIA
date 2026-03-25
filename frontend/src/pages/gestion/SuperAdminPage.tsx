@@ -12,7 +12,7 @@ import {
   Shield, Plus, Edit2, Users, Building, Loader2, Upload,
   Trash2, PauseCircle, PlayCircle, UserCheck, BarChart2,
   UserPlus, Pencil, ChevronRight, Mail, CheckCircle2, XCircle,
-  Settings, AlertTriangle, Wrench,
+  Settings, AlertTriangle, Wrench, ScrollText, Clock, Tag,
 } from "lucide-react";
 import type { Tenant, GestionUserCreate, GestionUser, AnillaSize, PlatformSettings } from "../../types";
 
@@ -25,7 +25,7 @@ interface SuperAdminStats {
   por_asociacion: { id: string; name: string; slug: string; is_active: boolean; max_socios: number; socios_count: number }[];
 }
 
-type Section = "dashboard" | "asociaciones" | "configuracion" | "gestiones_avanzadas";
+type Section = "dashboard" | "asociaciones" | "configuracion" | "gestiones_avanzadas" | "log";
 
 interface TenantForm {
   name: string; slug: string; primary_color: string; secondary_color: string;
@@ -69,6 +69,8 @@ export default function SuperAdminPage() {
     ? "asociaciones"
     : location.pathname.includes("configuracion")
     ? "configuracion"
+    : location.pathname.includes("/log")
+    ? "log"
     : "dashboard";
 
   // ── Tenant modal state ─────────────────────────────────────────────────────
@@ -99,15 +101,26 @@ export default function SuperAdminPage() {
   const [userError, setUserError, clearUserError] = useAutoCloseError();
   const [saError, setSaError, clearSaError] = useAutoCloseError();
 
+  // ── Log state ─────────────────────────────────────────────────────────────
+  const [logTenantFilter, setLogTenantFilter] = useState("");
+  const [logRoleFilter, setLogRoleFilter] = useState("");
+  const [logSearch, setLogSearch] = useState("");
+  const [logDateFrom, setLogDateFrom] = useState("");
+  const [logDateTo, setLogDateTo] = useState("");
+  const [logPage, setLogPage] = useState(1);
+
   // ── Gestiones Avanzadas state ──────────────────────────────────────────────
   const [deleteSociosTarget, setDeleteSociosTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleteSociosConfirm, setDeleteSociosConfirm] = useState("");
+  const [deleteAnillasTarget, setDeleteAnillasTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteAnillasConfirm, setDeleteAnillasConfirm] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
   // ── Platform SMTP state ────────────────────────────────────────────────────
   const [platformSmtpForm, setPlatformSmtpForm] = useState<PlatformSettings>({
     smtp_host: "", smtp_port: 587, smtp_user: "", smtp_password: "",
     smtp_from_email: "", smtp_from_name: "", smtp_use_tls: true, smtp_use_ssl: false,
+    inactivity_timeout_minutes: 30,
   });
   const [platformSmtpTestResult, setPlatformSmtpTestResult] = useState<string | null>(null);
   const [platformSmtpTesting, setPlatformSmtpTesting] = useState(false);
@@ -122,7 +135,7 @@ export default function SuperAdminPage() {
   const { data: tenantsData, isLoading: loadingTenants } = useQuery({
     queryKey: ["superadmin-tenants"],
     queryFn: () => superadminApi.listTenants(),
-    enabled: section === "asociaciones" || section === "dashboard",
+    enabled: section === "asociaciones" || section === "dashboard" || section === "gestiones_avanzadas",
   });
   const { data: tenantUsers = [], isLoading: loadingUsers } = useQuery({
     queryKey: ["superadmin-users", usersModalTenant?.id],
@@ -138,6 +151,18 @@ export default function SuperAdminPage() {
     queryKey: ["platform-settings"],
     queryFn: superadminApi.getPlatformSettings,
     enabled: section === "configuracion",
+  });
+  const { data: logsData, isLoading: loadingLogs } = useQuery({
+    queryKey: ["superadmin-logs", logTenantFilter, logRoleFilter, logSearch, logDateFrom, logDateTo, logPage],
+    queryFn: () => superadminApi.getLogs({
+      tenant_id: logTenantFilter || undefined,
+      role: logRoleFilter || undefined,
+      search: logSearch || undefined,
+      date_from: logDateFrom || undefined,
+      date_to: logDateTo || undefined,
+      page: logPage,
+    }),
+    enabled: section === "log",
   });
 
   // Sync platform settings to form when loaded
@@ -243,6 +268,16 @@ export default function SuperAdminPage() {
   });
 
   // ── Platform settings mutations ────────────────────────────────────────────
+  const deleteAnillasMutation = useMutation({
+    mutationFn: (id: string) => superadminApi.deleteTenantAnillas(id),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["superadmin-tenants"] });
+      setDeleteAnillasTarget(null);
+      setDeleteAnillasConfirm("");
+      setSuccessMsg(data.detail);
+    },
+  });
+
   const deleteSociosMutation = useMutation({
     mutationFn: (id: string) => superadminApi.deleteTenantSocios(id),
     onSuccess: (data) => {
@@ -512,6 +547,32 @@ export default function SuperAdminPage() {
               </h1>
             </div>
 
+            {/* Inactividad */}
+            <div className="card space-y-3">
+              <div>
+                <h2 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Clock size={15} /> Cierre de sesión por inactividad</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Aplica a todos los usuarios (superadmin, gestión y socios). 0 = desactivado.</p>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <input
+                  type="number"
+                  min={0}
+                  max={480}
+                  className="input-field w-28"
+                  value={platformSmtpForm.inactivity_timeout_minutes}
+                  onChange={(e) => setPlatformSmtpForm({ ...platformSmtpForm, inactivity_timeout_minutes: parseInt(e.target.value) || 0 })}
+                />
+                <span className="text-sm text-gray-500">minutos de inactividad</span>
+                <button
+                  className="btn-primary text-sm ml-auto"
+                  onClick={() => updatePlatformSmtpMutation.mutate({ inactivity_timeout_minutes: platformSmtpForm.inactivity_timeout_minutes })}
+                  disabled={updatePlatformSmtpMutation.isPending}
+                >
+                  {updatePlatformSmtpMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : "Guardar"}
+                </button>
+              </div>
+            </div>
+
             {/* Global SMTP */}
             <div className="card space-y-4">
               <h2 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Mail size={15} /> SMTP Global <span className="font-normal text-gray-400 text-xs">(la plataforma usa este servidor para enviar emails a las asociaciones)</span></h2>
@@ -746,13 +807,20 @@ export default function SuperAdminPage() {
 
           <fieldset className="space-y-3">
             <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tamaños de anilla</legend>
-            <p className="text-xs text-gray-400">Define los tamaños disponibles para esta asociación. Se mostrará al registrar animales.</p>
+            <p className="text-xs text-gray-400">Define los diámetros disponibles y el sexo asociado a cada uno para esta asociación.</p>
             <div className="space-y-2">
+              {/* Header */}
+              {tenantForm.anilla_sizes.length > 0 && (
+                <div className="grid grid-cols-[80px_120px_32px] gap-2 px-1">
+                  <span className="text-xs text-gray-400 font-medium">Diámetro (mm)</span>
+                  <span className="text-xs text-gray-400 font-medium">Sexo</span>
+                </div>
+              )}
               {tenantForm.anilla_sizes.map((sz, idx) => (
-                <div key={idx} className="flex items-center gap-2">
+                <div key={idx} className="grid grid-cols-[80px_120px_32px] gap-2 items-center">
                   <input
-                    className="input-field w-20 text-sm"
-                    placeholder="mm"
+                    className="input-field text-sm"
+                    placeholder="ej: 18"
                     value={sz.mm}
                     onChange={(e) => {
                       const sizes = [...tenantForm.anilla_sizes];
@@ -760,12 +828,33 @@ export default function SuperAdminPage() {
                       setTenantForm({ ...tenantForm, anilla_sizes: sizes });
                     }}
                   />
-                  <button type="button" className="btn-ghost p-1.5 text-red-500" onClick={() => setTenantForm({ ...tenantForm, anilla_sizes: tenantForm.anilla_sizes.filter((_, i) => i !== idx) })}>
+                  <select
+                    className="input-field text-sm"
+                    value={sz.sexo ?? ""}
+                    onChange={(e) => {
+                      const sizes = [...tenantForm.anilla_sizes];
+                      sizes[idx] = { ...sizes[idx], sexo: e.target.value as "M" | "H" | "" };
+                      setTenantForm({ ...tenantForm, anilla_sizes: sizes });
+                    }}
+                  >
+                    <option value="">Sin asignar</option>
+                    <option value="M">♂ Macho</option>
+                    <option value="H">♀ Hembra</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="btn-ghost p-1.5 text-red-500"
+                    onClick={() => setTenantForm({ ...tenantForm, anilla_sizes: tenantForm.anilla_sizes.filter((_, i) => i !== idx) })}
+                  >
                     <Trash2 size={14} />
                   </button>
                 </div>
               ))}
-              <button type="button" className="btn-ghost text-xs gap-1 flex items-center" onClick={() => setTenantForm({ ...tenantForm, anilla_sizes: [...tenantForm.anilla_sizes, { mm: "" }] })}>
+              <button
+                type="button"
+                className="btn-ghost text-xs gap-1 flex items-center"
+                onClick={() => setTenantForm({ ...tenantForm, anilla_sizes: [...tenantForm.anilla_sizes, { mm: "", sexo: "" }] })}
+              >
                 <Plus size={12} /> Añadir tamaño
               </button>
             </div>
@@ -1106,7 +1195,202 @@ export default function SuperAdminPage() {
               </div>
             )}
           </div>
+
+          {/* ── Reset anillas ─────────────────────────────────────────────── */}
+          <div className="card space-y-4">
+            <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+              <Tag size={16} className="text-orange-600" /> Eliminar anillas por asociación
+            </h2>
+            <p className="text-sm text-gray-500">
+              Elimina <strong>todas las entregas de anillas</strong> de una asociación para reiniciar las asignaciones de campaña. Los animales y socios no se ven afectados.
+            </p>
+            {loadingTenants ? (
+              <div className="space-y-2">
+                {[1,2,3].map(i => <div key={i} className="h-12 bg-gray-100 animate-pulse rounded-lg" />)}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {tenants.map(t => (
+                  <div key={t.id} className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg px-4 py-3">
+                    <span className="font-medium text-gray-900 text-sm">{t.name}</span>
+                    <button
+                      onClick={() => { setDeleteAnillasTarget({ id: t.id, name: t.name }); setDeleteAnillasConfirm(""); }}
+                      className="btn-danger text-xs px-3 py-1.5 flex items-center gap-1.5"
+                    >
+                      <Trash2 size={13} /> Eliminar anillas
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </>
+      )}
+
+      {/* ════════════════ LOG DE ACCESOS ═══════════════════════════════════ */}
+      {section === "log" && (
+        <>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <ScrollText size={22} className="text-indigo-600" /> Log de Accesos
+            </h1>
+            <p className="text-sm text-gray-500">Registro de todos los inicios de sesión en la plataforma</p>
+          </div>
+
+          {/* Filtros */}
+          <div className="card">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Asociación</label>
+                <select
+                  className="input-field text-sm"
+                  value={logTenantFilter}
+                  onChange={(e) => { setLogTenantFilter(e.target.value); setLogPage(1); }}
+                >
+                  <option value="">Todas</option>
+                  {tenants.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Rol</label>
+                <select
+                  className="input-field text-sm"
+                  value={logRoleFilter}
+                  onChange={(e) => { setLogRoleFilter(e.target.value); setLogPage(1); }}
+                >
+                  <option value="">Todos</option>
+                  <option value="superadmin">SuperAdmin</option>
+                  <option value="gestion">Gestión</option>
+                  <option value="socio">Socio</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Buscar email</label>
+                <input
+                  type="text"
+                  className="input-field text-sm"
+                  placeholder="email@..."
+                  value={logSearch}
+                  onChange={(e) => { setLogSearch(e.target.value); setLogPage(1); }}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Desde</label>
+                <input type="date" className="input-field text-sm" value={logDateFrom}
+                  onChange={(e) => { setLogDateFrom(e.target.value); setLogPage(1); }} />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Hasta</label>
+                <input type="date" className="input-field text-sm" value={logDateTo}
+                  onChange={(e) => { setLogDateTo(e.target.value); setLogPage(1); }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Tabla */}
+          <div className="card overflow-x-auto">
+            {loadingLogs ? (
+              <div className="flex justify-center py-8"><Loader2 size={24} className="animate-spin text-indigo-600" /></div>
+            ) : !logsData?.results.length ? (
+              <p className="text-center text-gray-400 py-8">No hay registros con los filtros seleccionados.</p>
+            ) : (
+              <>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-xs text-gray-500 uppercase">
+                      <th className="text-left py-2 pr-4">Fecha y hora</th>
+                      <th className="text-left py-2 pr-4">Email</th>
+                      <th className="text-left py-2 pr-4">Rol</th>
+                      <th className="text-left py-2 pr-4">Asociación</th>
+                      <th className="text-left py-2">IP</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {logsData.results.map((log) => (
+                      <tr key={log.id} className="hover:bg-gray-50">
+                        <td className="py-2 pr-4 text-gray-600 whitespace-nowrap">
+                          {new Date(log.timestamp).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "medium" })}
+                        </td>
+                        <td className="py-2 pr-4 font-mono text-gray-800">{log.user_email}</td>
+                        <td className="py-2 pr-4">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            log.user_role === "superadmin" ? "bg-violet-100 text-violet-700"
+                            : log.user_role === "gestion" ? "bg-blue-100 text-blue-700"
+                            : "bg-gray-100 text-gray-600"
+                          }`}>
+                            {log.user_role === "superadmin" ? "SuperAdmin" : log.user_role === "gestion" ? "Gestión" : "Socio"}
+                          </span>
+                        </td>
+                        <td className="py-2 pr-4 text-gray-600">{log.tenant_name || "—"}</td>
+                        <td className="py-2 text-xs text-gray-400 font-mono">{log.ip_address || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Paginación */}
+                {(logsData.count > 50) && (
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-3">
+                    <span className="text-xs text-gray-500">{logsData.count} registros en total</span>
+                    <div className="flex gap-2">
+                      <button
+                        disabled={!logsData.previous}
+                        onClick={() => setLogPage((p) => p - 1)}
+                        className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-40"
+                      >Anterior</button>
+                      <span className="text-xs text-gray-500 self-center">Pág. {logPage}</span>
+                      <button
+                        disabled={!logsData.next}
+                        onClick={() => setLogPage((p) => p + 1)}
+                        className="btn-secondary text-xs px-3 py-1.5 disabled:opacity-40"
+                      >Siguiente</button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ── Modal confirmación eliminar anillas ─────────────────────────── */}
+      {deleteAnillasTarget && (
+        <Modal onClose={() => setDeleteAnillasTarget(null)} title="Eliminar todas las anillas">
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-lg p-3">
+              <AlertTriangle size={18} className="text-orange-600 shrink-0 mt-0.5" />
+              <div className="text-sm text-orange-800">
+                <p className="font-semibold mb-1">Acción irreversible</p>
+                <p>Se eliminarán <strong>todas las entregas de anillas</strong> de <strong>{deleteAnillasTarget.name}</strong>. Los animales y socios no se verán afectados.</p>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Escribe el nombre de la asociación para confirmar:
+              </label>
+              <p className="text-xs font-mono bg-gray-100 rounded px-2 py-1 mb-2 select-all">{deleteAnillasTarget.name}</p>
+              <input
+                className="input-field"
+                placeholder={deleteAnillasTarget.name}
+                value={deleteAnillasConfirm}
+                onChange={e => setDeleteAnillasConfirm(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button className="btn-secondary flex-1" onClick={() => setDeleteAnillasTarget(null)}>Cancelar</button>
+              <button
+                className="btn-danger flex-1"
+                disabled={deleteAnillasConfirm !== deleteAnillasTarget.name || deleteAnillasMutation.isPending}
+                onClick={() => deleteAnillasMutation.mutate(deleteAnillasTarget.id)}
+              >
+                {deleteAnillasMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : "Confirmar eliminación"}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* ── Modal confirmación eliminar socios ────────────────────────────── */}

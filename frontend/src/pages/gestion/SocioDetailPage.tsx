@@ -16,6 +16,8 @@ import {
   Loader2,
   AlertTriangle,
   UserCheck,
+  Pencil,
+  RefreshCw,
 } from "lucide-react";
 import type { Animal, AnimalEstado } from "../../types";
 import clsx from "clsx";
@@ -63,6 +65,14 @@ export default function SocioDetailPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["socio", id] });
       setSuccessMsg("Socio reactivado correctamente.");
+    },
+  });
+
+  const reactivarAnimalMutation = useMutation({
+    mutationFn: (animalId: string) => animalsApi.reactivar(animalId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["animals", { socio_id: id }] });
+      setSuccessMsg("Animal reactivado correctamente. Pendiente de aprobación.");
     },
   });
 
@@ -172,6 +182,20 @@ export default function SocioDetailPage() {
               <dd className="font-medium text-gray-800 truncate">{value}</dd>
             </div>
           ))}
+          {/* Acceso al portal */}
+          <div className="col-span-2 sm:col-span-3 border-t border-gray-100 pt-3 mt-1">
+            <dt className="text-xs text-gray-400 mb-1">Email / Usuario (acceso al portal)</dt>
+            <dd className="font-medium text-gray-800">
+              {socio.email
+                ? <span className="font-mono text-blue-700">{socio.email}</span>
+                : <span className="text-gray-400 italic">Sin cuenta de acceso</span>
+              }
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-gray-400 mb-1">Contraseña</dt>
+            <dd className="text-gray-400 italic text-sm">Cifrada — no visible. Usa "Editar" para cambiarla.</dd>
+          </div>
           {socio.estado === "BAJA" && socio.razon_baja && (
             <div className="col-span-2 sm:col-span-3">
               <dt className="text-xs text-gray-400">Razón de baja</dt>
@@ -243,6 +267,14 @@ export default function SocioDetailPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-gray-500">{a.variedad}</span>
                         <AnimalStateChip estado={a.estado} />
+                        <button
+                          onClick={() => navigate(`/socios/${id}/animales/${a.id}`)}
+                          className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
+                          title="Ver / Editar"
+                        >
+                          <Pencil size={12} />
+                          Ver/Editar
+                        </button>
                         <button
                           onClick={() => {
                             setBajaAnimalId(a.id);
@@ -331,6 +363,25 @@ export default function SocioDetailPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-500">{a.variedad}</span>
                       <AnimalStateChip estado={a.estado} />
+                      <button
+                        onClick={() => navigate(`/socios/${id}/animales/${a.id}`)}
+                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
+                        title="Ver / Editar"
+                      >
+                        <Pencil size={12} />
+                        Ver/Editar
+                      </button>
+                      <button
+                        onClick={() => reactivarAnimalMutation.mutate(a.id)}
+                        disabled={reactivarAnimalMutation.isPending}
+                        className="flex items-center gap-1 text-xs text-green-700 hover:text-green-900 px-2 py-1 rounded hover:bg-green-50 disabled:opacity-40"
+                        title="Reactivar animal"
+                      >
+                        {reactivarAnimalMutation.isPending
+                          ? <Loader2 size={12} className="animate-spin" />
+                          : <RefreshCw size={12} />}
+                        Reactivar
+                      </button>
                     </div>
                   </div>
                 ))}

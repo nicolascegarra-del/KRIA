@@ -134,3 +134,92 @@ class Socio(UUIDModel):
 
     def __str__(self):
         return f"{self.nombre_razon_social} [{self.numero_socio}]"
+
+
+class SolicitudCambioDatos(UUIDModel):
+    class Estado(models.TextChoices):
+        PENDIENTE = "PENDIENTE", "Pendiente"
+        APROBADO = "APROBADO", "Aprobado"
+        DENEGADO = "DENEGADO", "Denegado"
+
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="solicitudes_cambio",
+    )
+    socio = models.ForeignKey(
+        Socio,
+        on_delete=models.CASCADE,
+        related_name="solicitudes_cambio",
+    )
+    datos_propuestos = models.JSONField()
+    estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.PENDIENTE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "accounts_solicitudcambiodatos"
+        ordering = ["-created_at"]
+
+
+class Notificacion(UUIDModel):
+    class Tipo(models.TextChoices):
+        ANIMAL_APROBADO = "ANIMAL_APROBADO", "Animal aprobado"
+        ANIMAL_RECHAZADO = "ANIMAL_RECHAZADO", "Animal rechazado"
+        REALTA_APROBADA = "REALTA_APROBADA", "Re-alta aprobada"
+        REALTA_DENEGADA = "REALTA_DENEGADA", "Re-alta denegada"
+        REPRODUCTOR_APROBADO = "REPRODUCTOR_APROBADO", "Reproductor aprobado"
+        REPRODUCTOR_DENEGADO = "REPRODUCTOR_DENEGADO", "Reproductor denegado"
+        CAMBIO_DATOS_APROBADO = "CAMBIO_DATOS_APROBADO", "Cambio de datos aprobado"
+        CAMBIO_DATOS_DENEGADO = "CAMBIO_DATOS_DENEGADO", "Cambio de datos denegado"
+        CUOTA_PENDIENTE = "CUOTA_PENDIENTE", "Cuota anual pendiente"
+
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="notificaciones",
+    )
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="notificaciones",
+    )
+    tipo = models.CharField(max_length=50, choices=Tipo.choices)
+    animal_id_str = models.CharField(max_length=40, blank=True)
+    animal_anilla = models.CharField(max_length=100, blank=True)
+    mensaje = models.TextField(blank=True)
+    leida = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "accounts_notificacion"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.tipo} — {self.animal_anilla}"
+
+
+class UserAccessLog(models.Model):
+    """Records every successful login across all tenants and roles."""
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="access_logs",
+    )
+    tenant_name = models.CharField(max_length=200, blank=True, default="")
+    user_email = models.CharField(max_length=254, blank=True, default="")
+    user_role = models.CharField(
+        max_length=20, blank=True, default="",
+        help_text="superadmin | gestion | socio",
+    )
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "accounts_access_log"
+        ordering = ["-timestamp"]
+        verbose_name = "Log de Acceso"
+        verbose_name_plural = "Logs de Acceso"
+
+    def __str__(self):
+        return f"{self.timestamp:%Y-%m-%d %H:%M} — {self.user_email} ({self.user_role})"

@@ -41,6 +41,14 @@ class SuperAdminTenantListCreateView(generics.ListCreateAPIView):
         with transaction.atomic():
             tenant = tenant_serializer.save()
 
+            # Sembrar motivos de baja por defecto
+            from apps.animals.models import MotivoBaja
+            _DEFAULT_MOTIVOS = ["Fallecimiento", "Cesión", "Venta"]
+            for i, nombre in enumerate(_DEFAULT_MOTIVOS):
+                MotivoBaja.objects.get_or_create(
+                    tenant=tenant, nombre=nombre, defaults={"orden": i, "is_active": True}
+                )
+
             if gestion_serializer:
                 from apps.accounts.models import User
                 gd = gestion_serializer.validated_data
@@ -538,3 +546,91 @@ class SuperAdminTenantDeleteSociosView(APIView):
         User.objects.filter(id__in=user_ids, is_gestion=False, is_superadmin=False).delete()
 
         return Response({"detail": f"Se han eliminado {count} socios.", "count": count})
+
+
+class SuperAdminTenantDeleteAnillasView(APIView):
+    """POST /api/v1/superadmin/tenants/:id/delete-anillas/
+    Elimina todas las entregas de anillas de una asociación.
+    """
+    permission_classes = [IsSuperAdmin]
+
+    def post(self, request, pk):
+        from apps.anillas.models import EntregaAnillas
+        try:
+            tenant = Tenant.objects.exclude(slug="system").get(pk=pk)
+        except Tenant.DoesNotExist:
+            return Response({"detail": "Not found."}, status=404)
+
+        qs = EntregaAnillas.all_objects.filter(tenant=tenant)
+        count = qs.count()
+        qs.delete()
+        return Response({"detail": f"Se han eliminado {count} entregas de anillas.", "count": count})
+
+
+class SuperAdminLogsView(APIView):
+    """
+    GET /api/v1/superadmin/logs/
+    Returns paginated access logs for all tenants, newest first.
+    Filters: tenant_id, role, date_from (YYYY-MM-DD), date_to (YYYY-MM-DD), search (email)
+    """
+    permission_classes = [IsSuperAdmin]
+
+    def get(self, request):
+        from apps.accounts.models import UserAccessLog
+        from rest_framework.pagination import PageNumberPagination
+
+        qs = UserAccessLog.objects.select_related("tenant").order_by("-timestamp")
+
+        tenant_id = request.query_params.get("tenant_id", "")
+        if tenant_id:
+            qs = qs.filter(tenant_id=tenant_id)
+
+        role = request.query_params.get("role", "")
+        if role in ("superadmin", "gestion", "socio"):
+            qs = qs.filter(user_role=role)
+
+        search = request.query_params.get("search", "").strip()
+        if search:
+            qs = qs.filter(user_email__icontains=search)
+
+        date_from = request.query_params.get("date_from", "")
+        if date_from:
+            qs = qs.filter(timestamp__date__gte=date_from)
+
+        date_to = request.query_params.get("date_to", "")
+        if date_to:
+            qs = qs.filter(timestamp__date__lte=date_to)
+
+        paginator = PageNumberPagination()
+        paginator.page_size = 50
+        paginator.page_size_query_param = "page_size"
+        paginator.max_page_size = 200
+        page = paginator.paginate_queryset(qs, request)
+
+        data = [
+            {
+                "id": entry.id,
+                "timestamp": entry.timestamp.isoformat(),
+                "user_email": entry.user_email,
+                "user_role": entry.user_role,
+                "tenant_id": str(entry.tenant_id) if entry.tenant_id else None,
+                "tenant_name": entry.tenant_name or (entry.tenant.name if entry.tenant else "—"),
+                "ip_address": entry.ip_address,
+            }
+            for entry in page
+        ]
+        return paginator.get_paginated_response(data)
+
+
+# ── Public settings (no auth) ─────────────────────────────────────────────────
+
+class PublicSettingsView(APIView):
+    """GET /api/v1/public-settings/ — devuelve configuración pública sin autenticación."""
+    permission_classes = []
+    authentication_classes = []
+
+    def get(self, request):
+        from .models import PlatformSettings
+        cfg = PlatformSettings.get()
+        return Response({"inactivity_timeout_minutes": cfg.inactivity_timeout_minutes})
+

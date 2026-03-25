@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.http import JsonResponse
+from apps.tenants.superadmin_views import PublicSettingsView
 
 
 def health_check(request):
@@ -10,6 +11,7 @@ def health_check(request):
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("health/", health_check),
+    path("api/v1/public-settings/", PublicSettingsView.as_view()),
     path("api/v1/auth/", include("apps.accounts.urls")),
     path("api/v1/tenants/", include("apps.tenants.urls")),
     path("api/v1/socios/", include("apps.accounts.socios_urls")),
@@ -25,4 +27,5 @@ urlpatterns = [
     path("api/v1/documentos/", include("apps.documentos.urls")),
     path("api/v1/superadmin/", include("apps.tenants.superadmin_urls")),
     path("api/v1/configuracion/", include("apps.animals.configuracion_urls")),
+    path("api/v1/notificaciones/", include("apps.accounts.notificaciones_urls")),
 ]
