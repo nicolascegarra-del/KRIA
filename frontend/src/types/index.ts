@@ -51,6 +51,7 @@ export interface Socio {
   fecha_baja: string | null;
   email: string;
   full_name: string;
+  has_portal_access: boolean;
   cuota_anual_pagada?: number | null;
 }
 

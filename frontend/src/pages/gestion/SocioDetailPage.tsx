@@ -18,6 +18,8 @@ import {
   UserCheck,
   Pencil,
   RefreshCw,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import type { Animal, AnimalEstado } from "../../types";
 import clsx from "clsx";
@@ -132,16 +134,27 @@ export default function SocioDetailPage() {
         </button>
         <div className="flex-1">
           <h1 className="text-xl font-bold text-gray-900">{socio.nombre_razon_social}</h1>
-          <p className="text-sm text-gray-500">{socio.email}</p>
+          <p className="text-sm text-gray-500">{socio.email || "Sin email"}</p>
         </div>
-        <span
-          className={clsx(
-            "text-xs font-semibold px-2.5 py-1 rounded-full",
-            socio.estado === "ALTA" ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-600"
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <span
+            className={clsx(
+              "text-xs font-semibold px-2.5 py-1 rounded-full",
+              socio.estado === "ALTA" ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-600"
+            )}
+          >
+            {socio.estado}
+          </span>
+          {socio.has_portal_access ? (
+            <span className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">
+              <CheckCircle size={12} /> Acceso al portal
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-red-50 text-red-600 border border-red-200">
+              <XCircle size={12} /> Sin acceso al portal
+            </span>
           )}
-        >
-          {socio.estado}
-        </span>
+        </div>
         {socio.estado === "BAJA" && (
           <button
             onClick={() => reactivarMutation.mutate()}
@@ -182,20 +195,6 @@ export default function SocioDetailPage() {
               <dd className="font-medium text-gray-800 truncate">{value}</dd>
             </div>
           ))}
-          {/* Acceso al portal */}
-          <div className="col-span-2 sm:col-span-3 border-t border-gray-100 pt-3 mt-1">
-            <dt className="text-xs text-gray-400 mb-1">Email / Usuario (acceso al portal)</dt>
-            <dd className="font-medium text-gray-800">
-              {socio.email
-                ? <span className="font-mono text-blue-700">{socio.email}</span>
-                : <span className="text-gray-400 italic">Sin cuenta de acceso</span>
-              }
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs text-gray-400 mb-1">Contraseña</dt>
-            <dd className="text-gray-400 italic text-sm">Cifrada — no visible. Usa "Editar" para cambiarla.</dd>
-          </div>
           {socio.estado === "BAJA" && socio.razon_baja && (
             <div className="col-span-2 sm:col-span-3">
               <dt className="text-xs text-gray-400">Razón de baja</dt>

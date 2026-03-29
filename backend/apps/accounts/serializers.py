@@ -167,6 +167,15 @@ class SocioSerializer(serializers.ModelSerializer):
         )
         return socio
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["email"] = instance.user.email if instance.user_id else ""
+        data["full_name"] = instance.user.full_name if instance.user_id else ""
+        data["has_portal_access"] = bool(
+            instance.user_id and instance.user.has_usable_password()
+        )
+        return data
+
     def update(self, instance, validated_data):
         email = validated_data.pop("email", None)
         validated_data.pop("first_name", None)
@@ -196,12 +205,16 @@ class SocioListSerializer(serializers.ModelSerializer):
     """Lighter serializer for list views."""
     email = serializers.SerializerMethodField()
     full_name = serializers.SerializerMethodField()
+    has_portal_access = serializers.SerializerMethodField()
 
     def get_email(self, obj):
         return obj.user.email if obj.user_id else ""
 
     def get_full_name(self, obj):
         return obj.user.full_name if obj.user_id else ""
+
+    def get_has_portal_access(self, obj):
+        return bool(obj.user_id and obj.user.has_usable_password())
 
     class Meta:
         model = Socio
@@ -210,7 +223,7 @@ class SocioListSerializer(serializers.ModelSerializer):
             "codigo_rega", "telefono", "domicilio", "municipio", "codigo_postal",
             "provincia", "numero_cuenta", "fecha_alta",
             "cuota_anual_pagada", "estado", "razon_baja", "fecha_baja",
-            "email", "full_name",
+            "email", "full_name", "has_portal_access",
         ]
 
 
