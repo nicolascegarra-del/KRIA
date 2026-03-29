@@ -1,0 +1,10 @@
+from django.apps import AppConfig
+
+
+class EvaluacionesConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "apps.evaluaciones"
+    label = "evaluaciones"
+
+    def ready(self):
+        import apps.evaluaciones.signals  # noqa

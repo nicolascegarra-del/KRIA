@@ -1,0 +1,206 @@
+# ═══════════════════════════════════════════════════════════════════
+#  Kria — Docker Compose para Coolify
+#
+#  Arquitectura:
+#  - frontend (nginx): puerto 80, sirve la SPA React Y hace proxy
+#    de /api/ y /admin/ al backend internamente.
+#    Coolify/Traefik enruta kria.klyp.es y admin-kria.klyp.es
+#    a este servicio.
+#  - backend (gunicorn): interno, sin puerto expuesto al host.
+#  - celery / celery-beat: workers internos.
+#  - db / redis / minio: servicios internos.
+#
+#  En Coolify: Docker Compose Location → docker-compose.coolify.yml
+#  Servicio principal para Traefik → frontend, puerto 80
+# ═══════════════════════════════════════════════════════════════════
+
+version: "3.9"
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-kria}
+      POSTGRES_USER: ${POSTGRES_USER:-kria}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data_v2:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kria}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ───────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── MinIO ───────────────────────────────────────────────────────
+  # MinIO es un servicio INTERNO (sin expose ni ports).
+  # El frontend (nginx) lo proxia en /media/ → minio:9000.
+  # En Coolify definir: MINIO_EXTERNAL_ENDPOINT=https://kria.klyp.es/media
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Backend (Gunicorn) — interno, sin puerto expuesto ──────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    # expose declara el puerto del contenedor a Traefik sin enlazarlo al host.
+    # Necesario para que SERVICE_FQDN_BACKEND sepa a qué puerto enrutar.
+    expose:
+      - "8000"
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+      DATABASE_URL: postgres://${POSTGRES_USER:-kria}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-kria}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-kria}
+      MINIO_USE_HTTPS: "false"
+      MINIO_EXTERNAL_ENDPOINT: ${MINIO_EXTERNAL_ENDPOINT}
+      EMAIL_HOST: ${EMAIL_HOST:-localhost}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-true}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-Kria <noreply@kria.es>}
+      FRONTEND_URL: ${FRONTEND_URL}
+      TENANT_DOMAIN_SUFFIX: ${TENANT_DOMAIN_SUFFIX:-.klyp.es}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      ACCESS_TOKEN_LIFETIME_MINUTES: ${ACCESS_TOKEN_LIFETIME_MINUTES:-15}
+      REFRESH_TOKEN_LIFETIME_DAYS: ${REFRESH_TOKEN_LIFETIME_DAYS:-7}
+    volumes:
+      - static_files:/app/staticfiles
+      - media_files:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    command: ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput && python manage.py seed_admin && exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --worker-class gthread --threads 2 --timeout 120 --max-requests 1000 --max-requests-jitter 100 --access-logfile - --error-logfile -"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.settimeout(3); s.connect(('127.0.0.1', 8000)); s.close()"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  # ── Celery Worker ──────────────────────────────────────────────
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DATABASE_URL: postgres://${POSTGRES_USER:-kria}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-kria}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-kria}
+      MINIO_USE_HTTPS: "false"
+      MINIO_EXTERNAL_ENDPOINT: ${MINIO_EXTERNAL_ENDPOINT}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    command: celery -A config worker -l warning -Q default,imports,reports --concurrency 4
+
+  # ── Celery Beat ────────────────────────────────────────────────
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DATABASE_URL: postgres://${POSTGRES_USER:-kria}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-kria}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    command: celery -A config beat -l warning --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+  # ── Frontend: nginx SPA + proxy API ───────────────────────────
+  # Coolify/Traefik enruta aquí AMBOS dominios:
+  #   kria.klyp.es       → SPA React
+  #   admin-kria.klyp.es → /admin/ (Django admin) + /api/
+  #
+  # IMPORTANTE: NO exponer "ports: 80:80" aquí.
+  # Coolify/Traefik gestiona el routing por dominio externamente.
+  # Exponer el puerto directamente al host haría que Kria
+  # interceptara TODO el tráfico HTTP del servidor (incluyendo
+  # dominios de otras apps como kronos.klyp.es).
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    # expose declara el puerto del contenedor a Traefik sin enlazarlo al host.
+    # Necesario para que SERVICE_FQDN_FRONTEND sepa a qué puerto enrutar.
+    # Correcto: Traefik enruta solo los dominios configurados (kria.klyp.es).
+    # Incorrecto habría sido "ports: 80:80" que captura TODO el tráfico del host.
+    expose:
+      - "80"
+    environment:
+      # Dominios que este nginx debe aceptar.
+      # El bloque default_server del nginx rechaza cualquier otro dominio.
+      # Separar múltiples dominios con espacio: "dominio1.com dominio2.com"
+      NGINX_HOSTS: "${NGINX_HOSTS:-kria.klyp.es admin-kria.klyp.es}"
+    volumes:
+      - static_files:/app/staticfiles:ro
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data_v2:
+  redis_data:
+  minio_data:
+  static_files:
+  media_files:

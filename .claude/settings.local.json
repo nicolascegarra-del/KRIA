@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker info:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker inspect:*)",
+      "Bash(docker network:*)",
+      "Bash(curl -s -X POST http://localhost:8000/api/auth/login/ -H \"Content-Type: application/json\" -d \"{\"\"email\"\":\"\"admin@kria.es\"\",\"\"password\"\":\"\"kria2024!\"\"}\")",
+      "Bash(python -m json.tool)",
+      "Bash(curl:*)",
+      "Bash(docker exec:*)",
+      "Bash(\"C:/Users/Adrián Nicolás/Desktop/KRIA-Version-0.2/agamur_backup.sql\")",
+      "Bash(docker stop:*)",
+      "Bash(docker rm:*)",
+      "Bash(docker volume:*)",
+      "Bash(grep -rn \"demo\\\\|seed_demo\\\\|AGAMUR\" 'C:\\\\Users\\\\Adrián Nicolás\\\\Desktop\\\\KRIA-Version-0.2\\\\frontend\\\\src' --include=*.ts --include=*.tsx -l)",
+      "Bash(docker cp:*)",
+      "Bash(xargs grep:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}
