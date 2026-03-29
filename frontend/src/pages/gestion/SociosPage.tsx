@@ -375,7 +375,9 @@ export default function SociosPage() {
   const [ordering, setOrdering] = useState("numero_socio");
   const [page, setPage] = useState(1);
   const [bajaModal, setBajaModal] = useState<Socio | null>(null);
-  const [razonBaja, setRazonBaja] = useState("");
+  const [bajaMotivoKey, setBajaMotivoKey] = useState<"voluntaria" | "impago" | "otros" | "">("");
+  const [bajaObservaciones, setBajaObservaciones] = useState("");
+  const [bajaFecha, setBajaFecha] = useState(new Date().toISOString().split("T")[0]);
   const [socioModal, setSocioModal] = useState<{ mode: ModalMode; socio?: Socio } | null>(null);
   const [successMsg, setSuccessMsg] = useState("");
   const [colState, setColState] = useState<ColState[]>(loadColState);
@@ -400,7 +402,8 @@ export default function SociosPage() {
   });
 
   const bajaMutation = useMutation({
-    mutationFn: ({ id, razon }: { id: string; razon: string }) => sociosApi.darBaja(id, razon),
+    mutationFn: ({ id, razon, fecha }: { id: string; razon: string; fecha: string }) =>
+      sociosApi.darBaja(id, razon, fecha),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["socios"] }); setBajaModal(null); setSuccessMsg("Socio dado de baja."); },
   });
 
@@ -544,7 +547,7 @@ export default function SociosPage() {
                       </button>
                       {socio.estado === "ALTA" ? (
                         <button
-                          onClick={() => { setBajaModal(socio); setRazonBaja(""); }}
+                          onClick={() => { setBajaModal(socio); setBajaMotivoKey(""); setBajaObservaciones(""); setBajaFecha(new Date().toISOString().split("T")[0]); }}
                           className="p-2 rounded-lg text-red-600 hover:bg-red-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
                           title="Dar de baja"
                         >
@@ -593,37 +596,71 @@ export default function SociosPage() {
         <SocioModal mode={socioModal.mode} socio={socioModal.socio} onClose={() => setSocioModal(null)} onSuccess={setSuccessMsg} />
       )}
 
-      {bajaModal && (
-        <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4">
-          <div role="dialog" aria-modal="true" className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
-            <h2 className="text-lg font-bold text-gray-900">Dar de Baja a Socio</h2>
-            <p className="text-gray-600">Socio: <strong>{bajaModal.nombre_razon_social}</strong></p>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-              ⚠️ Todos los animales del socio pasarán a estado "Socio en Baja".
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Razón de baja *</label>
-              <textarea
-                className="input-field h-20 resize-none"
-                value={razonBaja}
-                onChange={(e) => setRazonBaja(e.target.value)}
-                placeholder="Motivo de la baja..."
-                autoFocus
-              />
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => setBajaModal(null)} className="btn-secondary flex-1">Cancelar</button>
-              <button
-                onClick={() => bajaMutation.mutate({ id: bajaModal.id, razon: razonBaja })}
-                disabled={!razonBaja.trim() || bajaMutation.isPending}
-                className="btn-danger flex-1"
-              >
-                {bajaMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : "Confirmar Baja"}
-              </button>
+      {bajaModal && (() => {
+        const razonFinal = bajaMotivoKey === "otros"
+          ? `Otros: ${bajaObservaciones.trim()}`
+          : bajaMotivoKey === "voluntaria" ? "Voluntaria"
+          : bajaMotivoKey === "impago" ? "Impago"
+          : "";
+        const canSubmit = !!bajaMotivoKey && (bajaMotivoKey !== "otros" || bajaObservaciones.trim().length > 0) && !!bajaFecha;
+        return (
+          <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4">
+            <div role="dialog" aria-modal="true" className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+              <h2 className="text-lg font-bold text-gray-900">Dar de Baja a Socio</h2>
+              <p className="text-gray-600">Socio: <strong>{bajaModal.nombre_razon_social}</strong></p>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                ⚠️ Todos los animales del socio pasarán a estado "Socio en Baja".
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de baja *</label>
+                <input
+                  type="date"
+                  className="input-field"
+                  value={bajaFecha}
+                  onChange={(e) => setBajaFecha(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Motivo *</label>
+                <select
+                  className="input-field"
+                  value={bajaMotivoKey}
+                  onChange={(e) => { setBajaMotivoKey(e.target.value as typeof bajaMotivoKey); setBajaObservaciones(""); }}
+                  autoFocus
+                >
+                  <option value="">Seleccionar motivo...</option>
+                  <option value="voluntaria">Voluntaria</option>
+                  <option value="impago">Impago</option>
+                  <option value="otros">Otros</option>
+                </select>
+              </div>
+              {bajaMotivoKey === "otros" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones *</label>
+                  <textarea
+                    className="input-field h-20 resize-none"
+                    value={bajaObservaciones}
+                    onChange={(e) => setBajaObservaciones(e.target.value)}
+                    placeholder="Describe el motivo de la baja..."
+                    autoFocus
+                  />
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button onClick={() => setBajaModal(null)} className="btn-secondary flex-1">Cancelar</button>
+                <button
+                  onClick={() => bajaMutation.mutate({ id: bajaModal.id, razon: razonFinal, fecha: bajaFecha })}
+                  disabled={!canSubmit || bajaMutation.isPending}
+                  className="btn-danger flex-1 disabled:opacity-50"
+                >
+                  {bajaMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : "Confirmar Baja"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

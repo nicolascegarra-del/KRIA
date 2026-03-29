@@ -28,8 +28,8 @@ export const sociosApi = {
     return data;
   },
 
-  darBaja: async (id: string, razon_baja: string): Promise<void> => {
-    await apiClient.post(`/socios/${id}/dar-baja/`, { razon_baja });
+  darBaja: async (id: string, razon_baja: string, fecha_baja: string): Promise<void> => {
+    await apiClient.post(`/socios/${id}/dar-baja/`, { razon_baja, fecha_baja });
   },
 
   reactivar: async (id: string): Promise<void> => {

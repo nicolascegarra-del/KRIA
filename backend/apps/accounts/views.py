@@ -280,10 +280,19 @@ class SocioDarBajaView(APIView):
             return Response({"detail": "Socio ya está en BAJA."}, status=400)
 
         razon = request.data.get("razon_baja", "")
+        fecha_baja = request.data.get("fecha_baja")
         from django.utils import timezone as tz
+        if fecha_baja:
+            try:
+                from datetime import date
+                fecha_baja = date.fromisoformat(str(fecha_baja))
+            except (ValueError, TypeError):
+                return Response({"detail": "Formato de fecha inválido. Use YYYY-MM-DD."}, status=400)
+        else:
+            fecha_baja = tz.now().date()
         socio.estado = Socio.Estado.BAJA
         socio.razon_baja = razon
-        socio.fecha_baja = tz.now().date()
+        socio.fecha_baja = fecha_baja
         socio.save()
 
         return Response({"detail": "Socio dado de baja correctamente."})
