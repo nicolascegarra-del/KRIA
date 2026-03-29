@@ -78,7 +78,7 @@ export default function AnillasPage() {
       anio_campana: parseInt(form.anio_campana, 10),
       rango_inicio: form.rango_inicio,
       rango_fin: form.rango_fin,
-      diametro: form.diametro,
+      diametro: form.diametro as "18" | "20",
     });
   };
 

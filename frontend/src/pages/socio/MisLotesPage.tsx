@@ -482,7 +482,7 @@ function AddCriaModal({ lote, onClose }: AddCriaModalProps) {
         numero_anilla: anilla.trim(),
         fecha_nacimiento: fechaNacimiento,
         sexo,
-        variedad,
+        variedad: variedad as import("../../types").AnimalVariedad,
         ...(lote.macho ? { padre: lote.macho } : {}),
         madre_lote: lote.id,
       }),

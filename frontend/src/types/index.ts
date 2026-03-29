@@ -94,6 +94,7 @@ export interface Animal {
   motivo_baja_nombre: string | null;
   candidato_reproductor: boolean;
   reproductor_aprobado: boolean;
+  socio: string;
   socio_nombre: string;
   padre: string | null;
   padre_anilla: string | null;

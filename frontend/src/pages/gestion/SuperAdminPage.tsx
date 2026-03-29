@@ -98,7 +98,7 @@ export default function SuperAdminPage() {
   const [addingUser, setAddingUser] = useState(false);
   const [addUserForm, setAddUserForm] = useState<GestionUserCreate>(USER_DEFAULTS);
   const [editingUser, setEditingUser] = useState<GestionUser | null>(null);
-  const [editUserForm, setEditUserForm] = useState<UserEditForm>({ email: "", first_name: "", last_name: "", password: "" });
+  const [editUserForm, setEditUserForm] = useState<UserEditForm>({ email: "", first_name: "", last_name: "", password: "", notif_nueva_asociacion: false, notif_asociacion_suspendida: false, notif_asociacion_activada: false, notif_asociacion_eliminada: false });
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
 
   // ── SuperAdmin modal state ─────────────────────────────────────────────────
@@ -533,7 +533,7 @@ export default function SuperAdminPage() {
               </button>
             </div>
 
-            <ErrorAlert message={error} onClose={clearError} />
+            <ErrorAlert message={error} onDismiss={clearError} />
 
             {loadingTenants ? (
               <div className="space-y-2">{[1,2,3].map((i) => <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />)}</div>
@@ -712,7 +712,7 @@ export default function SuperAdminPage() {
               </button>
             </div>
 
-            <ErrorAlert message={saError} onClose={clearSaError} />
+            <ErrorAlert message={saError} onDismiss={clearSaError} />
 
             {loadingSa ? (
               <div className="space-y-2">{[1,2].map((i) => <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />)}</div>
@@ -755,7 +755,7 @@ export default function SuperAdminPage() {
       ══════════════════════════════════════════════════════════════════════ */}
       {tenantModalOpen && <Modal onClose={closeTenantModal} title={editingTenant ? "Editar asociación" : "Nueva asociación"} maxWidth="max-w-3xl">
         <form onSubmit={handleTenantSubmit} className="space-y-4">
-          <ErrorAlert message={error} onClose={clearError} />
+          <ErrorAlert message={error} onDismiss={clearError} />
 
           <fieldset className="space-y-3">
             <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Datos básicos</legend>
@@ -1086,7 +1086,7 @@ export default function SuperAdminPage() {
       ══════════════════════════════════════════════════════════════════════ */}
       {!!usersModalTenant && <Modal onClose={() => { setUsersModalTenant(null); setAddingUser(false); setEditingUser(null); setDeleteUserId(null); clearUserError(); }} title={`Usuarios admin — ${usersModalTenant?.name}`} maxWidth="max-w-2xl">
         <div className="space-y-4">
-          <ErrorAlert message={userError} onClose={clearUserError} />
+          <ErrorAlert message={userError} onDismiss={clearUserError} />
 
           {/* ── Lista de usuarios ── */}
           {loadingUsers ? (
@@ -1120,7 +1120,7 @@ export default function SuperAdminPage() {
                       <td className="px-3 py-2 text-xs text-gray-400 italic">cifrada</td>
                       <td className="px-3 py-2">
                         <div className="flex gap-1">
-                          <button className="btn-ghost p-1" title="Editar / cambiar contraseña" onClick={() => { setEditingUser(u); setAddingUser(false); setEditUserForm({ email: u.email, first_name: u.first_name, last_name: u.last_name, password: "" }); }}>
+                          <button className="btn-ghost p-1" title="Editar / cambiar contraseña" onClick={() => { setEditingUser(u); setAddingUser(false); setEditUserForm({ email: u.email, first_name: u.first_name, last_name: u.last_name, password: "", notif_nueva_asociacion: false, notif_asociacion_suspendida: false, notif_asociacion_activada: false, notif_asociacion_eliminada: false }); }}>
                             <Pencil size={13} />
                           </button>
                           {u.is_active
@@ -1225,7 +1225,7 @@ export default function SuperAdminPage() {
       ══════════════════════════════════════════════════════════════════════ */}
       {saModalOpen && <Modal onClose={closeSaModal} title={editingSa ? "Editar superadmin" : "Nuevo superadmin"}>
         <form onSubmit={handleSaSubmit} className="space-y-3">
-          <ErrorAlert message={saError} onClose={clearSaError} />
+          <ErrorAlert message={saError} onDismiss={clearSaError} />
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-gray-600 mb-1">Nombre</label>
