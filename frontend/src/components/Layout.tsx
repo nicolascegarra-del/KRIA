@@ -292,7 +292,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       >
         {/* Logo / Brand */}
         <div className="flex items-center gap-3 px-6 py-5 border-b border-white/20">
-          {branding?.logo_url ? (
+          {branding?.logo_url && (!isSuperadmin || impersonatingTenant) ? (
             <img src={branding.logo_url} alt="Logo" className="w-8 h-8 rounded object-cover" />
           ) : (
             <Bird size={24} className="text-white" />
@@ -437,7 +437,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <Menu size={20} />
             </button>
           )}
-          {branding?.logo_url ? (
+          {branding?.logo_url && (!isSuperadmin || impersonatingTenant) ? (
             <img src={branding.logo_url} alt="Logo" className="w-7 h-7 rounded object-cover shrink-0" />
           ) : (
             <Bird size={20} className="shrink-0" style={{ color: primaryColor }} />
