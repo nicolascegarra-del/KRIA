@@ -144,10 +144,15 @@ export default function App() {
       .catch(() => {/* Offline — branding from persisted store */});
   }, [user?.tenant_id, setBranding]);
 
-  // Apply branding from cache immediately
+  // Apply branding from cache immediately (skip for superadmins — they have no tenant branding)
   useEffect(() => {
-    if (branding) applyBranding(branding);
-  }, [branding]);
+    if (branding && !user?.is_superadmin) applyBranding(branding);
+  }, [branding, user?.is_superadmin]);
+
+  // Fixed title for superadmins
+  useEffect(() => {
+    if (user?.is_superadmin) document.title = "KRIA – Gestión Animal";
+  }, [user?.is_superadmin]);
 
   // Fetch inactivity timeout from public endpoint
   useEffect(() => {

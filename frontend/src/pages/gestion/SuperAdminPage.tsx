@@ -13,6 +13,7 @@ import {
   Trash2, PauseCircle, PlayCircle, UserCheck, BarChart2,
   UserPlus, Pencil, ChevronRight, Mail, CheckCircle2, XCircle,
   Settings, AlertTriangle, Wrench, ScrollText, Clock, Tag,
+  MapPin, Phone, AtSign, Settings2, GripVertical, X, Eye,
 } from "lucide-react";
 import type { Tenant, GestionUserCreate, GestionUser, AnillaSize, PlatformSettings } from "../../types";
 
@@ -30,12 +31,13 @@ type Section = "dashboard" | "asociaciones" | "configuracion" | "gestiones_avanz
 interface TenantForm {
   name: string; slug: string; primary_color: string; secondary_color: string;
   is_active: boolean; max_socios: number;
-  nombre_completo: string; cif: string; domicilio: string; email_asociacion: string;
-  telefono1: string; telefono1_nombre: string; telefono1_cargo: string;
-  telefono2: string; telefono2_nombre: string; telefono2_cargo: string;
+  nombre_completo: string; cif: string;
+  email_asociacion: string;
+  domicilio: string; cod_postal: string; municipio: string; provincia: string;
+  telefono1: string; telefono1_nombre: string; telefono1_cargo: string; telefono1_email: string;
+  telefono2: string; telefono2_nombre: string; telefono2_cargo: string; telefono2_email: string;
   granjas_enabled: boolean;
   anilla_sizes: AnillaSize[];
-  email_notificaciones: string;
   smtp_host: string; smtp_port: number; smtp_user: string; smtp_password: string;
   smtp_from_email: string; smtp_from_name: string; smtp_use_tls: boolean; smtp_use_ssl: boolean;
 }
@@ -43,13 +45,116 @@ interface TenantForm {
 const TENANT_DEFAULTS: TenantForm = {
   name: "", slug: "", primary_color: "#1565C0", secondary_color: "#FBC02D",
   is_active: true, max_socios: 50,
-  nombre_completo: "", cif: "", domicilio: "", email_asociacion: "",
-  telefono1: "", telefono1_nombre: "", telefono1_cargo: "",
-  telefono2: "", telefono2_nombre: "", telefono2_cargo: "",
-  granjas_enabled: true, anilla_sizes: [], email_notificaciones: "",
+  nombre_completo: "", cif: "", email_asociacion: "",
+  domicilio: "", cod_postal: "", municipio: "", provincia: "",
+  telefono1: "", telefono1_nombre: "", telefono1_cargo: "", telefono1_email: "",
+  telefono2: "", telefono2_nombre: "", telefono2_cargo: "", telefono2_email: "",
+  granjas_enabled: true, anilla_sizes: [],
   smtp_host: "", smtp_port: 587, smtp_user: "", smtp_password: "",
   smtp_from_email: "", smtp_from_name: "", smtp_use_tls: true, smtp_use_ssl: false,
 };
+
+// ── Tenant column definitions (for the configurable table) ────────────────────
+const LS_TENANTS_COLS = "tenants_table_cols";
+
+interface TenantColDef {
+  id: string;
+  label: string;
+  render: (t: Tenant) => React.ReactNode;
+}
+
+const TENANT_ALL_COLS: TenantColDef[] = [
+  { id: "nombre_completo", label: "Nombre completo", render: (t) => <span className="text-sm text-gray-600 truncate max-w-[200px] block">{t.nombre_completo || <span className="text-gray-300">—</span>}</span> },
+  { id: "cif", label: "CIF", render: (t) => <span className="font-mono text-sm text-gray-600">{t.cif || <span className="text-gray-300">—</span>}</span> },
+  { id: "email", label: "Email", render: (t) => <span className="text-sm text-gray-600">{t.email_asociacion || <span className="text-gray-300">—</span>}</span> },
+  { id: "municipio", label: "Municipio", render: (t) => <span className="text-sm text-gray-600">{t.municipio || <span className="text-gray-300">—</span>}</span> },
+  { id: "provincia", label: "Provincia", render: (t) => <span className="text-sm text-gray-600">{t.provincia || <span className="text-gray-300">—</span>}</span> },
+  { id: "socios", label: "Socios", render: (t) => {
+    const pct = (t.max_socios ?? 0) > 0 ? Math.min(((t.socios_count ?? 0) / (t.max_socios ?? 1)) * 100, 100) : 0;
+    const bar = pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-400" : "bg-green-500";
+    return (
+      <div className="flex items-center gap-2 min-w-[100px]">
+        {(t.max_socios ?? 0) > 0 && <div className="w-16 bg-gray-100 rounded-full h-1.5 shrink-0"><div className={`h-1.5 rounded-full ${bar}`} style={{ width: `${pct}%` }} /></div>}
+        <span className="text-xs text-gray-500 whitespace-nowrap">{t.socios_count ?? 0}{(t.max_socios ?? 0) > 0 ? `/${t.max_socios}` : ""}</span>
+      </div>
+    );
+  }},
+  { id: "estado", label: "Estado", render: (t) => (
+    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${t.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
+      {t.is_active ? "Activa" : "Suspendida"}
+    </span>
+  )},
+  { id: "created_at", label: "Fecha alta", render: (t) => t.created_at ? <span className="text-sm text-gray-500">{new Date(t.created_at).toLocaleDateString("es-ES")}</span> : <span className="text-gray-300">—</span> },
+];
+
+const TENANT_DEFAULT_VISIBLE = ["cif", "email", "socios", "estado"];
+
+interface TenantColState { id: string; visible: boolean; }
+
+function loadTenantColState(): TenantColState[] {
+  try {
+    const raw = localStorage.getItem(LS_TENANTS_COLS);
+    if (raw) {
+      const saved: TenantColState[] = JSON.parse(raw);
+      const ids = new Set(saved.map((c) => c.id));
+      const merged = [...saved];
+      TENANT_ALL_COLS.forEach((c) => { if (!ids.has(c.id)) merged.push({ id: c.id, visible: false }); });
+      return merged;
+    }
+  } catch {}
+  return TENANT_ALL_COLS.map((c) => ({ id: c.id, visible: TENANT_DEFAULT_VISIBLE.includes(c.id) }));
+}
+
+function TenantColConfigPanel({ cols, onChange, onClose }: { cols: TenantColState[]; onChange: (cols: TenantColState[]) => void; onClose: () => void; }) {
+  const [local, setLocal] = useState<TenantColState[]>(cols);
+  const dragIdx = useRef<number | null>(null);
+
+  const toggleVisible = (id: string) => setLocal((prev) => prev.map((c) => c.id === id ? { ...c, visible: !c.visible } : c));
+  const handleDragStart = (idx: number) => { dragIdx.current = idx; };
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (dragIdx.current === null || dragIdx.current === idx) return;
+    const next = [...local];
+    const [moved] = next.splice(dragIdx.current, 1);
+    next.splice(idx, 0, moved);
+    dragIdx.current = idx;
+    setLocal(next);
+  };
+  const handleDrop = () => { dragIdx.current = null; };
+  const save = () => { onChange(local); onClose(); };
+  const reset = () => setLocal(TENANT_ALL_COLS.map((c) => ({ id: c.id, visible: TENANT_DEFAULT_VISIBLE.includes(c.id) })));
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-black/30" onClick={onClose} />
+      <div className="w-72 max-w-[calc(100vw-2rem)] bg-white shadow-2xl flex flex-col">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+          <span className="font-semibold text-gray-800 text-sm">Configurar columnas</span>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+        </div>
+        <p className="text-xs text-gray-500 px-4 pt-2 pb-1">Arrastra para reordenar · Marca para mostrar</p>
+        <ul className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
+          {local.map((cs, idx) => {
+            const def = TENANT_ALL_COLS.find((c) => c.id === cs.id)!;
+            if (!def) return null;
+            return (
+              <li key={cs.id} draggable onDragStart={() => handleDragStart(idx)} onDragOver={(e) => handleDragOver(e, idx)} onDrop={handleDrop}
+                className="flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-gray-50 cursor-grab active:cursor-grabbing select-none">
+                <GripVertical size={14} className="text-gray-300 shrink-0" />
+                <input type="checkbox" checked={cs.visible} onChange={() => toggleVisible(cs.id)} className="accent-violet-600" />
+                <span className="text-sm text-gray-700">{def.label}</span>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="border-t border-gray-200 px-4 py-3 flex gap-2">
+          <button onClick={reset} className="btn-secondary text-xs flex-1">Restablecer</button>
+          <button onClick={save} className="btn-primary text-xs flex-1">Aplicar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const USER_DEFAULTS: GestionUserCreate = { email: "", first_name: "", last_name: "", password: "" };
 
@@ -110,6 +215,11 @@ export default function SuperAdminPage() {
   const [error, setError, clearError] = useAutoCloseError();
   const [userError, setUserError, clearUserError] = useAutoCloseError();
   const [saError, setSaError, clearSaError] = useAutoCloseError();
+
+  // ── Tenant table column state ──────────────────────────────────────────────
+  const [tenantColState, setTenantColState] = useState<TenantColState[]>(loadTenantColState);
+  const [showTenantColPanel, setShowTenantColPanel] = useState(false);
+  useEffect(() => { localStorage.setItem(LS_TENANTS_COLS, JSON.stringify(tenantColState)); }, [tenantColState]);
 
   // ── Log state ─────────────────────────────────────────────────────────────
   const [logTenantFilter, setLogTenantFilter] = useState("");
@@ -392,13 +502,16 @@ export default function SuperAdminPage() {
     setTenantForm({
       name: t.name, slug: t.slug, primary_color: t.primary_color, secondary_color: t.secondary_color,
       is_active: t.is_active, max_socios: t.max_socios ?? 50,
-      nombre_completo: t.nombre_completo ?? "", cif: t.cif ?? "", domicilio: t.domicilio ?? "",
-      email_asociacion: t.email_asociacion ?? "",
-      telefono1: t.telefono1 ?? "", telefono1_nombre: t.telefono1_nombre ?? "", telefono1_cargo: t.telefono1_cargo ?? "",
-      telefono2: t.telefono2 ?? "", telefono2_nombre: t.telefono2_nombre ?? "", telefono2_cargo: t.telefono2_cargo ?? "",
+      nombre_completo: t.nombre_completo ?? "", cif: t.cif ?? "",
+      email_asociacion: t.email_asociacion || t.email_notificaciones || "",
+      domicilio: t.domicilio ?? "", cod_postal: t.cod_postal ?? "",
+      municipio: t.municipio ?? "", provincia: t.provincia ?? "",
+      telefono1: t.telefono1 ?? "", telefono1_nombre: t.telefono1_nombre ?? "",
+      telefono1_cargo: t.telefono1_cargo ?? "", telefono1_email: t.telefono1_email ?? "",
+      telefono2: t.telefono2 ?? "", telefono2_nombre: t.telefono2_nombre ?? "",
+      telefono2_cargo: t.telefono2_cargo ?? "", telefono2_email: t.telefono2_email ?? "",
       granjas_enabled: t.granjas_enabled ?? true,
       anilla_sizes: t.anilla_sizes ?? [],
-      email_notificaciones: t.email_notificaciones ?? "",
       smtp_host: t.smtp_host ?? "", smtp_port: t.smtp_port ?? 587,
       smtp_user: t.smtp_user ?? "", smtp_password: t.smtp_password ?? "",
       smtp_from_email: t.smtp_from_email ?? "", smtp_from_name: t.smtp_from_name ?? "",
@@ -521,91 +634,87 @@ export default function SuperAdminPage() {
         {/* ════════════════ ASOCIACIONES ═════════════════════════════════════ */}
         {section === "asociaciones" && (
           <>
+            {showTenantColPanel && (
+              <TenantColConfigPanel cols={tenantColState} onChange={setTenantColState} onClose={() => setShowTenantColPanel(false)} />
+            )}
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                   <Building size={22} className="text-violet-600" /> Asociaciones
                 </h1>
-                <p className="text-sm text-gray-500">Gestión de asociaciones registradas</p>
+                <p className="text-sm text-gray-500">{tenants.length > 0 ? `${tenants.length} asociaciones registradas` : "Gestión de asociaciones registradas"}</p>
               </div>
-              <button onClick={openCreateTenant} className="btn-primary gap-2 flex items-center">
-                <Plus size={16} /> Nueva asociación
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setShowTenantColPanel(true)} className="btn-ghost gap-1.5 flex items-center text-sm" title="Configurar columnas">
+                  <Settings2 size={15} /> Columnas
+                </button>
+                <button onClick={openCreateTenant} className="btn-primary gap-2 flex items-center">
+                  <Plus size={16} /> Nueva asociación
+                </button>
+              </div>
             </div>
 
             <ErrorAlert message={error} onDismiss={clearError} />
 
             {loadingTenants ? (
-              <div className="space-y-2">{[1,2,3].map((i) => <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />)}</div>
+              <div className="space-y-2">{[1,2,3].map((i) => <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />)}</div>
             ) : tenants.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-10">No hay asociaciones.</p>
-            ) : (
-              <div className="space-y-3">
-                {tenants.map((t) => {
-                  const pct = t.max_socios > 0 ? Math.min(((t.socios_count ?? 0) / t.max_socios) * 100, 100) : 0;
-                  const barColor = pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-400" : "bg-green-500";
-                  return (
-                    <div key={t.id} className="card flex items-center gap-4">
-                      {/* Logo/color swatch */}
-                      <div className="w-10 h-10 rounded-lg shrink-0 flex items-center justify-center overflow-hidden" style={{ background: t.primary_color }}>
-                        {t.logo_url
-                          ? <img src={t.logo_url} alt="" className="w-full h-full object-cover" />
-                          : <Building size={18} className="text-white" />
-                        }
-                      </div>
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900 truncate">{t.name}</span>
-                          <span className="text-xs text-gray-400 font-mono">{t.slug}</span>
-                          <span className={`text-xs px-1.5 py-0.5 rounded ${t.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
-                            {t.is_active ? "Activa" : "Suspendida"}
-                          </span>
-                        </div>
-                        {t.nombre_completo && <p className="text-xs text-gray-500 truncate">{t.nombre_completo}</p>}
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="w-24 bg-gray-100 rounded-full h-1.5">
-                            {t.max_socios > 0 && <div className={`h-1.5 rounded-full ${barColor}`} style={{ width: `${pct}%` }} />}
-                          </div>
-                          <span className="text-xs text-gray-400">
-                            {t.socios_count ?? 0}{t.max_socios > 0 ? ` / ${t.max_socios} socios` : " socios (sin límite)"}
-                          </span>
-                        </div>
-                      </div>
-                      {/* Actions */}
-                      <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
-                        <button
-                          title="Gestionar usuarios admin"
-                          className="btn-ghost p-1.5"
-                          onClick={() => setUsersModalTenant(t)}
-                        ><Users size={15} /></button>
-                        <button
-                          title="Editar"
-                          className="btn-ghost p-1.5"
-                          onClick={() => openEditTenant(t)}
-                        ><Edit2 size={15} /></button>
-                        <button
-                          title={t.is_active ? "Suspender" : "Activar"}
-                          className="btn-ghost p-1.5"
-                          onClick={() => t.is_active ? suspendTenantMutation.mutate(t.id) : activateTenantMutation.mutate(t.id)}
-                        >{t.is_active ? <PauseCircle size={15} className="text-amber-500" /> : <PlayCircle size={15} className="text-green-600" />}</button>
-                        <button
-                          title="Acceder como admin"
-                          className="btn-ghost p-1.5"
-                          onClick={() => impersonateMutation.mutate(t.id)}
-                          disabled={!t.is_active}
-                        ><ChevronRight size={15} className="text-violet-600" /></button>
-                        <button
-                          title="Eliminar"
-                          className="btn-ghost p-1.5"
-                          onClick={() => setDeleteModalTenant(t)}
-                        ><Trash2 size={15} className="text-red-500" /></button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            ) : (() => {
+              const visibleCols = tenantColState
+                .filter((cs) => cs.visible)
+                .map((cs) => TENANT_ALL_COLS.find((c) => c.id === cs.id)!)
+                .filter(Boolean);
+              return (
+                <div className="card overflow-x-auto p-0">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Asociación</th>
+                        {visibleCols.map((col) => (
+                          <th key={col.id} className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{col.label}</th>
+                        ))}
+                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {tenants.map((t) => (
+                        <tr key={t.id} className="hover:bg-gray-50/60 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center overflow-hidden" style={{ background: t.primary_color }}>
+                                {t.logo_url ? <img src={t.logo_url} alt="" className="w-full h-full object-cover" /> : <Building size={14} className="text-white" />}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-medium text-gray-900 leading-tight">{t.name}</p>
+                                <p className="text-xs text-gray-400 font-mono leading-tight">{t.slug}</p>
+                              </div>
+                            </div>
+                          </td>
+                          {visibleCols.map((col) => (
+                            <td key={col.id} className="py-3 px-3">{col.render(t)}</td>
+                          ))}
+                          <td className="py-3 px-4">
+                            <div className="flex items-center justify-end gap-0.5">
+                              <button title="Gestionar usuarios admin" className="btn-ghost p-1.5" onClick={() => setUsersModalTenant(t)}><Users size={14} /></button>
+                              <button title="Editar" className="btn-ghost p-1.5" onClick={() => openEditTenant(t)}><Edit2 size={14} /></button>
+                              <button title={t.is_active ? "Suspender" : "Activar"} className="btn-ghost p-1.5"
+                                onClick={() => t.is_active ? suspendTenantMutation.mutate(t.id) : activateTenantMutation.mutate(t.id)}>
+                                {t.is_active ? <PauseCircle size={14} className="text-amber-500" /> : <PlayCircle size={14} className="text-green-600" />}
+                              </button>
+                              <button title="Acceder como admin" className="btn-ghost p-1.5" onClick={() => impersonateMutation.mutate(t.id)} disabled={!t.is_active}>
+                                <Eye size={14} className="text-violet-600" />
+                              </button>
+                              <button title="Eliminar" className="btn-ghost p-1.5" onClick={() => setDeleteModalTenant(t)}><Trash2 size={14} className="text-red-500" /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </>
         )}
 
@@ -616,70 +725,77 @@ export default function SuperAdminPage() {
               <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <Settings size={22} className="text-violet-600" /> Configuración
               </h1>
+              <p className="text-sm text-gray-500">Parámetros globales de la plataforma</p>
             </div>
 
-            {/* Inactividad */}
-            <div className="card space-y-3">
-              <div>
-                <h2 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Clock size={15} /> Cierre de sesión por inactividad</h2>
-                <p className="text-xs text-gray-500 mt-0.5">Aplica a todos los usuarios (superadmin, gestión y socios). 0 = desactivado.</p>
-              </div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <input
-                  type="number"
-                  min={0}
-                  max={480}
-                  className="input-field w-28"
-                  value={platformSmtpForm.inactivity_timeout_minutes}
-                  onChange={(e) => setPlatformSmtpForm({ ...platformSmtpForm, inactivity_timeout_minutes: parseInt(e.target.value) || 0 })}
-                />
-                <span className="text-sm text-gray-500">minutos de inactividad</span>
-                <button
-                  className="btn-primary text-sm ml-auto"
-                  onClick={() => updatePlatformSmtpMutation.mutate({ inactivity_timeout_minutes: platformSmtpForm.inactivity_timeout_minutes })}
-                  disabled={updatePlatformSmtpMutation.isPending}
-                >
-                  {updatePlatformSmtpMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : "Guardar"}
-                </button>
-              </div>
-            </div>
-
-            {/* Global SMTP */}
+            {/* ── Seguridad ── */}
             <div className="card space-y-4">
-              <h2 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Mail size={15} /> SMTP Global <span className="font-normal text-gray-400 text-xs">(la plataforma usa este servidor para enviar emails a las asociaciones)</span></h2>
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                <div className="w-1 h-4 bg-violet-400 rounded-full" />
+                <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2"><Clock size={14} /> Seguridad</h2>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Cierre de sesión por inactividad</label>
+                <p className="text-xs text-gray-400 mb-2">Aplica a todos los usuarios de la plataforma. <span className="font-medium">0 = desactivado.</span></p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number" min={0} max={480}
+                    className="input-field w-28"
+                    value={platformSmtpForm.inactivity_timeout_minutes}
+                    onChange={(e) => setPlatformSmtpForm({ ...platformSmtpForm, inactivity_timeout_minutes: parseInt(e.target.value) || 0 })}
+                  />
+                  <span className="text-sm text-gray-500">minutos</span>
+                  <button
+                    className="btn-primary text-sm ml-auto"
+                    onClick={() => updatePlatformSmtpMutation.mutate({ inactivity_timeout_minutes: platformSmtpForm.inactivity_timeout_minutes })}
+                    disabled={updatePlatformSmtpMutation.isPending}
+                  >
+                    {updatePlatformSmtpMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : "Guardar"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ── SMTP Global ── */}
+            <div className="card space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                <div className="w-1 h-4 bg-violet-400 rounded-full" />
+                <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2"><Mail size={14} /> Correo electrónico global</h2>
+                <span className="text-xs text-gray-400 ml-1">— usado para enviar comunicaciones a las asociaciones</span>
+              </div>
               <form onSubmit={(e) => { e.preventDefault(); updatePlatformSmtpMutation.mutate(platformSmtpForm); }} className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Servidor SMTP</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Servidor SMTP</label>
                     <input className="input-field" placeholder="smtp.gmail.com" value={platformSmtpForm.smtp_host} onChange={(e) => setPlatformSmtpForm({ ...platformSmtpForm, smtp_host: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Puerto</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Puerto</label>
                     <input className="input-field" type="number" value={platformSmtpForm.smtp_port} onChange={(e) => setPlatformSmtpForm({ ...platformSmtpForm, smtp_port: parseInt(e.target.value) || 587 })} />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Usuario</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Usuario</label>
                     <input className="input-field" value={platformSmtpForm.smtp_user} onChange={(e) => setPlatformSmtpForm({ ...platformSmtpForm, smtp_user: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Contraseña</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Contraseña</label>
                     <input className="input-field" type="password" value={platformSmtpForm.smtp_password} onChange={(e) => setPlatformSmtpForm({ ...platformSmtpForm, smtp_password: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Email remitente</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Email remitente</label>
                     <input className="input-field" type="email" value={platformSmtpForm.smtp_from_email} onChange={(e) => setPlatformSmtpForm({ ...platformSmtpForm, smtp_from_email: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Nombre remitente</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Nombre remitente</label>
                     <input className="input-field" value={platformSmtpForm.smtp_from_name} onChange={(e) => setPlatformSmtpForm({ ...platformSmtpForm, smtp_from_name: e.target.value })} />
                   </div>
                 </div>
-                <div className="flex items-center gap-4 flex-wrap">
-                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                <div className="flex items-center gap-4 flex-wrap pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600">
                     <input type="checkbox" checked={platformSmtpForm.smtp_use_tls} onChange={(e) => setPlatformSmtpForm({ ...platformSmtpForm, smtp_use_tls: e.target.checked, smtp_use_ssl: e.target.checked ? false : platformSmtpForm.smtp_use_ssl })} className="rounded" />
                     STARTTLS
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600">
                     <input type="checkbox" checked={platformSmtpForm.smtp_use_ssl} onChange={(e) => setPlatformSmtpForm({ ...platformSmtpForm, smtp_use_ssl: e.target.checked, smtp_use_tls: e.target.checked ? false : platformSmtpForm.smtp_use_tls })} className="rounded" />
                     SSL/TLS
                   </label>
@@ -694,300 +810,302 @@ export default function SuperAdminPage() {
                         {platformSmtpTestResult.slice(2)}
                       </span>
                     )}
+                    <button type="submit" className="btn-primary text-sm" disabled={updatePlatformSmtpMutation.isPending}>
+                      {updatePlatformSmtpMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : "Guardar"}
+                    </button>
                   </div>
-                </div>
-                <div className="flex justify-end">
-                  <button type="submit" className="btn-primary text-sm" disabled={updatePlatformSmtpMutation.isPending}>
-                    {updatePlatformSmtpMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : "Guardar SMTP global"}
-                  </button>
                 </div>
               </form>
             </div>
 
-            {/* SuperAdmins */}
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-800 flex items-center gap-2"><Shield size={15} /> SuperAdmins</h2>
-              <button onClick={openCreateSa} className="btn-primary gap-2 flex items-center text-sm">
-                <Plus size={16} /> Nuevo superadmin
-              </button>
-            </div>
+            {/* ── SuperAdmins ── */}
+            <div className="card space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-4 bg-violet-400 rounded-full" />
+                  <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2"><Shield size={14} /> SuperAdmins</h2>
+                </div>
+                <button onClick={openCreateSa} className="btn-primary gap-1.5 flex items-center text-xs">
+                  <Plus size={13} /> Nuevo superadmin
+                </button>
+              </div>
 
-            <ErrorAlert message={saError} onDismiss={clearSaError} />
+              <ErrorAlert message={saError} onDismiss={clearSaError} />
 
-            {loadingSa ? (
-              <div className="space-y-2">{[1,2].map((i) => <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />)}</div>
-            ) : superAdmins.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-10">No hay superadmins.</p>
-            ) : (
-              <div className="card overflow-x-auto">
+              {loadingSa ? (
+                <div className="space-y-2">{[1,2].map((i) => <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />)}</div>
+              ) : superAdmins.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-6">No hay superadmins registrados.</p>
+              ) : (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100 text-xs text-gray-500 uppercase">
-                      <th className="pb-2 text-left pr-4">Nombre</th>
-                      <th className="pb-2 text-left pr-4">Email</th>
-                      <th className="pb-2 text-left pr-4">Alta</th>
-                      <th className="pb-2 text-left">Acciones</th>
+                    <tr className="text-xs text-gray-400 uppercase tracking-wide">
+                      <th className="pb-2 text-left font-semibold">Nombre</th>
+                      <th className="pb-2 text-left font-semibold">Email</th>
+                      <th className="pb-2 text-left font-semibold">Alta</th>
+                      <th className="pb-2 text-right font-semibold">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {superAdmins.map((u) => (
-                      <tr key={u.id}>
-                        <td className="py-2 pr-4">{u.first_name} {u.last_name || ""}</td>
-                        <td className="py-2 pr-4 text-gray-600">{u.email}</td>
-                        <td className="py-2 pr-4 text-gray-400 text-xs">{new Date(u.date_joined).toLocaleDateString("es-ES")}</td>
-                        <td className="py-2">
-                          <div className="flex gap-1">
-                            <button title="Editar" className="btn-ghost p-1" onClick={() => openEditSa(u)}><Pencil size={14} /></button>
-                            <button title="Eliminar" className="btn-ghost p-1" onClick={() => setDeleteSaId(u.id)}><Trash2 size={14} className="text-red-500" /></button>
+                      <tr key={u.id} className="hover:bg-gray-50/50">
+                        <td className="py-2.5 pr-4 font-medium text-gray-800">{u.first_name} {u.last_name || ""}</td>
+                        <td className="py-2.5 pr-4 text-gray-500">{u.email}</td>
+                        <td className="py-2.5 pr-4 text-gray-400 text-xs">{new Date(u.date_joined).toLocaleDateString("es-ES")}</td>
+                        <td className="py-2.5">
+                          <div className="flex gap-1 justify-end">
+                            <button title="Editar" className="btn-ghost p-1.5" onClick={() => openEditSa(u)}><Pencil size={13} /></button>
+                            <button title="Eliminar" className="btn-ghost p-1.5" onClick={() => setDeleteSaId(u.id)}><Trash2 size={13} className="text-red-500" /></button>
                           </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
-            )}
+              )}
+            </div>
           </>
         )}
 
       {/* ══════════════════════════════════════════════════════════════════════
           MODAL: Crear / Editar Asociación
       ══════════════════════════════════════════════════════════════════════ */}
-      {tenantModalOpen && <Modal onClose={closeTenantModal} title={editingTenant ? "Editar asociación" : "Nueva asociación"} maxWidth="max-w-3xl">
-        <form onSubmit={handleTenantSubmit} className="space-y-4">
+      {tenantModalOpen && <Modal onClose={closeTenantModal} title={editingTenant ? `Editar — ${editingTenant.name}` : "Nueva asociación"} maxWidth="max-w-3xl">
+        <form onSubmit={handleTenantSubmit} className="space-y-6">
           <ErrorAlert message={error} onDismiss={clearError} />
 
-          <fieldset className="space-y-3">
-            <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Datos básicos</legend>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Nombre corto *</label>
-              <input
-                className="input-field"
-                placeholder="p.ej. APACA"
-                required
-                value={tenantForm.name}
-                onChange={(e) => {
-                  const name = e.target.value;
-                  setTenantForm((prev) => ({
-                    ...prev,
-                    name,
-                    slug: editingTenant ? prev.slug : toSlug(name),
-                  }));
-                }}
-              />
+          {/* ── IDENTIFICACIÓN ── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 pb-1.5 border-b border-gray-100">
+              <div className="w-1 h-4 bg-violet-400 rounded-full shrink-0" />
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Identificación</span>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Nombre completo</label>
-              <input className="input-field" placeholder="Asociación de Productores Avícolas de Castilla" value={tenantForm.nombre_completo} onChange={(e) => setTenantForm({ ...tenantForm, nombre_completo: e.target.value })} />
+            <div className="flex gap-4">
+              {/* Logo */}
+              <div className="shrink-0">
+                {editingTenant ? (
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="w-20 h-20 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50" style={{ background: logoPreview ? undefined : tenantForm.primary_color }}>
+                      {logoPreview
+                        ? <img src={logoPreview} alt="Logo" className="w-full h-full object-contain p-1" />
+                        : <Building size={22} className="text-white" />}
+                    </div>
+                    <button type="button" className="text-xs text-violet-600 hover:text-violet-800 flex items-center gap-1" onClick={() => logoInputRef.current?.click()} disabled={logoUploading}>
+                      {logoUploading ? <Loader2 size={10} className="animate-spin" /> : <Upload size={10} />}
+                      {logoPreview ? "Cambiar" : "Subir logo"}
+                    </button>
+                    {logoPreview && (
+                      <button type="button" className="text-xs text-red-400 hover:text-red-600 flex items-center gap-1" onClick={handleLogoDelete} disabled={logoUploading}>
+                        <Trash2 size={10} /> Quitar
+                      </button>
+                    )}
+                    <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+                  </div>
+                ) : (
+                  <div className="w-20 h-20 rounded-xl border border-dashed border-gray-200 flex flex-col items-center justify-center bg-gray-50 gap-1">
+                    <Upload size={18} className="text-gray-300" />
+                    <span className="text-xs text-gray-300 text-center leading-tight">Logo tras<br/>crear</span>
+                  </div>
+                )}
+              </div>
+              {/* Fields right of logo */}
+              <div className="flex-1 space-y-2.5 min-w-0">
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Nombre corto *</label>
+                    <input className="input-field" placeholder="APACA" required value={tenantForm.name}
+                      onChange={(e) => { const name = e.target.value; setTenantForm((prev) => ({ ...prev, name, slug: editingTenant ? prev.slug : toSlug(name) })); }} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Nombre completo</label>
+                    <input className="input-field" placeholder="Asociación de Productores Avícolas de Castilla" value={tenantForm.nombre_completo} onChange={(e) => setTenantForm({ ...tenantForm, nombre_completo: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">CIF</label>
+                    <input className="input-field font-mono" placeholder="G12345678" value={tenantForm.cif} onChange={(e) => setTenantForm({ ...tenantForm, cif: e.target.value })} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Email de contacto</label>
+                    <input className="input-field" type="email" placeholder="info@asociacion.es" value={tenantForm.email_asociacion} onChange={(e) => setTenantForm({ ...tenantForm, email_asociacion: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Color primario</label>
+                    <div className="flex gap-1.5 items-center">
+                      <input type="color" className="w-8 h-8 rounded cursor-pointer border border-gray-200 p-0.5" value={tenantForm.primary_color} onChange={(e) => setTenantForm({ ...tenantForm, primary_color: e.target.value })} />
+                      <input className="input-field font-mono text-xs" value={tenantForm.primary_color} onChange={(e) => setTenantForm({ ...tenantForm, primary_color: e.target.value })} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Color secundario</label>
+                    <div className="flex gap-1.5 items-center">
+                      <input type="color" className="w-8 h-8 rounded cursor-pointer border border-gray-200 p-0.5" value={tenantForm.secondary_color} onChange={(e) => setTenantForm({ ...tenantForm, secondary_color: e.target.value })} />
+                      <input className="input-field font-mono text-xs" value={tenantForm.secondary_color} onChange={(e) => setTenantForm({ ...tenantForm, secondary_color: e.target.value })} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Límite socios <span className="font-normal text-gray-400">(0 = ∞)</span></label>
+                    <input className="input-field" type="number" min="0" value={tenantForm.max_socios} onChange={(e) => setTenantForm({ ...tenantForm, max_socios: parseInt(e.target.value) || 0 })} />
+                  </div>
+                </div>
+                <div className="flex items-center gap-5 pt-0.5">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                    <input type="checkbox" checked={tenantForm.is_active} onChange={(e) => setTenantForm({ ...tenantForm, is_active: e.target.checked })} className="rounded" />
+                    Asociación activa
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                    <input type="checkbox" checked={tenantForm.granjas_enabled} onChange={(e) => setTenantForm({ ...tenantForm, granjas_enabled: e.target.checked })} className="rounded" />
+                    Módulo Granjas
+                  </label>
+                  {editingTenant && (
+                    <span className="text-xs text-gray-400 ml-auto font-mono">slug: {tenantForm.slug}</span>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">CIF</label>
-                <input className="input-field" placeholder="G12345678" value={tenantForm.cif} onChange={(e) => setTenantForm({ ...tenantForm, cif: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
-                <input className="input-field" type="email" placeholder="info@asociacion.es" value={tenantForm.email_asociacion} onChange={(e) => setTenantForm({ ...tenantForm, email_asociacion: e.target.value })} />
-              </div>
+          </div>
+
+          {/* ── SEDE ── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 pb-1.5 border-b border-gray-100">
+              <div className="w-1 h-4 bg-blue-400 rounded-full shrink-0" />
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5"><MapPin size={11} /> Sede</span>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Domicilio</label>
-              <input className="input-field" placeholder="Calle Mayor 1, 28001 Madrid" value={tenantForm.domicilio} onChange={(e) => setTenantForm({ ...tenantForm, domicilio: e.target.value })} />
+              <input className="input-field" placeholder="Calle Mayor, 1" value={tenantForm.domicilio} onChange={(e) => setTenantForm({ ...tenantForm, domicilio: e.target.value })} />
             </div>
-          </fieldset>
+            <div className="grid grid-cols-4 gap-2.5">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Cód. postal</label>
+                <input className="input-field font-mono" placeholder="28001" value={tenantForm.cod_postal} onChange={(e) => setTenantForm({ ...tenantForm, cod_postal: e.target.value })} />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Municipio</label>
+                <input className="input-field" placeholder="Madrid" value={tenantForm.municipio} onChange={(e) => setTenantForm({ ...tenantForm, municipio: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Provincia</label>
+                <input className="input-field" placeholder="Madrid" value={tenantForm.provincia} onChange={(e) => setTenantForm({ ...tenantForm, provincia: e.target.value })} />
+              </div>
+            </div>
+          </div>
 
-          <fieldset className="space-y-2">
-            <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Teléfonos de contacto</legend>
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Teléfono 1</label>
-                <input className="input-field" placeholder="+34 600 000 000" value={tenantForm.telefono1} onChange={(e) => setTenantForm({ ...tenantForm, telefono1: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Nombre</label>
-                <input className="input-field" placeholder="Juan García" value={tenantForm.telefono1_nombre} onChange={(e) => setTenantForm({ ...tenantForm, telefono1_nombre: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Cargo</label>
-                <input className="input-field" placeholder="Presidente" value={tenantForm.telefono1_cargo} onChange={(e) => setTenantForm({ ...tenantForm, telefono1_cargo: e.target.value })} />
-              </div>
+          {/* ── DATOS DE CONTACTO ── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 pb-1.5 border-b border-gray-100">
+              <div className="w-1 h-4 bg-green-400 rounded-full shrink-0" />
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5"><Phone size={11} /> Datos de contacto</span>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Teléfono 2</label>
-                <input className="input-field" placeholder="+34 600 000 001" value={tenantForm.telefono2} onChange={(e) => setTenantForm({ ...tenantForm, telefono2: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Nombre</label>
-                <input className="input-field" placeholder="María López" value={tenantForm.telefono2_nombre} onChange={(e) => setTenantForm({ ...tenantForm, telefono2_nombre: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Cargo</label>
-                <input className="input-field" placeholder="Secretaria" value={tenantForm.telefono2_cargo} onChange={(e) => setTenantForm({ ...tenantForm, telefono2_cargo: e.target.value })} />
-              </div>
-            </div>
-          </fieldset>
-
-          <fieldset className="space-y-3">
-            <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Apariencia y límites</legend>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Color primario</label>
-                <div className="flex gap-2 items-center">
-                  <input type="color" className="w-8 h-8 rounded cursor-pointer border" value={tenantForm.primary_color} onChange={(e) => setTenantForm({ ...tenantForm, primary_color: e.target.value })} />
-                  <input className="input-field font-mono text-xs" value={tenantForm.primary_color} onChange={(e) => setTenantForm({ ...tenantForm, primary_color: e.target.value })} />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Color secundario</label>
-                <div className="flex gap-2 items-center">
-                  <input type="color" className="w-8 h-8 rounded cursor-pointer border" value={tenantForm.secondary_color} onChange={(e) => setTenantForm({ ...tenantForm, secondary_color: e.target.value })} />
-                  <input className="input-field font-mono text-xs" value={tenantForm.secondary_color} onChange={(e) => setTenantForm({ ...tenantForm, secondary_color: e.target.value })} />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Límite socios <span className="font-normal">(0 = sin límite)</span></label>
-                <input className="input-field" type="number" min="0" value={tenantForm.max_socios} onChange={(e) => setTenantForm({ ...tenantForm, max_socios: parseInt(e.target.value) || 0 })} />
-              </div>
-            </div>
-
-            {/* Logo */}
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Logo de la asociación</label>
-              {editingTenant ? (
-                <div className="flex items-center gap-3">
-                  {logoPreview ? (
-                    <img src={logoPreview} alt="Logo" className="w-16 h-16 object-contain rounded-lg border bg-white p-1" />
-                  ) : (
-                    <div className="w-16 h-16 rounded-lg border border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
-                      <Upload size={18} className="text-gray-300" />
-                    </div>
-                  )}
-                  <div className="flex flex-col gap-1.5">
-                    <button type="button" className="btn-ghost text-xs gap-1 flex items-center" onClick={() => logoInputRef.current?.click()} disabled={logoUploading}>
-                      {logoUploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-                      {logoUploading ? "Subiendo..." : logoPreview ? "Cambiar logo" : "Subir logo"}
-                    </button>
-                    {logoPreview && (
-                      <button type="button" className="btn-ghost text-xs gap-1 flex items-center text-red-500 hover:text-red-700" onClick={handleLogoDelete} disabled={logoUploading}>
-                        <Trash2 size={12} /> Quitar logo
-                      </button>
-                    )}
+            {[
+              { label: "Contacto 1", nombre: "telefono1_nombre", cargo: "telefono1_cargo", tel: "telefono1", email: "telefono1_email",
+                vNombre: tenantForm.telefono1_nombre, vCargo: tenantForm.telefono1_cargo, vTel: tenantForm.telefono1, vEmail: tenantForm.telefono1_email },
+              { label: "Contacto 2", nombre: "telefono2_nombre", cargo: "telefono2_cargo", tel: "telefono2", email: "telefono2_email",
+                vNombre: tenantForm.telefono2_nombre, vCargo: tenantForm.telefono2_cargo, vTel: tenantForm.telefono2, vEmail: tenantForm.telefono2_email },
+            ].map(({ label, nombre, cargo, tel, email, vNombre, vCargo, vTel, vEmail }) => (
+              <div key={label} className="bg-gray-50 rounded-lg p-3 space-y-2">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</span>
+                <div className="grid grid-cols-4 gap-2">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Nombre</label>
+                    <input className="input-field" placeholder="Juan García" value={vNombre} onChange={(e) => setTenantForm({ ...tenantForm, [nombre]: e.target.value })} />
                   </div>
-                  <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Cargo</label>
+                    <input className="input-field" placeholder="Presidente" value={vCargo} onChange={(e) => setTenantForm({ ...tenantForm, [cargo]: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1 flex items-center gap-1"><Phone size={9} /> Teléfono</label>
+                    <input className="input-field" placeholder="+34 600 000 000" value={vTel} onChange={(e) => setTenantForm({ ...tenantForm, [tel]: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1 flex items-center gap-1"><AtSign size={9} /> Email</label>
+                    <input className="input-field" type="email" placeholder="contacto@asoc.es" value={vEmail} onChange={(e) => setTenantForm({ ...tenantForm, [email]: e.target.value })} />
+                  </div>
                 </div>
-              ) : (
-                <p className="text-xs text-gray-400 italic">Podrás subir el logo una vez creada la asociación.</p>
-              )}
+              </div>
+            ))}
+          </div>
+
+          {/* ── TAMAÑOS DE ANILLA ── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 pb-1.5 border-b border-gray-100">
+              <div className="w-1 h-4 bg-amber-400 rounded-full shrink-0" />
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5"><Tag size={11} /> Tamaños de anilla</span>
             </div>
-
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={tenantForm.is_active} onChange={(e) => setTenantForm({ ...tenantForm, is_active: e.target.checked })} className="rounded" />
-              <span className="text-sm text-gray-700">Asociación activa</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={tenantForm.granjas_enabled} onChange={(e) => setTenantForm({ ...tenantForm, granjas_enabled: e.target.checked })} className="rounded" />
-              <span className="text-sm text-gray-700">Módulo Granjas activo</span>
-            </label>
-          </fieldset>
-
-          <fieldset className="space-y-3">
-            <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tamaños de anilla</legend>
-            <p className="text-xs text-gray-400">Define los diámetros disponibles y el sexo asociado a cada uno para esta asociación.</p>
+            <p className="text-xs text-gray-400">Diámetros disponibles y sexo asociado para esta asociación.</p>
             <div className="space-y-2">
-              {/* Header */}
               {tenantForm.anilla_sizes.length > 0 && (
-                <div className="grid grid-cols-[80px_120px_32px] gap-2 px-1">
+                <div className="grid grid-cols-[90px_130px_32px] gap-2 px-1">
                   <span className="text-xs text-gray-400 font-medium">Diámetro (mm)</span>
                   <span className="text-xs text-gray-400 font-medium">Sexo</span>
                 </div>
               )}
               {tenantForm.anilla_sizes.map((sz, idx) => (
-                <div key={idx} className="grid grid-cols-[80px_120px_32px] gap-2 items-center">
-                  <input
-                    className="input-field text-sm"
-                    placeholder="ej: 18"
-                    value={sz.mm}
-                    onChange={(e) => {
-                      const sizes = [...tenantForm.anilla_sizes];
-                      sizes[idx] = { ...sizes[idx], mm: e.target.value };
-                      setTenantForm({ ...tenantForm, anilla_sizes: sizes });
-                    }}
-                  />
-                  <select
-                    className="input-field text-sm"
-                    value={sz.sexo ?? ""}
-                    onChange={(e) => {
-                      const sizes = [...tenantForm.anilla_sizes];
-                      sizes[idx] = { ...sizes[idx], sexo: e.target.value as "M" | "H" | "" };
-                      setTenantForm({ ...tenantForm, anilla_sizes: sizes });
-                    }}
-                  >
+                <div key={idx} className="grid grid-cols-[90px_130px_32px] gap-2 items-center">
+                  <input className="input-field text-sm font-mono" placeholder="18" value={sz.mm}
+                    onChange={(e) => { const s = [...tenantForm.anilla_sizes]; s[idx] = { ...s[idx], mm: e.target.value }; setTenantForm({ ...tenantForm, anilla_sizes: s }); }} />
+                  <select className="input-field text-sm" value={sz.sexo ?? ""}
+                    onChange={(e) => { const s = [...tenantForm.anilla_sizes]; s[idx] = { ...s[idx], sexo: e.target.value as "M" | "H" | "" }; setTenantForm({ ...tenantForm, anilla_sizes: s }); }}>
                     <option value="">Sin asignar</option>
                     <option value="M">♂ Macho</option>
                     <option value="H">♀ Hembra</option>
                   </select>
-                  <button
-                    type="button"
-                    className="btn-ghost p-1.5 text-red-500"
-                    onClick={() => setTenantForm({ ...tenantForm, anilla_sizes: tenantForm.anilla_sizes.filter((_, i) => i !== idx) })}
-                  >
+                  <button type="button" className="btn-ghost p-1.5 text-red-400 hover:text-red-600"
+                    onClick={() => setTenantForm({ ...tenantForm, anilla_sizes: tenantForm.anilla_sizes.filter((_, i) => i !== idx) })}>
                     <Trash2 size={14} />
                   </button>
                 </div>
               ))}
-              <button
-                type="button"
-                className="btn-ghost text-xs gap-1 flex items-center"
-                onClick={() => setTenantForm({ ...tenantForm, anilla_sizes: [...tenantForm.anilla_sizes, { mm: "", sexo: "" }] })}
-              >
+              <button type="button" className="btn-ghost text-xs gap-1 flex items-center"
+                onClick={() => setTenantForm({ ...tenantForm, anilla_sizes: [...tenantForm.anilla_sizes, { mm: "", sexo: "" }] })}>
                 <Plus size={12} /> Añadir tamaño
               </button>
             </div>
-          </fieldset>
+          </div>
 
-          <fieldset className="space-y-3">
-            <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Notificaciones</legend>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Email de notificaciones <span className="font-normal text-gray-400">(la plataforma envía aquí avisos a la asociación)</span></label>
-              <input className="input-field" type="email" placeholder="notificaciones@asociacion.es" value={tenantForm.email_notificaciones} onChange={(e) => setTenantForm({ ...tenantForm, email_notificaciones: e.target.value })} />
+          {/* ── SMTP ── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 pb-1.5 border-b border-gray-100">
+              <div className="w-1 h-4 bg-gray-400 rounded-full shrink-0" />
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5"><Mail size={11} /> SMTP de la asociación</span>
+              <span className="text-xs text-gray-400">— para enviar emails a sus socios</span>
             </div>
-          </fieldset>
-
-          <fieldset className="space-y-3">
-            <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide">SMTP de la asociación <span className="font-normal text-gray-400">(para enviar emails a sus socios)</span></legend>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Servidor SMTP</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Servidor SMTP</label>
                 <input className="input-field" placeholder="smtp.gmail.com" value={tenantForm.smtp_host} onChange={(e) => setTenantForm({ ...tenantForm, smtp_host: e.target.value })} />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Puerto</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Puerto</label>
                 <input className="input-field" type="number" placeholder="587" value={tenantForm.smtp_port} onChange={(e) => setTenantForm({ ...tenantForm, smtp_port: parseInt(e.target.value) || 587 })} />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Usuario</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Usuario</label>
                 <input className="input-field" placeholder="user@gmail.com" value={tenantForm.smtp_user} onChange={(e) => setTenantForm({ ...tenantForm, smtp_user: e.target.value })} />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Contraseña</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Contraseña</label>
                 <input className="input-field" type="password" value={tenantForm.smtp_password} onChange={(e) => setTenantForm({ ...tenantForm, smtp_password: e.target.value })} />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Email remitente</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Email remitente</label>
                 <input className="input-field" type="email" placeholder="noreply@asociacion.es" value={tenantForm.smtp_from_email} onChange={(e) => setTenantForm({ ...tenantForm, smtp_from_email: e.target.value })} />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Nombre remitente</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Nombre remitente</label>
                 <input className="input-field" placeholder="Asociación APACA" value={tenantForm.smtp_from_name} onChange={(e) => setTenantForm({ ...tenantForm, smtp_from_name: e.target.value })} />
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+            <div className="flex items-center gap-4 flex-wrap">
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600">
                 <input type="checkbox" checked={tenantForm.smtp_use_tls} onChange={(e) => setTenantForm({ ...tenantForm, smtp_use_tls: e.target.checked, smtp_use_ssl: e.target.checked ? false : tenantForm.smtp_use_ssl })} className="rounded" />
                 STARTTLS
               </label>
-              <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600">
                 <input type="checkbox" checked={tenantForm.smtp_use_ssl} onChange={(e) => setTenantForm({ ...tenantForm, smtp_use_ssl: e.target.checked, smtp_use_tls: e.target.checked ? false : tenantForm.smtp_use_tls })} className="rounded" />
                 SSL/TLS
               </label>
@@ -998,41 +1116,46 @@ export default function SuperAdminPage() {
                     Probar conexión
                   </button>
                   {tenantSmtpTestResult && (
-                    <span className={`text-xs font-medium ${tenantSmtpTestResult.startsWith("✓") ? "text-green-600" : "text-red-600"}`}>
-                      {tenantSmtpTestResult}
+                    <span className={`text-xs font-medium flex items-center gap-1 ${tenantSmtpTestResult.startsWith("✓") ? "text-green-600" : "text-red-600"}`}>
+                      {tenantSmtpTestResult.startsWith("✓") ? <CheckCircle2 size={11} /> : <XCircle size={11} />}
+                      {tenantSmtpTestResult.slice(2)}
                     </span>
                   )}
                 </div>
               )}
             </div>
-          </fieldset>
+          </div>
 
-          {/* Initial admin user (only on create) */}
+          {/* ── USUARIO ADMIN INICIAL (solo creación) ── */}
           {!editingTenant && (
-            <fieldset className="space-y-3 border-t pt-4">
-              <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Usuario admin inicial (opcional)</legend>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 pb-1.5 border-b border-gray-100">
+                <div className="w-1 h-4 bg-indigo-400 rounded-full shrink-0" />
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5"><UserPlus size={11} /> Usuario admin inicial</span>
+                <span className="text-xs text-gray-400">— opcional</span>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Email</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
                   <input className="input-field" type="email" value={newUserForm.email} onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })} />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Contraseña</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Contraseña</label>
                   <input className="input-field" type="password" value={newUserForm.password} onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })} />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Nombre</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Nombre</label>
                   <input className="input-field" value={newUserForm.first_name} onChange={(e) => setNewUserForm({ ...newUserForm, first_name: e.target.value })} />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Apellidos</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Apellidos</label>
                   <input className="input-field" value={newUserForm.last_name} onChange={(e) => setNewUserForm({ ...newUserForm, last_name: e.target.value })} />
                 </div>
               </div>
-            </fieldset>
+            </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
             <button type="button" className="btn-ghost" onClick={closeTenantModal}>Cancelar</button>
             <button type="submit" className="btn-primary" disabled={tenantSaving}>
               {tenantSaving ? <Loader2 size={14} className="animate-spin" /> : (editingTenant ? "Guardar cambios" : "Crear asociación")}
@@ -1296,51 +1419,60 @@ export default function SuperAdminPage() {
             <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <Wrench size={22} className="text-orange-600" /> Gestiones Avanzadas
             </h1>
-            <p className="text-sm text-gray-500">Operaciones destructivas por asociación — úsalas con precaución</p>
+            <p className="text-sm text-gray-500">Operaciones destructivas por asociación</p>
           </div>
 
-          <div className="card overflow-x-auto">
+          <div className="flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-xl p-3">
+            <AlertTriangle size={16} className="text-orange-500 shrink-0 mt-0.5" />
+            <p className="text-sm text-orange-800">Las acciones de esta sección son <strong>irreversibles</strong>. Úsalas únicamente cuando sea estrictamente necesario.</p>
+          </div>
+
+          <div className="card overflow-x-auto p-0">
             {loadingTenants ? (
-              <div className="space-y-2">
-                {[1,2,3].map(i => <div key={i} className="h-14 bg-gray-100 animate-pulse rounded-lg" />)}
-              </div>
+              <div className="p-4 space-y-2">{[1,2,3].map(i => <div key={i} className="h-12 bg-gray-100 animate-pulse rounded-lg" />)}</div>
             ) : !tenants.length ? (
               <p className="text-center text-gray-400 py-8">No hay asociaciones.</p>
             ) : (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 text-xs text-gray-500 uppercase">
-                    <th className="text-left py-2 pr-4">Asociación</th>
-                    <th className="text-left py-2 pr-4">Socios activos</th>
-                    <th className="text-left py-2 pr-4">Estado</th>
-                    <th className="text-right py-2">Acciones</th>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Asociación</th>
+                    <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Socios</th>
+                    <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Estado</th>
+                    <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Operaciones</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-50">
                   {tenants.map((t) => (
-                    <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                      <td className="py-3 pr-4">
-                        <span className="font-medium text-gray-900">{t.name}</span>
-                        <span className="text-xs text-gray-400 ml-2 font-mono">{t.slug}</span>
+                    <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center overflow-hidden" style={{ background: t.primary_color }}>
+                            {t.logo_url ? <img src={t.logo_url} alt="" className="w-full h-full object-cover" /> : <Building size={12} className="text-white" />}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 leading-tight">{t.name}</p>
+                            <p className="text-xs text-gray-400 font-mono">{t.slug}</p>
+                          </div>
+                        </div>
                       </td>
-                      <td className="py-3 pr-4 text-gray-600">{t.socios_count ?? 0}</td>
-                      <td className="py-3 pr-4">
-                        {t.is_active
-                          ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Activa</span>
-                          : <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Suspendida</span>
-                        }
+                      <td className="py-3 px-3 text-gray-600 font-medium">{t.socios_count ?? 0}</td>
+                      <td className="py-3 px-3">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${t.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                          {t.is_active ? "Activa" : "Suspendida"}
+                        </span>
                       </td>
-                      <td className="py-3">
+                      <td className="py-3 px-4">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => { setDeleteSociosTarget({ id: t.id, name: t.name }); setDeleteSociosConfirm(""); }}
-                            className="flex items-center gap-1.5 text-xs border border-red-300 text-red-600 hover:bg-red-50 rounded-md px-2.5 py-1.5 transition-colors"
+                            className="flex items-center gap-1.5 text-xs border border-red-200 text-red-600 hover:bg-red-50 rounded-lg px-2.5 py-1.5 transition-colors font-medium"
                           >
                             <Users size={12} /> Eliminar Socios
                           </button>
                           <button
                             onClick={() => { setDeleteAnillasTarget({ id: t.id, name: t.name }); setDeleteAnillasConfirm(""); }}
-                            className="flex items-center gap-1.5 text-xs border border-orange-300 text-orange-600 hover:bg-orange-50 rounded-md px-2.5 py-1.5 transition-colors"
+                            className="flex items-center gap-1.5 text-xs border border-orange-200 text-orange-600 hover:bg-orange-50 rounded-lg px-2.5 py-1.5 transition-colors font-medium"
                           >
                             <Tag size={12} /> Eliminar Anillas
                           </button>

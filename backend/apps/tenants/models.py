@@ -20,13 +20,18 @@ class Tenant(models.Model):
     nombre_completo = models.CharField(max_length=300, blank=True, default="")
     cif = models.CharField(max_length=20, blank=True, default="")
     domicilio = models.TextField(blank=True, default="")
+    cod_postal = models.CharField(max_length=10, blank=True, default="")
+    municipio = models.CharField(max_length=200, blank=True, default="")
+    provincia = models.CharField(max_length=100, blank=True, default="")
     email_asociacion = models.EmailField(blank=True, default="")
     telefono1 = models.CharField(max_length=20, blank=True, default="")
     telefono1_nombre = models.CharField(max_length=150, blank=True, default="")
     telefono1_cargo = models.CharField(max_length=150, blank=True, default="")
+    telefono1_email = models.EmailField(blank=True, default="")
     telefono2 = models.CharField(max_length=20, blank=True, default="")
     telefono2_nombre = models.CharField(max_length=150, blank=True, default="")
     telefono2_cargo = models.CharField(max_length=150, blank=True, default="")
+    telefono2_email = models.EmailField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     # ── Feature flags ────────────────────────────────────────────────────────

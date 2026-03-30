@@ -318,17 +318,23 @@ export interface Tenant {
   nombre_completo?: string;
   cif?: string;
   domicilio?: string;
+  cod_postal?: string;
+  municipio?: string;
+  provincia?: string;
   email_asociacion?: string;
   telefono1?: string;
   telefono1_nombre?: string;
   telefono1_cargo?: string;
+  telefono1_email?: string;
   telefono2?: string;
   telefono2_nombre?: string;
   telefono2_cargo?: string;
+  telefono2_email?: string;
   // Features
   granjas_enabled?: boolean;
   anilla_sizes?: AnillaSize[];
   email_notificaciones?: string;
+  created_at?: string;
   // SMTP por asociación
   smtp_host?: string;
   smtp_port?: number;
