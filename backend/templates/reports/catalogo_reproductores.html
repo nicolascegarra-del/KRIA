@@ -1,46 +1,363 @@
-{% extends "reports/base_report.html" %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @page {
+      size: A4;
+      margin: 0;
+    }
 
-{% block content %}
-<h1>Catálogo de Reproductores</h1>
-<p style="color:#666">{{ tenant.name }} — Temporada {{ "now"|date:"Y" }}</p>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Liberation Sans", Arial, sans-serif;
+      font-size: 10pt;
+      color: #1a1a1a;
+    }
+
+    /* ─── Página por animal ──────────────────────────────────────── */
+    .animal-page {
+      width: 210mm;
+      height: 297mm;
+      page-break-after: always;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .animal-page:last-child { page-break-after: auto; }
+
+    /* ─── Banda superior de color ────────────────────────────────── */
+    .top-band {
+      background: {{ tenant.primary_color }};
+      color: white;
+      padding: 1.1cm 1.4cm 0.8cm;
+      flex-shrink: 0;
+    }
+    .top-band-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .top-org {
+      font-size: 11pt;
+      font-weight: bold;
+      opacity: 0.9;
+    }
+    .top-logo img { height: 38px; width: auto; }
+    .top-anilla {
+      font-family: monospace;
+      font-size: 32pt;
+      font-weight: bold;
+      letter-spacing: 0.04em;
+      margin-top: 0.3em;
+      line-height: 1;
+    }
+    .top-meta {
+      font-size: 9.5pt;
+      opacity: 0.85;
+      margin-top: 0.25em;
+    }
+    .top-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.45);
+      border-radius: 14px;
+      padding: 2px 12px;
+      font-size: 8pt;
+      font-weight: bold;
+      margin-top: 0.4em;
+    }
+
+    /* ─── Cuerpo ─────────────────────────────────────────────────── */
+    .page-body {
+      flex: 1;
+      display: flex;
+      padding: 0.7cm 1.4cm 0.5cm;
+      gap: 0.8cm;
+      overflow: hidden;
+    }
+
+    /* ─── Columna izquierda: datos + puntuaciones ────────────────── */
+    .col-left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55cm;
+    }
+
+    .section-title {
+      font-size: 7.5pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: {{ tenant.primary_color }};
+      border-bottom: 1.5px solid {{ tenant.primary_color }};
+      padding-bottom: 0.2em;
+      margin-bottom: 0.4em;
+    }
+
+    /* ─── Grid de datos ──────────────────────────────────────────── */
+    .data-grid {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .data-field {
+      width: 50%;
+      padding: 0.25em 0.3em 0.25em 0;
+    }
+    .data-field.full { width: 100%; }
+    .data-label {
+      font-size: 7pt;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .data-value {
+      font-size: 9.5pt;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .data-value.mono { font-family: monospace; }
+
+    /* ─── Barras de puntuación ───────────────────────────────────── */
+    .score-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.3em;
+      gap: 0.4em;
+    }
+    .score-label {
+      font-size: 8pt;
+      width: 100px;
+      flex-shrink: 0;
+      color: #444;
+    }
+    .score-bar-bg {
+      flex: 1;
+      height: 8px;
+      background: #e8ecf0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .score-bar-fill {
+      height: 100%;
+      background: {{ tenant.primary_color }};
+      border-radius: 4px;
+    }
+    .score-val {
+      font-size: 8.5pt;
+      font-weight: bold;
+      width: 22px;
+      text-align: right;
+      color: #333;
+    }
+
+    /* ─── Media grande ───────────────────────────────────────────── */
+    .media-box {
+      background: {{ tenant.primary_color }};
+      color: white;
+      border-radius: 8px;
+      padding: 0.5em 0.8em;
+      display: flex;
+      align-items: center;
+      gap: 0.6em;
+      margin-top: 0.2em;
+    }
+    .media-box-score {
+      font-size: 28pt;
+      font-weight: bold;
+      line-height: 1;
+    }
+    .media-box-text {
+      font-size: 8.5pt;
+      opacity: 0.85;
+    }
+    .media-box-text strong { font-size: 9.5pt; opacity: 1; }
+
+    /* ─── Columna derecha: gráfico + pie número ──────────────────── */
+    .col-right {
+      width: 6.5cm;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5cm;
+    }
+    .col-right img {
+      width: 100%;
+      max-width: 200px;
+    }
+    .page-number {
+      font-size: 7.5pt;
+      color: #aaa;
+      text-align: center;
+    }
+
+    /* ─── Pie de página ──────────────────────────────────────────── */
+    .page-footer {
+      background: #f5f7fa;
+      border-top: 1px solid #e0e6ed;
+      padding: 0.25cm 1.4cm;
+      font-size: 7.5pt;
+      color: #aaa;
+      display: flex;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
 
 {% for page in pages %}
 {% with animal=page.animal %}
-<div class="page-break">
-  <h2>{{ animal.numero_anilla }} / {{ animal.anio_nacimiento }}</h2>
+<div class="animal-page">
 
-  <table style="width:55%; float:left; margin-right:2em;">
-    <tr><th>Campo</th><th>Valor</th></tr>
-    <tr><td>Sexo</td><td>{{ animal.get_sexo_display }}</td></tr>
-    <tr><td>Variedad</td><td>{{ animal.get_variedad_display }}</td></tr>
-    <tr><td>Socio</td><td>{{ animal.socio.nombre_razon_social }}</td></tr>
-    <tr><td>REGA</td><td>{{ animal.socio.codigo_rega }}</td></tr>
-    {% if animal.evaluacion %}
-    <tr><td><strong>Puntuación Media</strong></td><td><strong>{{ animal.evaluacion.puntuacion_media }}/10</strong></td></tr>
-    {% endif %}
-  </table>
-
-  {% if page.radar_b64 %}
-  <div style="float:right; width:40%;">
-    <img src="data:image/png;base64,{{ page.radar_b64 }}"
-         style="width:100%; max-width:300px;" alt="Gráfico de puntuaciones" />
+  <!-- BANDA SUPERIOR -->
+  <div class="top-band">
+    <div class="top-band-inner">
+      <div>
+        <div class="top-org">{{ tenant.name }}</div>
+        <div style="font-size:8pt; opacity:0.7; margin-top:0.1em;">Catálogo de Reproductores</div>
+      </div>
+      {% if tenant.logo_url %}
+      <div class="top-logo"><img src="{{ tenant.logo_url }}" alt="{{ tenant.name }}" /></div>
+      {% endif %}
+    </div>
+    <div class="top-anilla">{{ animal.numero_anilla }}</div>
+    <div class="top-meta">
+      {{ animal.get_variedad_display }} · {{ animal.get_sexo_display }} · Nacido en {{ animal.fecha_nacimiento.year|default:"—" }}
+    </div>
+    <div><span class="top-badge">Reproductor Aprobado</span></div>
   </div>
-  {% endif %}
 
-  <div style="clear:both;"></div>
+  <!-- CUERPO -->
+  <div class="page-body">
 
-  {% if animal.evaluacion %}
-  <table style="width:55%; margin-top:1em;">
-    <tr><th>Criterio</th><th>Punt.</th></tr>
-    <tr><td>Cabeza</td><td>{{ animal.evaluacion.cabeza }}</td></tr>
-    <tr><td>Cola</td><td>{{ animal.evaluacion.cola }}</td></tr>
-    <tr><td>Pecho/Abdomen</td><td>{{ animal.evaluacion.pecho_abdomen }}</td></tr>
-    <tr><td>Muslos/Tarsos</td><td>{{ animal.evaluacion.muslos_tarsos }}</td></tr>
-    <tr><td>Cresta/Babilla</td><td>{{ animal.evaluacion.cresta_babilla }}</td></tr>
-    <tr><td>Color</td><td>{{ animal.evaluacion.color }}</td></tr>
-  </table>
-  {% endif %}
+    <!-- COLUMNA IZQUIERDA -->
+    <div class="col-left">
+
+      <!-- Datos del animal -->
+      <div>
+        <div class="section-title">Datos del Animal</div>
+        <div class="data-grid">
+          <div class="data-field">
+            <div class="data-label">Nº Anilla</div>
+            <div class="data-value mono">{{ animal.numero_anilla }}</div>
+          </div>
+          <div class="data-field">
+            <div class="data-label">Año de Nacimiento</div>
+            <div class="data-value">{{ animal.fecha_nacimiento.year|default:"—" }}</div>
+          </div>
+          <div class="data-field">
+            <div class="data-label">Sexo</div>
+            <div class="data-value">{{ animal.get_sexo_display }}</div>
+          </div>
+          <div class="data-field">
+            <div class="data-label">Variedad</div>
+            <div class="data-value">{{ animal.get_variedad_display }}</div>
+          </div>
+          <div class="data-field">
+            <div class="data-label">Ganadería</div>
+            <div class="data-value">{{ animal.ganaderia_nacimiento|default:"—" }}</div>
+          </div>
+          <div class="data-field">
+            <div class="data-label">Fecha de Nacimiento</div>
+            <div class="data-value">{{ animal.fecha_nacimiento|date:"d/m/Y"|default:"—" }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Datos del titular -->
+      <div>
+        <div class="section-title">Titular</div>
+        <div class="data-grid">
+          <div class="data-field full">
+            <div class="data-label">Nombre / Razón Social</div>
+            <div class="data-value">{{ animal.socio.nombre_razon_social }}</div>
+          </div>
+          <div class="data-field">
+            <div class="data-label">DNI / NIF</div>
+            <div class="data-value mono">{{ animal.socio.dni_nif }}</div>
+          </div>
+          <div class="data-field">
+            <div class="data-label">Cód. REGA</div>
+            <div class="data-value mono">{{ animal.socio.codigo_rega|default:"—" }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Evaluación morfológica -->
+      {% if animal.evaluacion %}
+      <div>
+        <div class="section-title">Evaluación Morfológica</div>
+
+        <div class="score-row">
+          <div class="score-label">Cabeza</div>
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:{{ animal.evaluacion.cabeza }}0%"></div></div>
+          <div class="score-val">{{ animal.evaluacion.cabeza }}</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Cola</div>
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:{{ animal.evaluacion.cola }}0%"></div></div>
+          <div class="score-val">{{ animal.evaluacion.cola }}</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Pecho/Abdomen</div>
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:{{ animal.evaluacion.pecho_abdomen }}0%"></div></div>
+          <div class="score-val">{{ animal.evaluacion.pecho_abdomen }}</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Muslos/Tarsos</div>
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:{{ animal.evaluacion.muslos_tarsos }}0%"></div></div>
+          <div class="score-val">{{ animal.evaluacion.muslos_tarsos }}</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Cresta/Babilla</div>
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:{{ animal.evaluacion.cresta_babilla }}0%"></div></div>
+          <div class="score-val">{{ animal.evaluacion.cresta_babilla }}</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Color</div>
+          <div class="score-bar-bg"><div class="score-bar-fill" style="width:{{ animal.evaluacion.color }}0%"></div></div>
+          <div class="score-val">{{ animal.evaluacion.color }}</div>
+        </div>
+
+        <div class="media-box">
+          <div class="media-box-score">{{ animal.evaluacion.puntuacion_media }}</div>
+          <div class="media-box-text">
+            <strong>Puntuación Media</strong><br>sobre 10 puntos
+          </div>
+        </div>
+
+        {% if animal.evaluacion.notas %}
+        <p style="font-size:7.5pt; color:#666; margin-top:0.5em;">
+          <em>{{ animal.evaluacion.notas }}</em>
+        </p>
+        {% endif %}
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- COLUMNA DERECHA: gráfico radar -->
+    <div class="col-right">
+      {% if page.radar_b64 %}
+      <img src="data:image/png;base64,{{ page.radar_b64 }}" alt="Gráfico de puntuaciones" />
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- PIE -->
+  <div class="page-footer">
+    <span>{{ tenant.name }} · Catálogo de Reproductores · {% now "Y" %}</span>
+    <span>Kria · Plataforma de Gestión de Asociaciones Avícolas</span>
+  </div>
+
 </div>
 {% endwith %}
 {% endfor %}
-{% endblock %}
+
+</body>
+</html>

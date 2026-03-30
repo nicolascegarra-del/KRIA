@@ -71,20 +71,25 @@ def _anio(animal) -> str:
 
 def _gen_inventory_pdf(job) -> str:
     from apps.animals.models import Animal
-    from apps.accounts.models import Socio
 
     socio_id = job.params.get("socio_id")
+    socio_nombre = None
     if socio_id:
         animals = Animal.all_objects.filter(
             tenant=job.tenant, socio_id=socio_id
-        ).select_related("socio")
+        ).select_related("socio", "padre", "madre_animal", "evaluacion").order_by("variedad", "numero_anilla")
+        first = animals.first()
+        if first:
+            socio_nombre = first.socio.nombre_razon_social
     else:
-        animals = Animal.objects.filter(tenant=job.tenant).select_related("socio")
+        animals = Animal.all_objects.filter(
+            tenant=job.tenant
+        ).select_related("socio", "padre", "madre_animal", "evaluacion").order_by("variedad", "numero_anilla")
 
     context = {
         "tenant": job.tenant,
         "animals": animals,
-        "title": "Inventario de Animales",
+        "socio_nombre": socio_nombre,
         "watermark": "COPIA",
     }
     pdf_bytes = _render_pdf("reports/inventory.html", context)
@@ -98,10 +103,10 @@ def _gen_individual_pdf(job) -> str:
 
     animal_id = job.params.get("animal_id")
     animal = Animal.all_objects.select_related(
-        "socio", "padre", "madre_animal", "evaluacion"
+        "socio", "padre", "madre_animal", "madre_lote", "evaluacion"
     ).get(pk=animal_id, tenant=job.tenant)
 
-    context = {"tenant": job.tenant, "animal": animal, "watermark": "COPIA"}
+    context = {"tenant": job.tenant, "animal": animal}
     pdf_bytes = _render_pdf("reports/individual.html", context)
     key = f"reports/{job.tenant.slug}/individual/{animal_id}.pdf"
     from .storage import upload_bytes

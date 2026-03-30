@@ -1,58 +1,464 @@
-{% extends "reports/base_report.html" %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @page {
+      size: A4;
+      margin: 1.8cm 2cm;
+      @bottom-center {
+        content: "Pág. " counter(page) " · Documento generado por {{ tenant.name }} mediante plataforma Kria";
+        font-size: 7.5pt;
+        color: #999;
+      }
+    }
 
-{% block content %}
-<h1>Ficha Individual</h1>
+    * { box-sizing: border-box; }
 
-<h2>{{ animal.numero_anilla }} / {{ animal.anio_nacimiento }}</h2>
+    body {
+      font-family: "Liberation Sans", Arial, sans-serif;
+      font-size: 10pt;
+      color: #1a1a1a;
+      line-height: 1.5;
+      margin: 0;
+    }
 
-<table style="width:50%">
-  <tr><th>Campo</th><th>Valor</th></tr>
-  <tr><td>Sexo</td><td>{{ animal.get_sexo_display }}</td></tr>
-  <tr><td>Variedad</td><td>{{ animal.get_variedad_display }}</td></tr>
-  <tr><td>Estado</td><td><span class="chip chip-{{ animal.estado }}">{{ animal.get_estado_display }}</span></td></tr>
-  <tr><td>Socio</td><td>{{ animal.socio.nombre_razon_social }}</td></tr>
-  <tr><td>DNI/NIF Socio</td><td>{{ animal.socio.dni_nif }}</td></tr>
-  <tr><td>Cód. REGA</td><td>{{ animal.socio.codigo_rega }}</td></tr>
-</table>
+    /* ── Cabecera ────────────────────────────────────────────────── */
+    .cert-header {
+      display: flex;
+      align-items: center;
+      border-bottom: 4px solid {{ tenant.primary_color }};
+      padding-bottom: 0.7em;
+      margin-bottom: 1.4em;
+      gap: 1em;
+    }
+    .cert-header-logo {
+      flex-shrink: 0;
+    }
+    .cert-header-logo img {
+      height: 54px;
+      width: auto;
+    }
+    .cert-header-text {
+      flex: 1;
+    }
+    .cert-org-name {
+      font-size: 16pt;
+      font-weight: bold;
+      color: {{ tenant.primary_color }};
+      line-height: 1.1;
+    }
+    .cert-doc-type {
+      font-size: 9pt;
+      color: #555;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 0.15em;
+    }
+    .cert-date {
+      font-size: 8pt;
+      color: #888;
+      text-align: right;
+      white-space: nowrap;
+    }
 
-<h3>Genealogía</h3>
-<table style="width:60%">
-  <tr><th>Relación</th><th>Anilla</th><th>Año</th><th>Variedad</th></tr>
-  <tr>
-    <td>Padre</td>
-    <td>{{ animal.padre.numero_anilla|default:"—" }}</td>
-    <td>{{ animal.padre.anio_nacimiento|default:"—" }}</td>
-    <td>{{ animal.padre.get_variedad_display|default:"—" }}</td>
-  </tr>
-  <tr>
-    <td>Madre</td>
-    <td>{{ animal.madre_animal.numero_anilla|default:"—" }}</td>
-    <td>{{ animal.madre_animal.anio_nacimiento|default:"—" }}</td>
-    <td>{{ animal.madre_animal.get_variedad_display|default:"—" }}</td>
-  </tr>
-</table>
+    /* ── Banner identificación ───────────────────────────────────── */
+    .id-banner {
+      background: {{ tenant.primary_color }};
+      color: white;
+      padding: 0.6em 1em;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.2em;
+    }
+    .id-banner-anilla {
+      font-size: 20pt;
+      font-weight: bold;
+      font-family: monospace;
+      letter-spacing: 0.05em;
+    }
+    .id-banner-meta {
+      text-align: right;
+      font-size: 9pt;
+      opacity: 0.9;
+    }
+    .id-banner-estado {
+      display: inline-block;
+      background: rgba(255,255,255,0.25);
+      border: 1px solid rgba(255,255,255,0.5);
+      border-radius: 12px;
+      padding: 2px 10px;
+      font-size: 8.5pt;
+      font-weight: bold;
+      margin-top: 0.2em;
+    }
 
-{% if animal.evaluacion %}
-<h3>Evaluación Morfológica</h3>
-<table style="width:60%">
-  <tr><th>Criterio</th><th>Puntuación</th></tr>
-  <tr><td>Cabeza</td><td>{{ animal.evaluacion.cabeza }}/10</td></tr>
-  <tr><td>Cola</td><td>{{ animal.evaluacion.cola }}/10</td></tr>
-  <tr><td>Pecho/Abdomen</td><td>{{ animal.evaluacion.pecho_abdomen }}/10</td></tr>
-  <tr><td>Muslos/Tarsos</td><td>{{ animal.evaluacion.muslos_tarsos }}/10</td></tr>
-  <tr><td>Cresta/Babilla</td><td>{{ animal.evaluacion.cresta_babilla }}/10</td></tr>
-  <tr><td>Color</td><td>{{ animal.evaluacion.color }}/10</td></tr>
-  <tr><td><strong>Media</strong></td><td><strong>{{ animal.evaluacion.puntuacion_media }}/10</strong></td></tr>
-</table>
-{% endif %}
+    /* ── Secciones ───────────────────────────────────────────────── */
+    .section {
+      margin-bottom: 1.2em;
+    }
+    .section-title {
+      font-size: 9pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: {{ tenant.primary_color }};
+      border-bottom: 1.5px solid {{ tenant.primary_color }};
+      padding-bottom: 0.2em;
+      margin-bottom: 0.6em;
+    }
 
-{% if animal.historico_pesos %}
-<h3>Histórico de Pesos</h3>
-<table style="width:40%">
-  <tr><th>Fecha</th><th>Peso (g)</th></tr>
-  {% for p in animal.historico_pesos %}
-  <tr><td>{{ p.fecha }}</td><td>{{ p.peso }}</td></tr>
-  {% endfor %}
-</table>
-{% endif %}
-{% endblock %}
+    /* ── Grid de datos ───────────────────────────────────────────── */
+    .data-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+    }
+    .data-field {
+      width: 33%;
+      padding: 0.35em 0.5em 0.35em 0;
+    }
+    .data-field.half { width: 50%; }
+    .data-field.full { width: 100%; }
+    .data-label {
+      font-size: 7.5pt;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.1em;
+    }
+    .data-value {
+      font-size: 10pt;
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+    .data-value.mono { font-family: monospace; }
+
+    /* ── Genealogía tabla ────────────────────────────────────────── */
+    .gen-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .gen-table th {
+      background: #f0f4f8;
+      color: #333;
+      font-size: 8.5pt;
+      font-weight: bold;
+      padding: 5px 8px;
+      border: 1px solid #dde3ea;
+      text-align: left;
+    }
+    .gen-table td {
+      font-size: 9pt;
+      padding: 5px 8px;
+      border: 1px solid #dde3ea;
+    }
+
+    /* ── Evaluación ──────────────────────────────────────────────── */
+    .eval-grid {
+      display: flex;
+      gap: 0.5em;
+      flex-wrap: wrap;
+    }
+    .eval-item {
+      background: #f8f9fb;
+      border: 1px solid #e0e6ed;
+      border-radius: 6px;
+      padding: 0.4em 0.7em;
+      text-align: center;
+      width: calc(16.6% - 0.5em);
+      min-width: 70px;
+    }
+    .eval-label { font-size: 7pt; color: #777; }
+    .eval-score {
+      font-size: 14pt;
+      font-weight: bold;
+      color: {{ tenant.primary_color }};
+      line-height: 1.2;
+    }
+    .eval-max { font-size: 7pt; color: #bbb; }
+    .eval-media-box {
+      background: {{ tenant.primary_color }};
+      color: white;
+      border-radius: 6px;
+      padding: 0.4em 0.7em;
+      text-align: center;
+      margin-top: 0.7em;
+      display: inline-block;
+    }
+    .eval-media-box .eval-media-label { font-size: 8pt; opacity: 0.85; }
+    .eval-media-box .eval-media-value { font-size: 18pt; font-weight: bold; }
+
+    /* ── Pesos ───────────────────────────────────────────────────── */
+    .weight-table {
+      width: auto;
+      min-width: 240px;
+      border-collapse: collapse;
+    }
+    .weight-table th {
+      background: #f0f4f8;
+      font-size: 8.5pt;
+      padding: 4px 10px;
+      border: 1px solid #dde3ea;
+    }
+    .weight-table td {
+      font-size: 9pt;
+      padding: 4px 10px;
+      border: 1px solid #dde3ea;
+    }
+
+    /* ── Footer legal ────────────────────────────────────────────── */
+    .cert-footer {
+      margin-top: 2em;
+      padding-top: 0.6em;
+      border-top: 1px solid #ddd;
+      font-size: 7.5pt;
+      color: #999;
+    }
+
+    /* ── Chips de estado ─────────────────────────────────────────── */
+    .chip {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 12px;
+      font-size: 8pt;
+      font-weight: bold;
+      color: white;
+    }
+    .chip-AÑADIDO    { background: #FBC02D; color: #333; }
+    .chip-APROBADO   { background: #2E7D32; }
+    .chip-EVALUADO   { background: #1565C0; }
+    .chip-RECHAZADO  { background: #D32F2F; }
+    .chip-SOCIO_EN_BAJA { background: #757575; }
+    .chip-BAJA       { background: #424242; }
+  </style>
+</head>
+<body>
+
+  <!-- CABECERA -->
+  <div class="cert-header">
+    {% if tenant.logo_url %}
+    <div class="cert-header-logo">
+      <img src="{{ tenant.logo_url }}" alt="{{ tenant.name }}" />
+    </div>
+    {% endif %}
+    <div class="cert-header-text">
+      <div class="cert-org-name">{{ tenant.name }}</div>
+      <div class="cert-doc-type">Ficha Individual de Animal</div>
+    </div>
+    <div class="cert-date">Generado el {% now "d/m/Y" %} a las {% now "H:i" %}h</div>
+  </div>
+
+  <!-- BANNER IDENTIFICACIÓN -->
+  <div class="id-banner">
+    <div>
+      <div style="font-size:8pt; opacity:0.8; margin-bottom:0.2em;">Número de Anilla</div>
+      <div class="id-banner-anilla">{{ animal.numero_anilla }}</div>
+    </div>
+    <div class="id-banner-meta">
+      <div>Año de nacimiento: <strong>{{ animal.fecha_nacimiento.year|default:"—" }}</strong></div>
+      <div>{{ animal.get_sexo_display }} · {{ animal.get_variedad_display }}</div>
+      <div><span class="id-banner-estado">{{ animal.get_estado_display }}</span></div>
+    </div>
+  </div>
+
+  <!-- DATOS DEL ANIMAL -->
+  <div class="section">
+    <div class="section-title">Datos del Animal</div>
+    <div class="data-grid">
+      <div class="data-field">
+        <div class="data-label">Fecha de Nacimiento</div>
+        <div class="data-value">{{ animal.fecha_nacimiento|date:"d/m/Y"|default:"—" }}</div>
+      </div>
+      <div class="data-field">
+        <div class="data-label">Sexo</div>
+        <div class="data-value">{{ animal.get_sexo_display }}</div>
+      </div>
+      <div class="data-field">
+        <div class="data-label">Variedad</div>
+        <div class="data-value">{{ animal.get_variedad_display }}</div>
+      </div>
+      <div class="data-field">
+        <div class="data-label">Fecha de Incubación</div>
+        <div class="data-value">{{ animal.fecha_incubacion|date:"d/m/Y"|default:"—" }}</div>
+      </div>
+      <div class="data-field">
+        <div class="data-label">Ganadería de Nacimiento</div>
+        <div class="data-value">{{ animal.ganaderia_nacimiento|default:"—" }}</div>
+      </div>
+      <div class="data-field">
+        <div class="data-label">Estado</div>
+        <div class="data-value">
+          <span class="chip chip-{{ animal.estado }}">{{ animal.get_estado_display }}</span>
+        </div>
+      </div>
+      {% if animal.candidato_reproductor %}
+      <div class="data-field">
+        <div class="data-label">Reproductor</div>
+        <div class="data-value">
+          {% if animal.reproductor_aprobado %}Aprobado{% else %}Candidato{% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- DATOS DEL TITULAR -->
+  <div class="section">
+    <div class="section-title">Titular</div>
+    <div class="data-grid">
+      <div class="data-field half">
+        <div class="data-label">Nombre / Razón Social</div>
+        <div class="data-value">{{ animal.socio.nombre_razon_social }}</div>
+      </div>
+      <div class="data-field">
+        <div class="data-label">DNI / NIF</div>
+        <div class="data-value mono">{{ animal.socio.dni_nif }}</div>
+      </div>
+      <div class="data-field">
+        <div class="data-label">Nº de Socio</div>
+        <div class="data-value mono">{{ animal.socio.numero_socio|default:"—" }}</div>
+      </div>
+      <div class="data-field">
+        <div class="data-label">Cód. REGA</div>
+        <div class="data-value mono">{{ animal.socio.codigo_rega|default:"—" }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GENEALOGÍA -->
+  <div class="section">
+    <div class="section-title">Genealogía</div>
+    <table class="gen-table">
+      <thead>
+        <tr>
+          <th>Relación</th>
+          <th>Nº Anilla</th>
+          <th>Año Nac.</th>
+          <th>Sexo</th>
+          <th>Variedad</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Padre</strong></td>
+          <td style="font-family:monospace;">{{ animal.padre.numero_anilla|default:"—" }}</td>
+          <td>{{ animal.padre.fecha_nacimiento.year|default:"—" }}</td>
+          <td>{{ animal.padre.get_sexo_display|default:"—" }}</td>
+          <td>{{ animal.padre.get_variedad_display|default:"—" }}</td>
+          <td>
+            {% if animal.padre %}
+            <span class="chip chip-{{ animal.padre.estado }}">{{ animal.padre.get_estado_display }}</span>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Madre</strong></td>
+          <td style="font-family:monospace;">{{ animal.madre_animal.numero_anilla|default:"—" }}</td>
+          <td>{{ animal.madre_animal.fecha_nacimiento.year|default:"—" }}</td>
+          <td>{{ animal.madre_animal.get_sexo_display|default:"—" }}</td>
+          <td>{{ animal.madre_animal.get_variedad_display|default:"—" }}</td>
+          <td>
+            {% if animal.madre_animal %}
+            <span class="chip chip-{{ animal.madre_animal.estado }}">{{ animal.madre_animal.get_estado_display }}</span>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% if animal.madre_lote %}
+        <tr>
+          <td><strong>Lote Madre</strong></td>
+          <td colspan="5">{{ animal.madre_lote.nombre }} (lote)</td>
+        </tr>
+        {% elif animal.madre_lote_externo %}
+        <tr>
+          <td><strong>Lote Madre (ext.)</strong></td>
+          <td colspan="5">{{ animal.madre_lote_externo }}</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- EVALUACIÓN MORFOLÓGICA -->
+  {% if animal.evaluacion %}
+  <div class="section">
+    <div class="section-title">Evaluación Morfológica</div>
+    <div class="eval-grid">
+      <div class="eval-item">
+        <div class="eval-label">Cabeza</div>
+        <div class="eval-score">{{ animal.evaluacion.cabeza }}</div>
+        <div class="eval-max">/10</div>
+      </div>
+      <div class="eval-item">
+        <div class="eval-label">Cola</div>
+        <div class="eval-score">{{ animal.evaluacion.cola }}</div>
+        <div class="eval-max">/10</div>
+      </div>
+      <div class="eval-item">
+        <div class="eval-label">Pecho/Abd.</div>
+        <div class="eval-score">{{ animal.evaluacion.pecho_abdomen }}</div>
+        <div class="eval-max">/10</div>
+      </div>
+      <div class="eval-item">
+        <div class="eval-label">Muslos/Tarsos</div>
+        <div class="eval-score">{{ animal.evaluacion.muslos_tarsos }}</div>
+        <div class="eval-max">/10</div>
+      </div>
+      <div class="eval-item">
+        <div class="eval-label">Cresta/Babilla</div>
+        <div class="eval-score">{{ animal.evaluacion.cresta_babilla }}</div>
+        <div class="eval-max">/10</div>
+      </div>
+      <div class="eval-item">
+        <div class="eval-label">Color</div>
+        <div class="eval-score">{{ animal.evaluacion.color }}</div>
+        <div class="eval-max">/10</div>
+      </div>
+    </div>
+    <div class="eval-media-box" style="margin-top:0.8em;">
+      <div class="eval-media-label">Puntuación Media</div>
+      <div class="eval-media-value">{{ animal.evaluacion.puntuacion_media }} <span style="font-size:10pt;opacity:0.7">/10</span></div>
+    </div>
+    {% if animal.evaluacion.notas %}
+    <p style="font-size:8.5pt; color:#555; margin-top:0.6em;">
+      <strong>Notas:</strong> {{ animal.evaluacion.notas }}
+    </p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- HISTÓRICO DE PESOS -->
+  {% if animal.historico_pesos %}
+  <div class="section">
+    <div class="section-title">Histórico de Pesos</div>
+    <table class="weight-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Peso (g)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in animal.historico_pesos %}
+        <tr>
+          <td>{{ p.fecha }}</td>
+          <td><strong>{{ p.peso }} g</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- PIE LEGAL -->
+  <div class="cert-footer">
+    Este documento ha sido generado por <strong>{{ tenant.name }}</strong> con carácter informativo.
+    La información contenida refleja los datos registrados en el sistema a la fecha de emisión.
+    Kria · Plataforma de Gestión de Asociaciones Avícolas.
+  </div>
+
+</body>
+</html>

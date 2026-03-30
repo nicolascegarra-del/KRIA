@@ -1,8 +1,11 @@
 {% extends "reports/base_report.html" %}
-{% load static %}
 
 {% block content %}
-<h1>{{ title }}</h1>
+<h1>Inventario de Animales</h1>
+<p style="color:#666; margin-top:-0.3em; margin-bottom:1em; font-size:9pt;">
+  {% if socio_nombre %}Socio: <strong>{{ socio_nombre }}</strong> — {% endif %}
+  Generado el {% now "d/m/Y" %} &nbsp;·&nbsp; Total: {{ animals|length }} animales
+</p>
 
 <table>
   <thead>
@@ -14,28 +17,32 @@
       <th>Padre</th>
       <th>Madre</th>
       <th>Socio</th>
+      <th>REGA</th>
       <th>Estado</th>
+      <th style="text-align:center;">Punt.</th>
     </tr>
   </thead>
   <tbody>
     {% for animal in animals %}
     <tr>
       <td><strong>{{ animal.numero_anilla }}</strong></td>
-      <td>{{ animal.anio_nacimiento }}</td>
+      <td>{{ animal.fecha_nacimiento.year|default:"—" }}</td>
       <td>{{ animal.get_sexo_display }}</td>
       <td>{{ animal.get_variedad_display }}</td>
-      <td>{{ animal.padre.numero_anilla|default:"—" }}</td>
-      <td>{{ animal.madre_animal.numero_anilla|default:"—" }}</td>
+      <td style="font-family:monospace;">{{ animal.padre.numero_anilla|default:"—" }}</td>
+      <td style="font-family:monospace;">{{ animal.madre_animal.numero_anilla|default:"—" }}</td>
       <td>{{ animal.socio.nombre_razon_social }}</td>
+      <td>{{ animal.socio.codigo_rega|default:"—" }}</td>
       <td><span class="chip chip-{{ animal.estado }}">{{ animal.get_estado_display }}</span></td>
+      <td style="text-align:center;">
+        {% if animal.evaluacion %}{{ animal.evaluacion.puntuacion_media }}{% else %}—{% endif %}
+      </td>
     </tr>
     {% empty %}
-    <tr><td colspan="8" style="text-align:center; color:#666;">No hay animales registrados.</td></tr>
+    <tr><td colspan="10" style="text-align:center; color:#999; padding:1.5em;">
+      No hay animales registrados.
+    </td></tr>
     {% endfor %}
   </tbody>
 </table>
-
-<p style="color:#666; font-size:8pt; margin-top:1em;">
-  Total: {{ animals|length }} animales
-</p>
 {% endblock %}

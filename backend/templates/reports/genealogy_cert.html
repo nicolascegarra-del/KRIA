@@ -1,118 +1,375 @@
-{% extends "reports/base_report.html" %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @page {
+      size: A4;
+      margin: 1.8cm 2cm;
+      @bottom-center {
+        content: "Pág. " counter(page) " · {{ tenant.name }} · Kria";
+        font-size: 7.5pt;
+        color: #999;
+      }
+    }
 
-{% block content %}
-<h1>Certificado Genealógico</h1>
+    * { box-sizing: border-box; }
 
-<h2>{{ animal.numero_anilla }} / {{ animal.anio_nacimiento }}</h2>
-<p>
-  <strong>Socio:</strong> {{ animal.socio.nombre_razon_social }} |
-  <strong>NIF:</strong> {{ animal.socio.dni_nif }} |
-  <strong>REGA:</strong> {{ animal.socio.codigo_rega }}
-</p>
+    body {
+      font-family: "Liberation Sans", Arial, sans-serif;
+      font-size: 10pt;
+      color: #1a1a1a;
+      margin: 0;
+    }
 
-<p>
-  <strong>Sexo:</strong> {{ animal.get_sexo_display }} |
-  <strong>Variedad:</strong> {{ animal.get_variedad_display }} |
-  <strong>Estado:</strong> <span class="chip chip-{{ animal.estado }}">{{ animal.get_estado_display }}</span>
-</p>
+    /* ── Cabecera ────────────────────────────────────────────────── */
+    .cert-header {
+      display: flex;
+      align-items: center;
+      border-bottom: 4px solid {{ tenant.primary_color }};
+      padding-bottom: 0.7em;
+      margin-bottom: 1.2em;
+      gap: 1em;
+    }
+    .cert-header img { height: 54px; width: auto; }
+    .cert-org-name {
+      font-size: 16pt;
+      font-weight: bold;
+      color: {{ tenant.primary_color }};
+      line-height: 1.1;
+      flex: 1;
+    }
+    .cert-doc-type {
+      font-size: 9pt;
+      color: #555;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .cert-date { font-size: 8pt; color: #888; text-align: right; white-space: nowrap; }
 
-<h3>Árbol Genealógico (3 generaciones)</h3>
+    /* ── Título certificado ──────────────────────────────────────── */
+    .cert-title-block {
+      text-align: center;
+      margin-bottom: 1.4em;
+    }
+    .cert-title-label {
+      font-size: 8pt;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #777;
+    }
+    .cert-title-main {
+      font-size: 20pt;
+      font-weight: bold;
+      color: {{ tenant.primary_color }};
+      margin: 0.1em 0 0.2em;
+    }
+    .cert-title-sub {
+      font-size: 9pt;
+      color: #555;
+    }
 
-<style>
-  .tree { display: flex; justify-content: center; margin: 1em 0; }
-  .tree-level { display: flex; flex-direction: column; justify-content: space-around; }
-  .tree-node {
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    padding: 6px 10px;
-    margin: 4px;
-    font-size: 8pt;
-    min-width: 80px;
-    text-align: center;
-  }
-  .tree-node.root { background: #E3F2FD; border-color: #1565C0; }
-  .tree-node.gen1 { background: #F1F8E9; }
-  .tree-node.gen2 { background: #FFF8E1; }
-</style>
+    /* ── Banner animal ───────────────────────────────────────────── */
+    .id-banner {
+      background: {{ tenant.primary_color }};
+      color: white;
+      padding: 0.6em 1.2em;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.2em;
+    }
+    .id-anilla { font-size: 20pt; font-weight: bold; font-family: monospace; }
+    .id-meta { font-size: 9pt; text-align: right; opacity: 0.9; }
 
-{% with node=tree %}
-<div style="overflow-x: auto;">
-  <table style="border-collapse:separate; border-spacing:10px;">
-    <tr>
-      <!-- Gen 2 (grandparents) -->
-      <td style="vertical-align:middle;">
-        {% if node.padre.padre %}
-        <div class="tree-node gen2">
-          <div>{{ node.padre.padre.anilla }}</div>
-          <div style="color:#999">{{ node.padre.padre.anio }}</div>
-        </div>
-        {% else %}<div class="tree-node gen2" style="opacity:0.3">—</div>{% endif %}
-      </td>
-      <td rowspan="2" style="vertical-align:middle;">
-        <!-- Gen 1 (parents) -->
-        {% if node.padre %}
-        <div class="tree-node gen1">
-          <div><strong>{{ node.padre.anilla }}</strong></div>
-          <div>{{ node.padre.anio }} · {{ node.padre.sexo }}</div>
-          <div style="color:#1565C0">{{ node.padre.variedad }}</div>
-        </div>
-        {% else %}<div class="tree-node gen1" style="opacity:0.3">—</div>{% endif %}
-      </td>
-      <td rowspan="4" style="vertical-align:middle; text-align:center;">
-        <!-- Root -->
-        <div class="tree-node root">
-          <div style="font-size:11pt;"><strong>{{ node.anilla }}</strong></div>
-          <div>{{ node.anio }}</div>
-          <div>{{ node.sexo }} · {{ node.variedad }}</div>
-          <div><span class="chip chip-{{ node.estado }}">{{ node.estado }}</span></div>
-        </div>
-      </td>
-    </tr>
-    <tr>
-      <td style="vertical-align:middle;">
-        {% if node.padre.madre %}
-        <div class="tree-node gen2">
-          <div>{{ node.padre.madre.anilla }}</div>
-          <div style="color:#999">{{ node.padre.madre.anio }}</div>
-        </div>
-        {% else %}<div class="tree-node gen2" style="opacity:0.3">—</div>{% endif %}
-      </td>
-    </tr>
-    <tr>
-      <td style="vertical-align:middle;">
-        {% if node.madre.padre %}
-        <div class="tree-node gen2">
-          <div>{{ node.madre.padre.anilla }}</div>
-          <div style="color:#999">{{ node.madre.padre.anio }}</div>
-        </div>
-        {% else %}<div class="tree-node gen2" style="opacity:0.3">—</div>{% endif %}
-      </td>
-      <td rowspan="2" style="vertical-align:middle;">
-        {% if node.madre %}
-        <div class="tree-node gen1">
-          <div><strong>{{ node.madre.anilla }}</strong></div>
-          <div>{{ node.madre.anio }} · {{ node.madre.sexo }}</div>
-          <div style="color:#1565C0">{{ node.madre.variedad }}</div>
-        </div>
-        {% else %}<div class="tree-node gen1" style="opacity:0.3">—</div>{% endif %}
-      </td>
-    </tr>
-    <tr>
-      <td style="vertical-align:middle;">
-        {% if node.madre.madre %}
-        <div class="tree-node gen2">
-          <div>{{ node.madre.madre.anilla }}</div>
-          <div style="color:#999">{{ node.madre.madre.anio }}</div>
-        </div>
-        {% else %}<div class="tree-node gen2" style="opacity:0.3">—</div>{% endif %}
-      </td>
-    </tr>
-  </table>
-</div>
-{% endwith %}
+    /* ── Datos básicos ───────────────────────────────────────────── */
+    .data-row {
+      display: flex;
+      gap: 1.5em;
+      margin-bottom: 1.2em;
+      flex-wrap: wrap;
+    }
+    .data-item { min-width: 120px; }
+    .data-label { font-size: 7.5pt; color: #888; text-transform: uppercase; letter-spacing: 0.06em; }
+    .data-value { font-size: 10pt; font-weight: 600; }
+    .data-value.mono { font-family: monospace; }
 
-<p style="font-size:8pt; color:#666; margin-top:2em; border-top:1px solid #ccc; padding-top:0.5em;">
-  Este certificado ha sido generado automáticamente por {{ tenant.name }} — Kria.
-  Documento con carácter oficial para la identificación de aves según normativa ARCA/Ministerio.
-</p>
-{% endblock %}
+    .chip {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 12px;
+      font-size: 8pt;
+      font-weight: bold;
+      color: white;
+    }
+    .chip-AÑADIDO    { background: #FBC02D; color: #333; }
+    .chip-APROBADO   { background: #2E7D32; }
+    .chip-EVALUADO   { background: #1565C0; }
+    .chip-RECHAZADO  { background: #D32F2F; }
+    .chip-SOCIO_EN_BAJA { background: #757575; }
+    .chip-BAJA       { background: #424242; }
+
+    /* ── Sección ─────────────────────────────────────────────────── */
+    .section-title {
+      font-size: 9pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: {{ tenant.primary_color }};
+      border-bottom: 1.5px solid {{ tenant.primary_color }};
+      padding-bottom: 0.2em;
+      margin-bottom: 0.8em;
+    }
+
+    /* ── Árbol genealógico ───────────────────────────────────────── */
+    .tree-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin: 0.5em 0 1.4em;
+    }
+
+    .tree-col {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+    }
+
+    /* columna gen2: 4 nodos */
+    .tree-col.gen2 { gap: 0.5em; }
+    /* columna gen1: 2 nodos */
+    .tree-col.gen1 { gap: 3.2em; margin: 0 0.6em; }
+    /* columna raíz */
+    .tree-col.root { }
+
+    .connector-col {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+    }
+
+    .tree-node {
+      border-radius: 6px;
+      padding: 0.5em 0.8em;
+      font-size: 8pt;
+      text-align: center;
+      min-width: 88px;
+    }
+    .tree-node.n-root {
+      background: {{ tenant.primary_color }};
+      color: white;
+      padding: 0.8em 1em;
+      min-width: 110px;
+    }
+    .tree-node.n-root .n-anilla { font-size: 13pt; font-weight: bold; font-family: monospace; }
+    .tree-node.n-gen1 {
+      background: #E3F2FD;
+      border: 1.5px solid {{ tenant.primary_color }};
+    }
+    .tree-node.n-gen1 .n-anilla { font-size: 10pt; font-weight: bold; font-family: monospace; }
+    .tree-node.n-gen2 {
+      background: #F5F5F5;
+      border: 1px solid #ccc;
+    }
+    .tree-node.n-empty {
+      background: #fafafa;
+      border: 1px dashed #ddd;
+      color: #bbb;
+      font-size: 9pt;
+    }
+    .n-anilla { font-family: monospace; }
+    .n-info { font-size: 7pt; color: #666; margin-top: 0.15em; }
+    .tree-node.n-root .n-info { color: rgba(255,255,255,0.75); }
+    .tree-node.n-gen1 .n-info { color: #555; }
+
+    /* líneas de conexión SVG-less con borders */
+    .h-line {
+      width: 20px;
+      border-top: 1.5px solid #aaa;
+      align-self: center;
+    }
+
+    /* ── Pie ─────────────────────────────────────────────────────── */
+    .cert-footer {
+      margin-top: 2em;
+      padding-top: 0.8em;
+      border-top: 1px solid #ddd;
+    }
+    .cert-footer-seal {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .cert-footer-text {
+      font-size: 7.5pt;
+      color: #999;
+      max-width: 75%;
+    }
+    .cert-footer-sign {
+      text-align: center;
+      font-size: 8pt;
+      color: #555;
+    }
+    .cert-footer-sign .sign-line {
+      width: 120px;
+      border-top: 1px solid #999;
+      margin: 1.8em auto 0.3em;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CABECERA -->
+  <div class="cert-header">
+    {% if tenant.logo_url %}
+    <img src="{{ tenant.logo_url }}" alt="{{ tenant.name }}" />
+    {% endif %}
+    <div style="flex:1;">
+      <div class="cert-org-name">{{ tenant.name }}</div>
+      <div class="cert-doc-type">Certificado Genealógico</div>
+    </div>
+    <div class="cert-date">Emitido el {% now "d/m/Y" %} a las {% now "H:i" %}h</div>
+  </div>
+
+  <!-- TÍTULO FORMAL -->
+  <div class="cert-title-block">
+    <div class="cert-title-label">La asociación certifica que</div>
+    <div class="cert-title-main">CERTIFICADO GENEALÓGICO</div>
+    <div class="cert-title-sub">Árbol genealógico de tres generaciones — Normativa ARCA/Ministerio</div>
+  </div>
+
+  <!-- BANNER ANIMAL -->
+  <div class="id-banner">
+    <div>
+      <div style="font-size:7.5pt; opacity:0.8; margin-bottom:0.2em;">Número de Anilla (Animal)</div>
+      <div class="id-anilla">{{ animal.numero_anilla }}</div>
+    </div>
+    <div class="id-meta">
+      <div>Año de nacimiento: <strong>{{ animal.fecha_nacimiento.year|default:"—" }}</strong></div>
+      <div>{{ animal.get_sexo_display }} · {{ animal.get_variedad_display }}</div>
+      <div style="margin-top:0.3em;">
+        <span style="background:rgba(255,255,255,0.22); border:1px solid rgba(255,255,255,0.4); border-radius:12px; padding:2px 10px; font-size:8pt; font-weight:bold;">
+          {{ animal.get_estado_display }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATOS DEL TITULAR -->
+  <div class="data-row">
+    <div class="data-item" style="min-width:200px;">
+      <div class="data-label">Titular</div>
+      <div class="data-value">{{ animal.socio.nombre_razon_social }}</div>
+    </div>
+    <div class="data-item">
+      <div class="data-label">DNI / NIF</div>
+      <div class="data-value mono">{{ animal.socio.dni_nif }}</div>
+    </div>
+    <div class="data-item">
+      <div class="data-label">Nº Socio</div>
+      <div class="data-value mono">{{ animal.socio.numero_socio|default:"—" }}</div>
+    </div>
+    <div class="data-item">
+      <div class="data-label">Cód. REGA</div>
+      <div class="data-value mono">{{ animal.socio.codigo_rega|default:"—" }}</div>
+    </div>
+    <div class="data-item">
+      <div class="data-label">Ganadería de Nacimiento</div>
+      <div class="data-value">{{ animal.ganaderia_nacimiento|default:"—" }}</div>
+    </div>
+  </div>
+
+  <!-- ÁRBOL GENEALÓGICO -->
+  <div class="section-title">Árbol Genealógico (3 Generaciones)</div>
+
+  {% with node=tree %}
+  <div class="tree-wrapper">
+
+    <!-- Gen 2: abuelos (4 nodos) -->
+    <div class="tree-col gen2">
+      {% if node.padre.padre %}
+      <div class="tree-node n-gen2">
+        <div class="n-anilla">{{ node.padre.padre.anilla }}</div>
+        <div class="n-info">{{ node.padre.padre.anio }} · {{ node.padre.padre.sexo|default:"?" }} · {{ node.padre.padre.variedad|default:"—" }}</div>
+      </div>
+      {% else %}<div class="tree-node n-empty">Sin datos</div>{% endif %}
+
+      {% if node.padre.madre %}
+      <div class="tree-node n-gen2">
+        <div class="n-anilla">{{ node.padre.madre.anilla }}</div>
+        <div class="n-info">{{ node.padre.madre.anio }} · {{ node.padre.madre.sexo|default:"?" }} · {{ node.padre.madre.variedad|default:"—" }}</div>
+      </div>
+      {% else %}<div class="tree-node n-empty">Sin datos</div>{% endif %}
+
+      {% if node.madre.padre %}
+      <div class="tree-node n-gen2">
+        <div class="n-anilla">{{ node.madre.padre.anilla }}</div>
+        <div class="n-info">{{ node.madre.padre.anio }} · {{ node.madre.padre.sexo|default:"?" }} · {{ node.madre.padre.variedad|default:"—" }}</div>
+      </div>
+      {% else %}<div class="tree-node n-empty">Sin datos</div>{% endif %}
+
+      {% if node.madre.madre %}
+      <div class="tree-node n-gen2">
+        <div class="n-anilla">{{ node.madre.madre.anilla }}</div>
+        <div class="n-info">{{ node.madre.madre.anio }} · {{ node.madre.madre.sexo|default:"?" }} · {{ node.madre.madre.variedad|default:"—" }}</div>
+      </div>
+      {% else %}<div class="tree-node n-empty">Sin datos</div>{% endif %}
+    </div>
+
+    <div class="h-line"></div>
+
+    <!-- Gen 1: padres (2 nodos) -->
+    <div class="tree-col gen1">
+      {% if node.padre %}
+      <div class="tree-node n-gen1">
+        <div class="n-anilla">{{ node.padre.anilla }}</div>
+        <div class="n-info">{{ node.padre.anio }} · {{ node.padre.sexo|default:"?" }} · {{ node.padre.variedad|default:"—" }}</div>
+      </div>
+      {% else %}<div class="tree-node n-empty">Sin padre</div>{% endif %}
+
+      {% if node.madre %}
+      <div class="tree-node n-gen1">
+        <div class="n-anilla">{{ node.madre.anilla }}</div>
+        <div class="n-info">{{ node.madre.anio }} · {{ node.madre.sexo|default:"?" }} · {{ node.madre.variedad|default:"—" }}</div>
+      </div>
+      {% else %}<div class="tree-node n-empty">Sin madre</div>{% endif %}
+    </div>
+
+    <div class="h-line"></div>
+
+    <!-- Raíz -->
+    <div class="tree-col root">
+      <div class="tree-node n-root">
+        <div class="n-anilla">{{ node.anilla }}</div>
+        <div class="n-info">{{ node.anio }} · {{ node.sexo|default:"?" }} · {{ node.variedad|default:"—" }}</div>
+        <div style="margin-top:0.35em;">
+          <span style="background:rgba(255,255,255,0.22); border:1px solid rgba(255,255,255,0.45); border-radius:10px; padding:1px 8px; font-size:7pt;">
+            {{ node.estado|default:"—" }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  {% endwith %}
+
+  <!-- PIE OFICIAL -->
+  <div class="cert-footer">
+    <div class="cert-footer-seal">
+      <div class="cert-footer-text">
+        El presente certificado acredita la genealogía del animal identificado con el número de anilla indicado, conforme a los datos registrados
+        en el sistema de gestión de <strong>{{ tenant.name }}</strong>. Emitido en base a la normativa ARCA/Ministerio de Agricultura.
+        Documento válido únicamente en su formato original. Kria · Plataforma de Gestión de Asociaciones Avícolas.
+      </div>
+      <div class="cert-footer-sign">
+        <div class="sign-line"></div>
+        <div>Sello / Firma de la Asociación</div>
+        <div style="font-size:7pt; color:#aaa; margin-top:0.2em;">{{ tenant.name }}</div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
