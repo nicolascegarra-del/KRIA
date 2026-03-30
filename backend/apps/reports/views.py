@@ -50,13 +50,14 @@ class InventoryReportView(APIView):
 
     def post(self, request):
         socio_id = request.data.get("socio_id")
+        formato = request.data.get("formato", "pdf")
         if not get_effective_is_gestion(request):
             # Socio can only request their own
             try:
                 socio_id = str(request.user.socio.id)
             except Exception:
                 return Response({"detail": "No socio profile."}, status=400)
-        return _create_report_job(request, ReportJob.ReportType.INVENTORY, {"socio_id": socio_id})
+        return _create_report_job(request, ReportJob.ReportType.INVENTORY, {"socio_id": socio_id, "formato": formato})
 
 
 def _check_animal_ownership(request, animal_id):
@@ -110,4 +111,5 @@ class CatalogoReproductoresView(APIView):
     throttle_classes = [UploadRateThrottle]
 
     def post(self, request):
-        return _create_report_job(request, ReportJob.ReportType.CATALOGO_REPRODUCTORES, {})
+        formato = request.data.get("formato", "pdf")
+        return _create_report_job(request, ReportJob.ReportType.CATALOGO_REPRODUCTORES, {"formato": formato})

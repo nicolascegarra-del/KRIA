@@ -32,8 +32,9 @@ def generate_report(self, job_id: str):
 
     try:
         rt = job.report_type
+        fmt = job.params.get("formato", "pdf")
         if rt == ReportJob.ReportType.INVENTORY:
-            file_key = _gen_inventory_pdf(job)
+            file_key = _gen_inventory_excel(job) if fmt == "excel" else _gen_inventory_pdf(job)
         elif rt == ReportJob.ReportType.INDIVIDUAL:
             file_key = _gen_individual_pdf(job)
         elif rt == ReportJob.ReportType.GENEALOGY_CERT:
@@ -41,7 +42,7 @@ def generate_report(self, job_id: str):
         elif rt == ReportJob.ReportType.LIBRO_GENEALOGICO:
             file_key = _gen_libro_genealogico(job)
         elif rt == ReportJob.ReportType.CATALOGO_REPRODUCTORES:
-            file_key = _gen_catalogo_reproductores(job)
+            file_key = _gen_catalogo_reproductores_excel(job) if fmt == "excel" else _gen_catalogo_reproductores(job)
         else:
             raise ValueError(f"Unknown report type: {rt}")
 
@@ -58,6 +59,14 @@ def _render_pdf(template_name: str, context: dict) -> bytes:
     from weasyprint import HTML, CSS  # type: ignore
     html_string = render_to_string(template_name, context)
     return HTML(string=html_string).write_pdf()
+
+
+def _anio(animal) -> str:
+    """Return birth year as string, tolerating both fecha_nacimiento and missing."""
+    try:
+        return str(animal.fecha_nacimiento.year)
+    except Exception:
+        return ""
 
 
 def _gen_inventory_pdf(job) -> str:
@@ -117,6 +126,166 @@ def _gen_genealogy_cert(job) -> str:
     return upload_bytes(key, pdf_bytes, "application/pdf")
 
 
+def _gen_inventory_excel(job) -> str:
+    """Generate Inventario de Animales as XLSX."""
+    import openpyxl
+    from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
+    import io
+    from apps.animals.models import Animal
+
+    socio_id = job.params.get("socio_id")
+    if socio_id:
+        animals = Animal.all_objects.filter(tenant=job.tenant, socio_id=socio_id).select_related("socio", "padre", "madre_animal").prefetch_related("evaluacion")
+    else:
+        animals = Animal.all_objects.filter(tenant=job.tenant).select_related("socio", "padre", "madre_animal").prefetch_related("evaluacion").order_by("variedad", "numero_anilla")
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Inventario de Animales"
+
+    primary = job.tenant.primary_color.lstrip("#") if job.tenant.primary_color else "1565C0"
+    header_fill = PatternFill(start_color=primary, end_color=primary, fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=10)
+    thin = Border(
+        left=Side(style="thin", color="DDDDDD"),
+        right=Side(style="thin", color="DDDDDD"),
+        bottom=Side(style="thin", color="DDDDDD"),
+    )
+
+    # Title row
+    ws.merge_cells("A1:K1")
+    title_cell = ws["A1"]
+    title_cell.value = f"Inventario de Animales — {job.tenant.name}"
+    title_cell.font = Font(bold=True, size=14, color=primary)
+    title_cell.alignment = Alignment(horizontal="center")
+    ws.row_dimensions[1].height = 24
+
+    HEADERS = ["Nº Anilla", "Año Nac.", "Sexo", "Variedad", "Estado",
+               "Padre", "Madre", "Socio", "DNI/NIF", "REGA", "Puntuación Media"]
+    for col, h in enumerate(HEADERS, 1):
+        cell = ws.cell(row=2, column=col, value=h)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center")
+
+    for row_num, animal in enumerate(animals, 3):
+        try:
+            media = float(animal.evaluacion.puntuacion_media)
+        except Exception:
+            media = ""
+        row_data = [
+            animal.numero_anilla,
+            _anio(animal),
+            animal.get_sexo_display(),
+            animal.get_variedad_display(),
+            animal.get_estado_display(),
+            animal.padre.numero_anilla if animal.padre else "",
+            animal.madre_animal.numero_anilla if animal.madre_animal else "",
+            animal.socio.nombre_razon_social,
+            animal.socio.dni_nif,
+            animal.socio.codigo_rega or "",
+            media,
+        ]
+        for col, val in enumerate(row_data, 1):
+            cell = ws.cell(row=row_num, column=col, value=val)
+            cell.border = thin
+            if row_num % 2 == 0:
+                cell.fill = PatternFill(start_color="F5F5F5", end_color="F5F5F5", fill_type="solid")
+
+    for col in ws.columns:
+        max_len = max((len(str(c.value or "")) for c in col), default=10)
+        ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    key = f"reports/{job.tenant.slug}/inventory/{uuid.uuid4()}.xlsx"
+    from .storage import upload_bytes
+    return upload_bytes(key, buf.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+def _gen_catalogo_reproductores_excel(job) -> str:
+    """Generate Catálogo de Reproductores as XLSX."""
+    import openpyxl
+    from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
+    import io
+    from apps.animals.models import Animal
+
+    animals = Animal.all_objects.filter(
+        tenant=job.tenant, reproductor_aprobado=True, estado=Animal.Estado.EVALUADO,
+    ).select_related("socio").prefetch_related("evaluacion").order_by("variedad", "numero_anilla")
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Catálogo de Reproductores"
+
+    primary = job.tenant.primary_color.lstrip("#") if job.tenant.primary_color else "1565C0"
+    header_fill = PatternFill(start_color=primary, end_color=primary, fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=10)
+    thin = Border(
+        left=Side(style="thin", color="DDDDDD"),
+        right=Side(style="thin", color="DDDDDD"),
+        bottom=Side(style="thin", color="DDDDDD"),
+    )
+
+    ws.merge_cells("A1:P1")
+    tc = ws["A1"]
+    tc.value = f"Catálogo de Reproductores — {job.tenant.name}"
+    tc.font = Font(bold=True, size=14, color=primary)
+    tc.alignment = Alignment(horizontal="center")
+    ws.row_dimensions[1].height = 24
+
+    HEADERS = ["Nº Anilla", "Año Nac.", "Sexo", "Variedad",
+               "Socio", "DNI/NIF", "REGA",
+               "Cabeza", "Cola", "Pecho/Abd.", "Muslos/Tarsos", "Cresta/Babilla", "Color",
+               "Puntuación Media", "Ganadería", "Fecha Nac."]
+    for col, h in enumerate(HEADERS, 1):
+        cell = ws.cell(row=2, column=col, value=h)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center")
+
+    for row_num, animal in enumerate(animals, 3):
+        ev = getattr(animal, "evaluacion", None)
+        try:
+            ev_real = ev if ev and ev.pk else None
+        except Exception:
+            ev_real = None
+
+        row_data = [
+            animal.numero_anilla,
+            _anio(animal),
+            animal.get_sexo_display(),
+            animal.get_variedad_display(),
+            animal.socio.nombre_razon_social,
+            animal.socio.dni_nif,
+            animal.socio.codigo_rega or "",
+            ev_real.cabeza if ev_real else "",
+            ev_real.cola if ev_real else "",
+            ev_real.pecho_abdomen if ev_real else "",
+            ev_real.muslos_tarsos if ev_real else "",
+            ev_real.cresta_babilla if ev_real else "",
+            ev_real.color if ev_real else "",
+            float(ev_real.puntuacion_media) if ev_real else "",
+            animal.ganaderia_nacimiento or "",
+            str(animal.fecha_nacimiento) if animal.fecha_nacimiento else "",
+        ]
+        for col, val in enumerate(row_data, 1):
+            cell = ws.cell(row=row_num, column=col, value=val)
+            cell.border = thin
+            if row_num % 2 == 0:
+                cell.fill = PatternFill(start_color="F5F5F5", end_color="F5F5F5", fill_type="solid")
+
+    for col in ws.columns:
+        max_len = max((len(str(c.value or "")) for c in col), default=10)
+        ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 35)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    key = f"reports/{job.tenant.slug}/catalogo/{uuid.uuid4()}.xlsx"
+    from .storage import upload_bytes
+    return upload_bytes(key, buf.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
 def _gen_libro_genealogico(job) -> str:
     """
     Generate ARCA/Ministerio format Excel Libro Genealógico using openpyxl.
@@ -167,7 +336,7 @@ def _gen_libro_genealogico(job) -> str:
 
         ws.append([
             animal.numero_anilla,
-            animal.anio_nacimiento,
+            _anio(animal),
             animal.get_sexo_display(),
             animal.get_variedad_display(),
             animal.padre.numero_anilla if animal.padre else "",

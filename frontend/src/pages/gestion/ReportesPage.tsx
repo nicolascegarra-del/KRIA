@@ -129,6 +129,7 @@ export default function ReportesPage() {
   const [jobs, setJobs] = useState<Record<string, string>>({}); // label → job_id
   const [generating, setGenerating] = useState<Record<string, boolean>>({});
   const [animalState, setAnimalState] = useState<Record<string, TileAnimalState>>({});
+  const [formato, setFormato] = useState<Record<string, "pdf" | "excel">>({});
 
   const handleGenerate = async (label: string, action: () => Promise<{ job_id: string }>) => {
     setGenerating((prev) => ({ ...prev, [label]: true }));
@@ -144,14 +145,17 @@ export default function ReportesPage() {
     setAnimalState((prev) => ({ ...prev, [tileLabel]: { selectedId: id, selectedLabel: label } }));
   };
 
+  const getFmt = (label: string): "pdf" | "excel" => formato[label] ?? "pdf";
+
   const tiles = [
     {
-      label: "Inventario PDF",
+      label: "Inventario",
       description: "Lista completa de animales (todos los socios)",
       icon: <FileText size={24} />,
       color: "bg-blue-700",
       requiresAnimal: false,
-      action: () => reportsApi.inventory(),
+      hasFormatSelector: true,
+      action: () => reportsApi.inventory(undefined, getFmt("Inventario")),
     },
     {
       label: "Libro Genealógico",
@@ -159,15 +163,17 @@ export default function ReportesPage() {
       icon: <Table size={24} />,
       color: "bg-green-700",
       requiresAnimal: false,
+      hasFormatSelector: false,
       action: () => reportsApi.libroGenealogico(),
     },
     {
       label: "Catálogo Reproductores",
-      description: "PDF editorial: 1 página por animal con gráfico radar",
+      description: "Reproductores aprobados con puntuaciones",
       icon: <BookOpen size={24} />,
       color: "bg-purple-700",
       requiresAnimal: false,
-      action: () => reportsApi.catalogoReproductores(),
+      hasFormatSelector: true,
+      action: () => reportsApi.catalogoReproductores(getFmt("Catálogo Reproductores")),
     },
     {
       label: "Ficha Individual",
@@ -175,6 +181,7 @@ export default function ReportesPage() {
       icon: <User size={24} />,
       color: "bg-orange-600",
       requiresAnimal: true,
+      hasFormatSelector: false,
       action: () => {
         const id = animalState["Ficha Individual"]?.selectedId;
         if (!id) throw new Error("Selecciona un animal.");
@@ -187,6 +194,7 @@ export default function ReportesPage() {
       icon: <FileText size={24} />,
       color: "bg-teal-700",
       requiresAnimal: true,
+      hasFormatSelector: false,
       action: () => {
         const id = animalState["Certificado Genealógico"]?.selectedId;
         if (!id) throw new Error("Selecciona un animal.");
@@ -218,6 +226,29 @@ export default function ReportesPage() {
                   <div className="text-xs text-gray-500">{tile.description}</div>
                 </div>
               </div>
+
+              {/* Format selector */}
+              {tile.hasFormatSelector && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">Formato:</span>
+                  <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+                    {(["pdf", "excel"] as const).map((fmt) => (
+                      <button
+                        key={fmt}
+                        type="button"
+                        onClick={() => setFormato((p) => ({ ...p, [tile.label]: fmt }))}
+                        className={`px-3 py-1 transition-colors ${
+                          getFmt(tile.label) === fmt
+                            ? "bg-blue-700 text-white"
+                            : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        {fmt === "pdf" ? "PDF" : "Excel"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Animal picker for individual reports */}
               {tile.requiresAnimal && (
