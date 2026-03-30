@@ -14,8 +14,9 @@ import {
   UserPlus, Pencil, ChevronRight, Mail, CheckCircle2, XCircle,
   Settings, AlertTriangle, Wrench, ScrollText, Clock, Tag,
   MapPin, Phone, AtSign, Settings2, GripVertical, X, Eye,
+  ClipboardCheck,
 } from "lucide-react";
-import type { Tenant, GestionUserCreate, GestionUser, AnillaSize, PlatformSettings } from "../../types";
+import type { Tenant, GestionUserCreate, GestionUser, AnillaSize, PlatformSettings, PreguntaInstalacion } from "../../types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface SuperAdminStats {
@@ -205,6 +206,9 @@ export default function SuperAdminPage() {
   const [editingUser, setEditingUser] = useState<GestionUser | null>(null);
   const [editUserForm, setEditUserForm] = useState<UserEditForm>({ email: "", first_name: "", last_name: "", password: "", notif_nueva_asociacion: false, notif_asociacion_suspendida: false, notif_asociacion_activada: false, notif_asociacion_eliminada: false });
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+
+  // ── Audit config modal state ───────────────────────────────────────────────
+  const [auditConfigTenant, setAuditConfigTenant] = useState<Tenant | null>(null);
 
   // ── SuperAdmin modal state ─────────────────────────────────────────────────
   const [saModalOpen, setSaModalOpen] = useState(false);
@@ -698,6 +702,7 @@ export default function SuperAdminPage() {
                             <div className="flex items-center justify-end gap-0.5">
                               <button title="Gestionar usuarios admin" className="btn-ghost p-1.5" onClick={() => setUsersModalTenant(t)}><Users size={14} /></button>
                               <button title="Editar" className="btn-ghost p-1.5" onClick={() => openEditTenant(t)}><Edit2 size={14} /></button>
+                              <button title="Configurar plantilla auditorías" className="btn-ghost p-1.5" onClick={() => setAuditConfigTenant(t)}><ClipboardCheck size={14} className="text-blue-600" /></button>
                               <button title={t.is_active ? "Suspender" : "Activar"} className="btn-ghost p-1.5"
                                 onClick={() => t.is_active ? suspendTenantMutation.mutate(t.id) : activateTenantMutation.mutate(t.id)}>
                                 {t.is_active ? <PauseCircle size={14} className="text-amber-500" /> : <PlayCircle size={14} className="text-green-600" />}
@@ -1165,7 +1170,17 @@ export default function SuperAdminPage() {
       </Modal>}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          MODAL: Confirmar eliminar asociación
+          MODAL: Configurar plantilla de auditorías para un tenant
+      ══════════════════════════════════════════════════════════════════════ */}
+      {!!auditConfigTenant && (
+        <AuditConfigModal
+          tenant={auditConfigTenant}
+          onClose={() => setAuditConfigTenant(null)}
+        />
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          MODAL: Eliminar asociación
       ══════════════════════════════════════════════════════════════════════ */}
       {!!deleteModalTenant && <Modal onClose={() => { setDeleteModalTenant(null); setDeleteTenantPassword(""); setDeleteTenantPasswordError(""); }} title="Eliminar asociación">
         <div className="space-y-4">
@@ -1890,5 +1905,252 @@ export default function SuperAdminPage() {
         </Modal>
       )}
     </div>
+  );
+}
+
+// ── AuditConfigModal ──────────────────────────────────────────────────────────
+
+function AuditConfigModal({ tenant, onClose }: { tenant: Tenant; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [tab, setTab] = useState<"criterios" | "preguntas">("criterios");
+
+  // ── Criterios ──────────────────────────────────────────────────────────────
+  const { data: criterios = [], isLoading: loadCrit } = useQuery({
+    queryKey: ["audit-criterios", tenant.id],
+    queryFn: () => superadminApi.auditConfig.listCriterios(tenant.id),
+  });
+  const [newCriterio, setNewCriterio] = useState({ nombre: "", descripcion: "", multiplicador: "1.00", is_active: true, orden: 0 });
+  const [showNewCrit, setShowNewCrit] = useState(false);
+
+  const createCrit = useMutation({
+    mutationFn: () => superadminApi.auditConfig.createCriterio(tenant.id, { ...newCriterio, orden: criterios.length }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["audit-criterios", tenant.id] }); setShowNewCrit(false); setNewCriterio({ nombre: "", descripcion: "", multiplicador: "1.00", is_active: true, orden: 0 }); },
+  });
+  const deleteCrit = useMutation({
+    mutationFn: (id: string) => superadminApi.auditConfig.deleteCriterio(tenant.id, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["audit-criterios", tenant.id] }),
+  });
+  const toggleCrit = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      superadminApi.auditConfig.updateCriterio(tenant.id, id, { is_active }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["audit-criterios", tenant.id] }),
+  });
+
+  const maxScore = criterios
+    .filter(c => c.is_active)
+    .reduce((sum, c) => sum + parseFloat(c.multiplicador) * 10, 0);
+
+  // ── Preguntas ──────────────────────────────────────────────────────────────
+  const { data: preguntas = [], isLoading: loadPregunta } = useQuery({
+    queryKey: ["audit-preguntas", tenant.id],
+    queryFn: () => superadminApi.auditConfig.listPreguntas(tenant.id),
+  });
+  const [newPregunta, setNewPregunta] = useState<Omit<PreguntaInstalacion, "id">>({ texto: "", tipo: "SINO", is_active: true, orden: 0 });
+  const [showNewPregunta, setShowNewPregunta] = useState(false);
+
+  const createPregunta = useMutation({
+    mutationFn: () => superadminApi.auditConfig.createPregunta(tenant.id, { ...newPregunta, orden: preguntas.length }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["audit-preguntas", tenant.id] }); setShowNewPregunta(false); setNewPregunta({ texto: "", tipo: "SINO", is_active: true, orden: 0 }); },
+  });
+  const deletePregunta = useMutation({
+    mutationFn: (id: string) => superadminApi.auditConfig.deletePregunta(tenant.id, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["audit-preguntas", tenant.id] }),
+  });
+  const togglePregunta = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      superadminApi.auditConfig.updatePregunta(tenant.id, id, { is_active }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["audit-preguntas", tenant.id] }),
+  });
+
+  return (
+    <Modal onClose={onClose} title={`Plantilla de Auditorías — ${tenant.name}`} maxWidth="max-w-2xl">
+      <div className="space-y-4">
+        {/* Tabs */}
+        <div className="flex border-b border-gray-200">
+          {(["criterios", "preguntas"] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                tab === t ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {t === "criterios" ? "Criterios de Evaluación" : "Preguntas de Instalaciones"}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Criterios ── */}
+        {tab === "criterios" && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500">
+                Cada criterio: puntuación 0–10 × multiplicador.
+                Puntuación máxima posible: <strong>{maxScore.toFixed(1)}</strong>
+                {Math.abs(maxScore - 100) > 0.1 && (
+                  <span className="text-amber-600 ml-1">(recomendado: 100)</span>
+                )}
+              </p>
+              <button onClick={() => setShowNewCrit(true)} className="btn-secondary text-xs flex items-center gap-1">
+                <Plus size={12} /> Añadir
+              </button>
+            </div>
+
+            {loadCrit ? <div className="h-20 bg-gray-100 rounded animate-pulse" /> : (
+              <div className="space-y-2">
+                {criterios.map(c => (
+                  <div key={c.id} className={`flex items-center gap-3 p-2.5 rounded-lg border ${c.is_active ? "border-gray-200 bg-white" : "border-gray-100 bg-gray-50 opacity-60"}`}>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-sm text-gray-900">{c.nombre}</span>
+                      {c.descripcion && <p className="text-xs text-gray-500 truncate">{c.descripcion}</p>}
+                    </div>
+                    <div className="text-xs text-gray-500 shrink-0">
+                      ×{c.multiplicador} → max <strong>{(parseFloat(c.multiplicador) * 10).toFixed(1)}</strong> pts
+                    </div>
+                    <button
+                      onClick={() => toggleCrit.mutate({ id: c.id, is_active: !c.is_active })}
+                      className={`text-xs px-2 py-0.5 rounded border transition-colors ${c.is_active ? "border-green-300 text-green-700 hover:bg-green-50" : "border-gray-300 text-gray-500 hover:bg-gray-100"}`}
+                    >
+                      {c.is_active ? "Activo" : "Inactivo"}
+                    </button>
+                    <button onClick={() => deleteCrit.mutate(c.id)} className="text-red-400 hover:text-red-600">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+                {criterios.length === 0 && (
+                  <p className="text-sm text-gray-400 text-center py-6">Sin criterios configurados</p>
+                )}
+              </div>
+            )}
+
+            {showNewCrit && (
+              <div className="border border-blue-200 bg-blue-50 rounded-xl p-3 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="col-span-2">
+                    <label className="label text-xs">Nombre *</label>
+                    <input
+                      className="input-field text-sm"
+                      placeholder="Ej: Conformación general"
+                      value={newCriterio.nombre}
+                      onChange={e => setNewCriterio(n => ({ ...n, nombre: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="label text-xs">Multiplicador *</label>
+                    <input
+                      className="input-field text-sm"
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={newCriterio.multiplicador}
+                      onChange={e => setNewCriterio(n => ({ ...n, multiplicador: e.target.value }))}
+                    />
+                    <p className="text-xs text-gray-400 mt-0.5">Aporta {(parseFloat(newCriterio.multiplicador || "0") * 10).toFixed(1)} pts al total</p>
+                  </div>
+                  <div>
+                    <label className="label text-xs">Descripción (opcional)</label>
+                    <input
+                      className="input-field text-sm"
+                      value={newCriterio.descripcion}
+                      onChange={e => setNewCriterio(n => ({ ...n, descripcion: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setShowNewCrit(false)} className="btn-ghost text-xs">Cancelar</button>
+                  <button
+                    onClick={() => createCrit.mutate()}
+                    disabled={!newCriterio.nombre || createCrit.isPending}
+                    className="btn-primary text-xs disabled:opacity-50"
+                  >
+                    {createCrit.isPending ? <Loader2 size={12} className="animate-spin" /> : "Guardar criterio"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Preguntas ── */}
+        {tab === "preguntas" && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500">{preguntas.length} pregunta{preguntas.length !== 1 ? "s" : ""} configurada{preguntas.length !== 1 ? "s" : ""}</p>
+              <button onClick={() => setShowNewPregunta(true)} className="btn-secondary text-xs flex items-center gap-1">
+                <Plus size={12} /> Añadir
+              </button>
+            </div>
+
+            {loadPregunta ? <div className="h-20 bg-gray-100 rounded animate-pulse" /> : (
+              <div className="space-y-2">
+                {preguntas.map(p => (
+                  <div key={p.id} className={`flex items-start gap-3 p-2.5 rounded-lg border ${p.is_active ? "border-gray-200 bg-white" : "border-gray-100 bg-gray-50 opacity-60"}`}>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-900">{p.texto}</p>
+                      <span className="text-xs text-gray-400">
+                        {p.tipo === "SINO" ? "Sí/No" : p.tipo === "TEXTO" ? "Texto libre" : "Puntuación 0-10"}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => togglePregunta.mutate({ id: p.id, is_active: !p.is_active })}
+                      className={`text-xs px-2 py-0.5 rounded border shrink-0 transition-colors ${p.is_active ? "border-green-300 text-green-700 hover:bg-green-50" : "border-gray-300 text-gray-500 hover:bg-gray-100"}`}
+                    >
+                      {p.is_active ? "Activa" : "Inactiva"}
+                    </button>
+                    <button onClick={() => deletePregunta.mutate(p.id)} className="text-red-400 hover:text-red-600 shrink-0">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+                {preguntas.length === 0 && (
+                  <p className="text-sm text-gray-400 text-center py-6">Sin preguntas configuradas</p>
+                )}
+              </div>
+            )}
+
+            {showNewPregunta && (
+              <div className="border border-blue-200 bg-blue-50 rounded-xl p-3 space-y-2">
+                <div>
+                  <label className="label text-xs">Texto de la pregunta *</label>
+                  <input
+                    className="input-field text-sm"
+                    placeholder="Ej: ¿Las instalaciones disponen de luz natural?"
+                    value={newPregunta.texto}
+                    onChange={e => setNewPregunta(n => ({ ...n, texto: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="label text-xs">Tipo de respuesta</label>
+                  <select
+                    className="input-field text-sm"
+                    value={newPregunta.tipo}
+                    onChange={e => setNewPregunta(n => ({ ...n, tipo: e.target.value as PreguntaInstalacion["tipo"] }))}
+                  >
+                    <option value="SINO">Sí / No</option>
+                    <option value="TEXTO">Texto libre</option>
+                    <option value="PUNTUACION">Puntuación (0–10)</option>
+                  </select>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setShowNewPregunta(false)} className="btn-ghost text-xs">Cancelar</button>
+                  <button
+                    onClick={() => createPregunta.mutate()}
+                    disabled={!newPregunta.texto || createPregunta.isPending}
+                    className="btn-primary text-xs disabled:opacity-50"
+                  >
+                    {createPregunta.isPending ? <Loader2 size={12} className="animate-spin" /> : "Guardar pregunta"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex justify-end border-t border-gray-100 pt-3">
+          <button onClick={onClose} className="btn-primary text-sm">Cerrar</button>
+        </div>
+      </div>
+    </Modal>
   );
 }

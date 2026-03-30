@@ -156,4 +156,38 @@ export const superadminApi = {
     }>("/superadmin/logs/", { params });
     return data;
   },
+
+  // ── Audit config (por tenant) ──────────────────────────────────────────────
+  auditConfig: {
+    listCriterios: async (tenantId: string) => {
+      const { data } = await apiClient.get(`/auditorias/superadmin/${tenantId}/criterios/`);
+      return data as import("../types").CriterioEvaluacion[];
+    },
+    createCriterio: async (tenantId: string, payload: Omit<import("../types").CriterioEvaluacion, "id">) => {
+      const { data } = await apiClient.post(`/auditorias/superadmin/${tenantId}/criterios/`, payload);
+      return data as import("../types").CriterioEvaluacion;
+    },
+    updateCriterio: async (tenantId: string, id: string, payload: Partial<import("../types").CriterioEvaluacion>) => {
+      const { data } = await apiClient.patch(`/auditorias/superadmin/${tenantId}/criterios/${id}/`, payload);
+      return data as import("../types").CriterioEvaluacion;
+    },
+    deleteCriterio: async (tenantId: string, id: string) => {
+      await apiClient.delete(`/auditorias/superadmin/${tenantId}/criterios/${id}/`);
+    },
+    listPreguntas: async (tenantId: string) => {
+      const { data } = await apiClient.get(`/auditorias/superadmin/${tenantId}/preguntas/`);
+      return data as import("../types").PreguntaInstalacion[];
+    },
+    createPregunta: async (tenantId: string, payload: Omit<import("../types").PreguntaInstalacion, "id">) => {
+      const { data } = await apiClient.post(`/auditorias/superadmin/${tenantId}/preguntas/`, payload);
+      return data as import("../types").PreguntaInstalacion;
+    },
+    updatePregunta: async (tenantId: string, id: string, payload: Partial<import("../types").PreguntaInstalacion>) => {
+      const { data } = await apiClient.patch(`/auditorias/superadmin/${tenantId}/preguntas/${id}/`, payload);
+      return data as import("../types").PreguntaInstalacion;
+    },
+    deletePregunta: async (tenantId: string, id: string) => {
+      await apiClient.delete(`/auditorias/superadmin/${tenantId}/preguntas/${id}/`);
+    },
+  },
 };

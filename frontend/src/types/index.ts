@@ -395,6 +395,66 @@ export interface TenantCreatePayload extends Partial<Tenant> {
   gestion_user?: GestionUserCreate;
 }
 
+// ─── Auditorías ───────────────────────────────────────────────────────────────
+export interface CriterioEvaluacion {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  multiplicador: string; // decimal as string from DRF
+  is_active: boolean;
+  orden: number;
+}
+
+export interface PreguntaInstalacion {
+  id: string;
+  texto: string;
+  tipo: "SINO" | "TEXTO" | "PUNTUACION";
+  is_active: boolean;
+  orden: number;
+}
+
+export interface AuditoriaAnimal {
+  id: string;
+  animal: string | null;
+  animal_anilla: string | null;
+  numero_anilla_manual: string;
+  puntuaciones: Record<string, number>; // criterio_id → valor 0-10
+  puntuacion_total: string;
+  puntuacion_maxima: string;
+  porcentaje: number | null;
+  notas: string;
+  created_at: string;
+}
+
+export interface AuditoriaRespuesta {
+  id: string;
+  pregunta: string;
+  pregunta_texto: string;
+  pregunta_tipo: "SINO" | "TEXTO" | "PUNTUACION";
+  respuesta: string;
+}
+
+export type AuditoriaEstado = "PLANIFICADA" | "EN_CURSO" | "COMPLETADA" | "CANCELADA";
+
+export interface AuditoriaSession {
+  id: string;
+  socio: string;
+  socio_nombre: string;
+  fecha_planificada: string;
+  fecha_realizacion: string | null;
+  estado: AuditoriaEstado;
+  auditores: string;
+  notas_generales: string;
+  animales_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AuditoriaSessionDetail extends AuditoriaSession {
+  animales_evaluados: AuditoriaAnimal[];
+  respuestas_instalacion: AuditoriaRespuesta[];
+}
+
 // ─── Pagination ───────────────────────────────────────────────────────────────
 export interface PaginatedResponse<T> {
   count: number;

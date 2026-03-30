@@ -28,4 +28,5 @@ urlpatterns = [
     path("api/v1/superadmin/", include("apps.tenants.superadmin_urls")),
     path("api/v1/configuracion/", include("apps.animals.configuracion_urls")),
     path("api/v1/notificaciones/", include("apps.accounts.notificaciones_urls")),
+    path("api/v1/auditorias/", include("apps.audits.urls")),
 ]

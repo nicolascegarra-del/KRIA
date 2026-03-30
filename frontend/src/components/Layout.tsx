@@ -57,6 +57,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/anillas",                  label: "Anillas",               icon: <Tag size={18} />,             gestionOnly: true },
   { to: "/importar",                 label: "Importar",              icon: <Upload size={18} />,          gestionOnly: true },
   { to: "/reportes",                 label: "Reportes",              icon: <FileText size={18} />,        gestionOnly: true },
+  { to: "/auditorias",              label: "Auditorías",            icon: <ClipboardCheck size={18} />,  gestionOnly: true },
   // SuperAdmin
   { to: "/superadmin",               label: "Dashboard",             icon: <LayoutDashboard size={18} />, superadminOnly: true, exact: true },
   { to: "/superadmin/asociaciones",  label: "Asociaciones",          icon: <Building size={18} />,        superadminOnly: true },
