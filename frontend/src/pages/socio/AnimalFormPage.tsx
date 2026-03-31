@@ -26,7 +26,7 @@ interface FormData {
   ganaderia_nacimiento: string;
   padre_anilla: string;
   madre_anilla: string;
-  candidato_reproductor: boolean;
+
   granja: string;
 }
 
@@ -125,7 +125,7 @@ export default function AnimalFormPage() {
         ganaderia_nacimiento: animal.ganaderia_nacimiento ?? "",
         padre_anilla: animal.padre_anilla ?? "",
         madre_anilla: animal.madre_anilla ?? "",
-        candidato_reproductor: animal.candidato_reproductor,
+
         granja: animal.granja ?? "",
       });
     }
@@ -206,7 +206,7 @@ export default function AnimalFormPage() {
       variedad: data.variedad,
       fecha_incubacion: data.fecha_incubacion || null,
       ganaderia_nacimiento: data.ganaderia_nacimiento,
-      candidato_reproductor: data.candidato_reproductor,
+
       granja: data.granja || null,
       ...(isGestionCreate && { socio: socioId }),
     };
@@ -490,8 +490,6 @@ export default function AnimalFormPage() {
             </div>
           )}
 
-          {/* Campo oculto para react-hook-form — candidato se gestiona desde la lista */}
-          <input type="hidden" {...register("candidato_reproductor")} />
 
           {conflictError && (
             <div className="bg-red-50 border border-red-300 rounded-lg p-3 text-sm text-red-700">
