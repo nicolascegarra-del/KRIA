@@ -1447,7 +1447,7 @@ export default function SuperAdminPage() {
           {/* ── Plantillas de Auditoría ── */}
           <div>
             <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2 mb-3">
-              <ClipboardCheck size={17} className="text-klyp-accent" /> Plantillas de Auditoría
+              <ClipboardCheck size={17} className="text-blue-600" /> Plantillas de Auditoría
             </h2>
             <div className="card overflow-x-auto p-0">
               {loadingTenants ? (
@@ -1478,7 +1478,7 @@ export default function SuperAdminPage() {
                             onClick={() => setAuditConfigTenant(t)}
                             className="flex items-center gap-1.5 text-xs border border-blue-200 text-blue-700 hover:bg-blue-50 rounded-lg px-2.5 py-1.5 transition-colors font-medium ml-auto"
                           >
-                            <ClipboardCheck size={12} /> Criterios y preguntas
+                            <ClipboardCheck size={12} /> Criterios
                           </button>
                         </td>
                       </tr>
@@ -1968,9 +1968,10 @@ function AuditConfigModal({ tenant, onClose }: { tenant: Tenant; onClose: () => 
   const [tab, setTab] = useState<"criterios" | "preguntas">("criterios");
 
   // ── Criterios ──────────────────────────────────────────────────────────────
-  const { data: criterios = [], isLoading: loadCrit } = useQuery({
+  const { data: criterios = [], isLoading: loadCrit, isError: critError } = useQuery({
     queryKey: ["audit-criterios", tenant.id],
     queryFn: () => superadminApi.auditConfig.listCriterios(tenant.id),
+    retry: 1,
   });
   const [newCriterio, setNewCriterio] = useState({ nombre: "", descripcion: "", multiplicador: "1.00", is_active: true, orden: 0 });
   const [showNewCrit, setShowNewCrit] = useState(false);
@@ -1994,9 +1995,10 @@ function AuditConfigModal({ tenant, onClose }: { tenant: Tenant; onClose: () => 
     .reduce((sum, c) => sum + parseFloat(c.multiplicador) * 10, 0);
 
   // ── Preguntas ──────────────────────────────────────────────────────────────
-  const { data: preguntas = [], isLoading: loadPregunta } = useQuery({
+  const { data: preguntas = [], isLoading: loadPregunta, isError: preguntaError } = useQuery({
     queryKey: ["audit-preguntas", tenant.id],
     queryFn: () => superadminApi.auditConfig.listPreguntas(tenant.id),
+    retry: 1,
   });
   const [newPregunta, setNewPregunta] = useState<Omit<PreguntaInstalacion, "id">>({ texto: "", tipo: "SINO", is_active: true, orden: 0 });
   const [showNewPregunta, setShowNewPregunta] = useState(false);
@@ -2027,7 +2029,7 @@ function AuditConfigModal({ tenant, onClose }: { tenant: Tenant; onClose: () => 
               onClick={() => setTab(tabKey)}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors min-h-0 ${
                 tab === tabKey
-                  ? "border-klyp-accent text-klyp-accent"
+                  ? "border-blue-600 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
@@ -2052,6 +2054,11 @@ function AuditConfigModal({ tenant, onClose }: { tenant: Tenant; onClose: () => 
               </button>
             </div>
 
+            {critError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                Error al cargar los criterios. Comprueba la consola del navegador.
+              </div>
+            )}
             {loadCrit ? <div className="h-20 bg-gray-100 rounded animate-pulse" /> : (
               <div className="space-y-2">
                 {criterios.map(c => (
@@ -2140,6 +2147,11 @@ function AuditConfigModal({ tenant, onClose }: { tenant: Tenant; onClose: () => 
               </button>
             </div>
 
+            {preguntaError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                Error al cargar las preguntas. Comprueba la consola del navegador.
+              </div>
+            )}
             {loadPregunta ? <div className="h-20 bg-gray-100 rounded animate-pulse" /> : (
               <div className="space-y-2">
                 {preguntas.map(p => (
