@@ -702,7 +702,6 @@ export default function SuperAdminPage() {
                             <div className="flex items-center justify-end gap-0.5">
                               <button title="Gestionar usuarios admin" className="btn-ghost p-1.5" onClick={() => setUsersModalTenant(t)}><Users size={14} /></button>
                               <button title="Editar" className="btn-ghost p-1.5" onClick={() => openEditTenant(t)}><Edit2 size={14} /></button>
-                              <button title="Configurar plantilla auditorías" className="btn-ghost p-1.5" onClick={() => setAuditConfigTenant(t)}><ClipboardCheck size={14} className="text-blue-600" /></button>
                               <button title={t.is_active ? "Suspender" : "Activar"} className="btn-ghost p-1.5"
                                 onClick={() => t.is_active ? suspendTenantMutation.mutate(t.id) : activateTenantMutation.mutate(t.id)}>
                                 {t.is_active ? <PauseCircle size={14} className="text-amber-500" /> : <PlayCircle size={14} className="text-green-600" />}
@@ -1439,9 +1438,59 @@ export default function SuperAdminPage() {
 
           <div className="flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-xl p-3">
             <AlertTriangle size={16} className="text-orange-500 shrink-0 mt-0.5" />
-            <p className="text-sm text-orange-800">Las acciones de esta sección son <strong>irreversibles</strong>. Úsalas únicamente cuando sea estrictamente necesario.</p>
+            <p className="text-sm text-orange-800">Las acciones destructivas son <strong>irreversibles</strong>. Úsalas únicamente cuando sea estrictamente necesario.</p>
           </div>
 
+          {/* ── Plantillas de Auditoría ── */}
+          <div>
+            <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2 mb-3">
+              <ClipboardCheck size={17} className="text-klyp-accent" /> Plantillas de Auditoría
+            </h2>
+            <div className="card overflow-x-auto p-0">
+              {loadingTenants ? (
+                <div className="p-4 space-y-2">{[1,2,3].map(i => <div key={i} className="h-10 bg-gray-100 animate-pulse rounded-lg" />)}</div>
+              ) : !tenants.length ? (
+                <p className="text-center text-gray-400 py-6">No hay asociaciones.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Asociación</th>
+                      <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Configurar</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {tenants.map((t) => (
+                      <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-6 h-6 rounded shrink-0 flex items-center justify-center overflow-hidden" style={{ background: t.primary_color }}>
+                              {t.logo_url ? <img src={t.logo_url} alt="" className="w-full h-full object-cover" /> : <Building size={11} className="text-white" />}
+                            </div>
+                            <span className="font-medium text-gray-900">{t.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            onClick={() => setAuditConfigTenant(t)}
+                            className="flex items-center gap-1.5 text-xs border border-blue-200 text-blue-700 hover:bg-blue-50 rounded-lg px-2.5 py-1.5 transition-colors font-medium ml-auto"
+                          >
+                            <ClipboardCheck size={12} /> Criterios y preguntas
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
+          {/* ── Operaciones destructivas ── */}
+          <div>
+            <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2 mb-3">
+              <Trash2 size={17} className="text-red-500" /> Operaciones Destructivas
+            </h2>
           <div className="card overflow-x-auto p-0">
             {loadingTenants ? (
               <div className="p-4 space-y-2">{[1,2,3].map(i => <div key={i} className="h-12 bg-gray-100 animate-pulse rounded-lg" />)}</div>
@@ -1498,6 +1547,7 @@ export default function SuperAdminPage() {
                 </tbody>
               </table>
             )}
+          </div>
           </div>
         </>
       )}
