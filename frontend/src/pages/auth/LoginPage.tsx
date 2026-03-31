@@ -57,7 +57,9 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="relative z-10">
-          <img src="/kria-logo.jpg" alt="KRIA" className="h-14 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
+          <div className="inline-flex items-center bg-white rounded-xl px-4 py-2">
+            <img src="/kria-logo.jpg" alt="KRIA" className="h-10 object-contain" style={{ mixBlendMode: "multiply" }} />
+          </div>
         </div>
 
         {/* Copy */}
@@ -174,7 +176,8 @@ export default function LoginPage() {
             <div className="mt-4 text-center">
               <Link
                 to="/auth/reset-password"
-                className="text-sm text-klyp-accent hover:underline"
+                className="text-sm hover:underline"
+                style={{ color: "#2E6DB4" }}
               >
                 ¿Olvidaste tu contraseña?
               </Link>

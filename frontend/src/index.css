@@ -30,17 +30,27 @@
 }
 
 @layer components {
+  /* ── Buttons ────────────────────────────────────────────────────────────── */
   .btn-primary {
-    @apply bg-klyp-navy text-white px-4 py-2.5 rounded-lg font-medium
-           hover:bg-klyp-light active:scale-95 transition-all
+    @apply text-white px-4 py-2.5 rounded-lg font-medium
+           active:scale-95 transition-all
            disabled:opacity-50 disabled:cursor-not-allowed
            min-h-[48px] flex items-center justify-center gap-2;
+    background-color: var(--color-primary, #051937);
+  }
+  .btn-primary:hover:not(:disabled) {
+    filter: brightness(0.88);
   }
 
   .btn-secondary {
-    @apply bg-white text-klyp-navy border border-klyp-navy px-4 py-2.5 rounded-lg font-medium
-           hover:bg-klyp-pale active:scale-95 transition-all
+    @apply bg-white px-4 py-2.5 rounded-lg font-medium
+           active:scale-95 transition-all
            disabled:opacity-50 min-h-[48px] flex items-center justify-center gap-2;
+    color: var(--color-primary, #051937);
+    border: 1.5px solid var(--color-primary, #051937);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background-color: #E8EDF5;
   }
 
   .btn-danger {
@@ -49,21 +59,27 @@
            disabled:opacity-50 min-h-[48px] flex items-center justify-center gap-2;
   }
 
-  .input-field {
-    @apply w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm
-           focus:outline-none focus:ring-2 focus:ring-klyp-accent focus:border-transparent
-           disabled:bg-gray-100 disabled:cursor-not-allowed
-           min-h-[48px];
-  }
-
-  .card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-4;
-  }
-
   .btn-ghost {
     @apply bg-transparent text-gray-600 px-3 py-2 rounded-lg font-medium
            hover:bg-gray-100 active:scale-95 transition-all
-           disabled:opacity-50 min-h-[36px] flex items-center justify-center gap-1.5;
+           disabled:opacity-50 flex items-center justify-center gap-1.5;
+    min-height: 36px;
+  }
+
+  /* ── Inputs ─────────────────────────────────────────────────────────────── */
+  .input-field {
+    @apply w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm
+           focus:outline-none focus:border-transparent
+           disabled:bg-gray-100 disabled:cursor-not-allowed
+           min-h-[48px];
+  }
+  .input-field:focus {
+    box-shadow: 0 0 0 2px var(--color-primary, #2E6DB4);
+  }
+
+  /* ── Cards & misc ───────────────────────────────────────────────────────── */
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-4;
   }
 
   .estado-chip {

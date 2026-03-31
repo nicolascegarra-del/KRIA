@@ -4,7 +4,7 @@ Centralised email utility for KRIA.
 Uses PlatformSettings SMTP (or a Tenant's SMTP) instead of the env-var
 Django defaults, and logs every attempt to MailLog.
 """
-from django.core.mail import get_connection, EmailMessage
+from django.core.mail import get_connection, EmailMessage, EmailMultiAlternatives
 from django.conf import settings as django_settings
 
 
@@ -13,6 +13,7 @@ def send_platform_mail(
     body: str,
     recipient_list: list[str],
     *,
+    html_body: str | None = None,
     tenant=None,
     tipo: str = "GENERAL",
     fail_silently: bool = False,
@@ -69,13 +70,23 @@ def send_platform_mail(
             # No SMTP configured — fall back to Django default (usually console/env)
             connection = None
 
-        msg = EmailMessage(
-            subject=subject,
-            body=body,
-            from_email=from_email,
-            to=recipient_list,
-            connection=connection,
-        )
+        if html_body:
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=body,
+                from_email=from_email,
+                to=recipient_list,
+                connection=connection,
+            )
+            msg.attach_alternative(html_body, "text/html")
+        else:
+            msg = EmailMessage(
+                subject=subject,
+                body=body,
+                from_email=from_email,
+                to=recipient_list,
+                connection=connection,
+            )
         msg.send(fail_silently=False)
         success = True
     except Exception as exc:

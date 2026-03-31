@@ -113,7 +113,10 @@ export default function PerfilPage() {
     },
     onError: (e: any) => {
       const d = e?.response?.data;
-      setCambioError(d?.detail ?? "Error al enviar la solicitud.");
+      const msg = typeof d === "object" && d !== null
+        ? (d.detail ?? Object.values(d).flat().join(" "))
+        : null;
+      setCambioError(msg || "Error al enviar la solicitud. Inténtalo de nuevo o contacta con soporte.");
     },
   });
 

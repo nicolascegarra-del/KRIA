@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from core.permissions import IsGestion, IsSocioOrGestion
+from core.permissions import IsGestion, IsSocioOrGestion, get_effective_is_gestion
 from .models import Socio, User
 from .serializers import (
     CustomTokenObtainPairSerializer,
@@ -78,9 +78,19 @@ class PasswordResetRequestView(APIView):
         user.save(update_fields=["reset_token", "reset_token_created"])
 
         reset_url = f"{settings.FRONTEND_URL}/auth/reset-password?token={token}"
+        tenant_name = tenant.name if tenant else "KRIA"
+
+        # Render HTML template
+        from django.template.loader import render_to_string
+        html_body = render_to_string("email/password_reset.html", {
+            "tenant_name": tenant_name,
+            "reset_url": reset_url,
+        })
+
         send_platform_mail(
-            subject="Restablecimiento de contraseña — KRIA",
+            subject=f"Restablecimiento de contraseña — {tenant_name}",
             body=f"Haz clic en el enlace para restablecer tu contraseña:\n{reset_url}\n\nEste enlace expira en 24 horas.",
+            html_body=html_body,
             recipient_list=[email],
             tipo="RESET_PASSWORD",
             fail_silently=True,

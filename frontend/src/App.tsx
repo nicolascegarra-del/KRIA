@@ -148,13 +148,17 @@ export default function App() {
 
   // Apply branding from cache immediately (skip for superadmins — they have no tenant branding)
   useEffect(() => {
-    if (branding && !user?.is_superadmin) applyBranding(branding);
+    if (branding && user && !user.is_superadmin) applyBranding(branding);
   }, [branding, user?.is_superadmin]);
 
-  // Fixed title for superadmins
+  // Title management
   useEffect(() => {
-    if (user?.is_superadmin) document.title = "KRIA – Gestión Animal";
-  }, [user?.is_superadmin]);
+    if (!user) {
+      document.title = "KRIA";
+    } else if (user.is_superadmin) {
+      document.title = "KRIA";
+    }
+  }, [user]);
 
   // Fetch inactivity timeout from public endpoint
   useEffect(() => {

@@ -520,7 +520,8 @@ class SuperAdminStatsView(APIView):
         global_stats = {
             "tenants": Tenant.objects.exclude(slug="system").count(),
             "usuarios": User.objects.filter(is_gestion=True, is_superadmin=False).count(),
-            "socios": Socio.all_objects.filter(estado="ALTA").count(),
+            "socios_activos": Socio.all_objects.filter(estado="ALTA").count(),
+            "socios_total": Socio.all_objects.count(),
             "animales": Animal.all_objects.count(),
         }
 

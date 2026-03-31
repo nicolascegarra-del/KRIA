@@ -22,7 +22,9 @@ import type { Tenant, GestionUserCreate, GestionUser, AnillaSize, PlatformSettin
 interface SuperAdminStats {
   tenants: number;
   usuarios: number;
-  socios: number;
+  socios?: number;         // legacy field, keep for backwards compat
+  socios_activos?: number;
+  socios_total?: number;
   animales: number;
   por_asociacion: { id: string; name: string; slug: string; is_active: boolean; max_socios: number; socios_count: number }[];
 }
@@ -590,12 +592,13 @@ export default function SuperAdminPage() {
 
             {stats && (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                   {[
-                    { label: "Asociaciones",  value: stats.tenants,  icon: <Building size={18} />,  color: "text-violet-600" },
-                    { label: "Admins gestión",value: stats.usuarios, icon: <Users size={18} />,     color: "text-blue-600" },
-                    { label: "Socios activos",value: stats.socios,   icon: <UserCheck size={18} />, color: "text-green-600" },
-                    { label: "Animales",      value: stats.animales, icon: <Shield size={18} />,    color: "text-amber-600" },
+                    { label: "Asociaciones",  value: stats.tenants,        icon: <Building size={18} />,  color: "text-violet-600" },
+                    { label: "Admins gestión",value: stats.usuarios,       icon: <Users size={18} />,     color: "text-blue-600" },
+                    { label: "Socios activos",value: stats.socios_activos ?? stats.socios, icon: <UserCheck size={18} />, color: "text-green-600" },
+                    { label: "Socios totales",value: stats.socios_total ?? stats.socios,   icon: <Users size={18} />,     color: "text-gray-600" },
+                    { label: "Animales",      value: stats.animales,       icon: <Shield size={18} />,    color: "text-amber-600" },
                   ].map((s) => (
                     <div key={s.label} className="card text-center">
                       <div className={`${s.color} flex justify-center mb-1`}>{s.icon}</div>
