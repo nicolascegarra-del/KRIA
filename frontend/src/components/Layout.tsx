@@ -266,7 +266,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     navigate("/login");
   };
 
-  const primaryColor = branding?.primary_color ?? "#1565C0";
+  const primaryColor = branding?.primary_color ?? "#051937";
 
   return (
     <div className="h-full flex bg-gray-50">
@@ -296,7 +296,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {branding?.logo_url && (!isSuperadmin || impersonatingTenant) ? (
             <img src={branding.logo_url} alt="Logo" className="w-8 h-8 rounded object-cover" />
           ) : (
-            <Bird size={24} className="text-white" />
+            <img src="/kria-logo.jpg" alt="KRIA" className="h-7 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
           )}
           <div>
             <div className="font-bold text-sm leading-tight">
@@ -441,7 +441,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {branding?.logo_url && (!isSuperadmin || impersonatingTenant) ? (
             <img src={branding.logo_url} alt="Logo" className="w-7 h-7 rounded object-cover shrink-0" />
           ) : (
-            <Bird size={20} className="shrink-0" style={{ color: primaryColor }} />
+            <img src="/kria-logo.jpg" alt="KRIA" className="h-6 object-contain shrink-0" style={{ mixBlendMode: "multiply" }} />
           )}
           <span className="font-semibold text-gray-800 flex-1 min-w-0 truncate">
             {isSuperadmin && !impersonatingTenant ? "KRIA" : (branding?.name ?? "KRIA")}

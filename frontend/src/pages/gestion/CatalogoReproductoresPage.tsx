@@ -311,10 +311,10 @@ export default function CatalogoReproductoresPage() {
   body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1a1a1a; }
   .page { width: 210mm; min-height: 297mm; padding: 20mm; page-break-after: always; display: flex; flex-direction: column; }
   .page:last-child { page-break-after: avoid; }
-  .header { border-bottom: 3px solid #1565C0; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .header { border-bottom: 3px solid #2E6DB4; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
   .header-title { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
-  .header-num { font-size: 11px; color: #1565C0; font-weight: 700; }
-  .animal-id { font-family: monospace; font-size: 28px; font-weight: 900; color: #1565C0; margin-bottom: 4px; }
+  .header-num { font-size: 11px; color: #2E6DB4; font-weight: 700; }
+  .animal-id { font-family: monospace; font-size: 28px; font-weight: 900; color: #2E6DB4; margin-bottom: 4px; }
   .animal-year { font-size: 16px; color: #666; margin-bottom: 16px; }
   .content { display: flex; gap: 24px; flex: 1; }
   .photo-area { width: 160px; flex-shrink: 0; }

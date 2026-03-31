@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { Bird, Eye, EyeOff, Loader2, BookOpen, Shield, BarChart2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, BookOpen, Shield, BarChart2 } from "lucide-react";
 import { authApi } from "../../api/auth";
 import { useAuthStore } from "../../store/authStore";
 
@@ -46,17 +46,18 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* Panel izquierdo — branding */}
-      <div className="hidden lg:flex lg:w-[55%] bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 flex-col justify-between p-12 text-white relative overflow-hidden">
+      <div
+        className="hidden lg:flex lg:w-[55%] flex-col justify-between p-12 text-white relative overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #051937 0%, #051937 60%, #1A3A6B 100%)" }}
+      >
         {/* Decorative circles */}
         <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/5 pointer-events-none" />
         <div className="absolute -bottom-32 -left-16 w-80 h-80 rounded-full bg-white/5 pointer-events-none" />
+        <div className="absolute top-1/2 right-8 w-48 h-48 rounded-full bg-white/3 pointer-events-none" />
 
         {/* Logo */}
-        <div className="flex items-center gap-3 relative z-10">
-          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-            <Bird size={22} className="text-white" />
-          </div>
-          <span className="text-xl font-bold tracking-tight">KRIA</span>
+        <div className="relative z-10">
+          <img src="/kria-logo.jpg" alt="KRIA" className="h-14 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
         </div>
 
         {/* Copy */}
@@ -65,7 +66,7 @@ export default function LoginPage() {
             <h1 className="text-4xl font-bold leading-tight">
               Gestión de Libros<br />Genealógicos Avícolas
             </h1>
-            <p className="mt-4 text-blue-200 text-lg leading-relaxed max-w-md">
+            <p className="mt-4 text-white/70 text-lg leading-relaxed max-w-md">
               Plataforma integral para asociaciones avícolas: registro genealógico, evaluaciones morfológicas y catálogos de reproductores.
             </p>
           </div>
@@ -77,7 +78,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <p className="font-semibold text-sm">Registro genealógico completo</p>
-                <p className="text-blue-300 text-sm mt-0.5">Trazabilidad total con árbol genealógico por ejemplar</p>
+                <p className="text-white/60 text-sm mt-0.5">Trazabilidad total con árbol genealógico por ejemplar</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -86,7 +87,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <p className="font-semibold text-sm">Validación y evaluación morfológica</p>
-                <p className="text-blue-300 text-sm mt-0.5">Flujo de aprobación con puntuación por criterios estándar</p>
+                <p className="text-white/60 text-sm mt-0.5">Flujo de aprobación con puntuación por criterios estándar</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -95,14 +96,14 @@ export default function LoginPage() {
               </div>
               <div>
                 <p className="font-semibold text-sm">Informes y certificados</p>
-                <p className="text-blue-300 text-sm mt-0.5">Generación de PDFs y exportación Excel con un clic</p>
+                <p className="text-white/60 text-sm mt-0.5">Generación de PDFs y exportación Excel con un clic</p>
               </div>
             </div>
           </div>
         </div>
 
-        <p className="text-blue-400 text-xs relative z-10">
-          © {new Date().getFullYear()} KRIA · Plataforma de Libros Genealógicos
+        <p className="text-white/40 text-xs relative z-10">
+          © {new Date().getFullYear()} KRIA by Klyp · Plataforma de Libros Genealógicos
         </p>
       </div>
 
@@ -111,10 +112,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Logo móvil */}
           <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-3 bg-blue-700">
-              <Bird size={28} className="text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">KRIA</h1>
+            <img src="/kria-logo.jpg" alt="KRIA" className="h-12 object-contain mx-auto mb-2" style={{ mixBlendMode: "multiply" }} />
             <p className="text-sm text-gray-500 mt-1">Libros Genealógicos Avícolas</p>
           </div>
 
@@ -176,7 +174,7 @@ export default function LoginPage() {
             <div className="mt-4 text-center">
               <Link
                 to="/auth/reset-password"
-                className="text-sm text-blue-700 hover:underline"
+                className="text-sm text-klyp-accent hover:underline"
               >
                 ¿Olvidaste tu contraseña?
               </Link>

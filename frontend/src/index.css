@@ -31,15 +31,15 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-blue-800 text-white px-4 py-2.5 rounded-lg font-medium
-           hover:bg-blue-900 active:scale-95 transition-all
+    @apply bg-klyp-navy text-white px-4 py-2.5 rounded-lg font-medium
+           hover:bg-klyp-light active:scale-95 transition-all
            disabled:opacity-50 disabled:cursor-not-allowed
            min-h-[48px] flex items-center justify-center gap-2;
   }
 
   .btn-secondary {
-    @apply bg-white text-blue-800 border border-blue-800 px-4 py-2.5 rounded-lg font-medium
-           hover:bg-blue-50 active:scale-95 transition-all
+    @apply bg-white text-klyp-navy border border-klyp-navy px-4 py-2.5 rounded-lg font-medium
+           hover:bg-klyp-pale active:scale-95 transition-all
            disabled:opacity-50 min-h-[48px] flex items-center justify-center gap-2;
   }
 
@@ -51,7 +51,7 @@
 
   .input-field {
     @apply w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm
-           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+           focus:outline-none focus:ring-2 focus:ring-klyp-accent focus:border-transparent
            disabled:bg-gray-100 disabled:cursor-not-allowed
            min-h-[48px];
   }

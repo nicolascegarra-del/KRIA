@@ -44,7 +44,7 @@ interface TenantForm {
 }
 
 const TENANT_DEFAULTS: TenantForm = {
-  name: "", slug: "", primary_color: "#1565C0", secondary_color: "#FBC02D",
+  name: "", slug: "", primary_color: "#051937", secondary_color: "#2E6DB4",
   is_active: true, max_socios: 50,
   nombre_completo: "", cif: "", email_asociacion: "",
   domicilio: "", cod_postal: "", municipio: "", provincia: "",
