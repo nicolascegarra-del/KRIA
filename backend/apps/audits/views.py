@@ -69,6 +69,7 @@ class PreguntaInstalacionDetailView(generics.RetrieveUpdateDestroyAPIView):
 class AuditoriaSessionListCreateView(generics.ListCreateAPIView):
     serializer_class = AuditoriaSessionSerializer
     permission_classes = [IsGestion]
+    pagination_class = None
 
     def get_queryset(self):
         qs = AuditoriaSession.objects.filter(
@@ -108,6 +109,7 @@ class AuditoriaSessionDetailView(generics.RetrieveUpdateDestroyAPIView):
 class AuditoriaAnimalListCreateView(generics.ListCreateAPIView):
     serializer_class = AuditoriaAnimalSerializer
     permission_classes = [IsGestion]
+    pagination_class = None
 
     def _get_auditoria(self):
         return AuditoriaSession.objects.get(
