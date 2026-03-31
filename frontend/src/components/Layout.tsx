@@ -210,15 +210,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
 
-  const { data: socioData } = useQuery({
-    queryKey: ["socio-me"],
-    queryFn: perfilSocioApi.get,
-    enabled: isSocio,
-  });
-
   const isGestion = !!impersonatingTenant || (user?.is_gestion ?? false);
   const isSuperadmin = user?.is_superadmin ?? false;
   const isSocio = !isGestion && !isSuperadmin;
+
+  const { data: socioData } = useQuery({
+    queryKey: ["socio-me"],
+    queryFn: perfilSocioApi.getMe,
+    enabled: isSocio,
+  });
 
   // ── Notifications (socios only) ──────────────────────────────────────────
   const { data: notifData } = useQuery({
