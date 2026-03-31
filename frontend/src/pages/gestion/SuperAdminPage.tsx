@@ -2017,15 +2017,18 @@ function AuditConfigModal({ tenant, onClose }: { tenant: Tenant; onClose: () => 
       <div className="space-y-4">
         {/* Tabs */}
         <div className="flex border-b border-gray-200">
-          {(["criterios", "preguntas"] as const).map(t => (
+          {(["criterios", "preguntas"] as const).map(tabKey => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                tab === t ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-700"
+              key={tabKey}
+              type="button"
+              onClick={() => setTab(tabKey)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors min-h-0 ${
+                tab === tabKey
+                  ? "border-klyp-accent text-klyp-accent"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
-              {t === "criterios" ? "Criterios de Evaluación" : "Preguntas de Instalaciones"}
+              {tabKey === "criterios" ? "Criterios de Evaluación" : "Preguntas de Instalaciones"}
             </button>
           ))}
         </div>
@@ -2041,7 +2044,7 @@ function AuditConfigModal({ tenant, onClose }: { tenant: Tenant; onClose: () => 
                   <span className="text-amber-600 ml-1">(recomendado: 100)</span>
                 )}
               </p>
-              <button onClick={() => setShowNewCrit(true)} className="btn-secondary text-xs flex items-center gap-1">
+              <button type="button" onClick={() => setShowNewCrit(true)} className="btn-secondary text-xs flex items-center gap-1 min-h-0 py-1.5 px-2.5">
                 <Plus size={12} /> Añadir
               </button>
             </div>
@@ -2058,12 +2061,13 @@ function AuditConfigModal({ tenant, onClose }: { tenant: Tenant; onClose: () => 
                       ×{c.multiplicador} → max <strong>{(parseFloat(c.multiplicador) * 10).toFixed(1)}</strong> pts
                     </div>
                     <button
+                      type="button"
                       onClick={() => toggleCrit.mutate({ id: c.id, is_active: !c.is_active })}
-                      className={`text-xs px-2 py-0.5 rounded border transition-colors ${c.is_active ? "border-green-300 text-green-700 hover:bg-green-50" : "border-gray-300 text-gray-500 hover:bg-gray-100"}`}
+                      className={`text-xs px-2 py-0.5 rounded border transition-colors min-h-0 ${c.is_active ? "border-green-300 text-green-700 hover:bg-green-50" : "border-gray-300 text-gray-500 hover:bg-gray-100"}`}
                     >
                       {c.is_active ? "Activo" : "Inactivo"}
                     </button>
-                    <button onClick={() => deleteCrit.mutate(c.id)} className="text-red-400 hover:text-red-600">
+                    <button type="button" onClick={() => deleteCrit.mutate(c.id)} className="text-red-400 hover:text-red-600 min-h-0 p-1">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -2108,11 +2112,12 @@ function AuditConfigModal({ tenant, onClose }: { tenant: Tenant; onClose: () => 
                   </div>
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <button onClick={() => setShowNewCrit(false)} className="btn-ghost text-xs">Cancelar</button>
+                  <button type="button" onClick={() => setShowNewCrit(false)} className="btn-ghost min-h-0 py-1.5 px-3 text-xs">Cancelar</button>
                   <button
+                    type="button"
                     onClick={() => createCrit.mutate()}
                     disabled={!newCriterio.nombre || createCrit.isPending}
-                    className="btn-primary text-xs disabled:opacity-50"
+                    className="btn-primary text-xs disabled:opacity-50 min-h-0 py-1.5 px-3"
                   >
                     {createCrit.isPending ? <Loader2 size={12} className="animate-spin" /> : "Guardar criterio"}
                   </button>
@@ -2127,7 +2132,7 @@ function AuditConfigModal({ tenant, onClose }: { tenant: Tenant; onClose: () => 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-xs text-gray-500">{preguntas.length} pregunta{preguntas.length !== 1 ? "s" : ""} configurada{preguntas.length !== 1 ? "s" : ""}</p>
-              <button onClick={() => setShowNewPregunta(true)} className="btn-secondary text-xs flex items-center gap-1">
+              <button type="button" onClick={() => setShowNewPregunta(true)} className="btn-secondary text-xs flex items-center gap-1 min-h-0 py-1.5 px-2.5">
                 <Plus size={12} /> Añadir
               </button>
             </div>
@@ -2143,12 +2148,13 @@ function AuditConfigModal({ tenant, onClose }: { tenant: Tenant; onClose: () => 
                       </span>
                     </div>
                     <button
+                      type="button"
                       onClick={() => togglePregunta.mutate({ id: p.id, is_active: !p.is_active })}
-                      className={`text-xs px-2 py-0.5 rounded border shrink-0 transition-colors ${p.is_active ? "border-green-300 text-green-700 hover:bg-green-50" : "border-gray-300 text-gray-500 hover:bg-gray-100"}`}
+                      className={`text-xs px-2 py-0.5 rounded border shrink-0 transition-colors min-h-0 ${p.is_active ? "border-green-300 text-green-700 hover:bg-green-50" : "border-gray-300 text-gray-500 hover:bg-gray-100"}`}
                     >
                       {p.is_active ? "Activa" : "Inactiva"}
                     </button>
-                    <button onClick={() => deletePregunta.mutate(p.id)} className="text-red-400 hover:text-red-600 shrink-0">
+                    <button type="button" onClick={() => deletePregunta.mutate(p.id)} className="text-red-400 hover:text-red-600 shrink-0 min-h-0 p-1">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -2183,11 +2189,12 @@ function AuditConfigModal({ tenant, onClose }: { tenant: Tenant; onClose: () => 
                   </select>
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <button onClick={() => setShowNewPregunta(false)} className="btn-ghost text-xs">Cancelar</button>
+                  <button type="button" onClick={() => setShowNewPregunta(false)} className="btn-ghost min-h-0 py-1.5 px-3 text-xs">Cancelar</button>
                   <button
+                    type="button"
                     onClick={() => createPregunta.mutate()}
                     disabled={!newPregunta.texto || createPregunta.isPending}
-                    className="btn-primary text-xs disabled:opacity-50"
+                    className="btn-primary text-xs disabled:opacity-50 min-h-0 py-1.5 px-3"
                   >
                     {createPregunta.isPending ? <Loader2 size={12} className="animate-spin" /> : "Guardar pregunta"}
                   </button>
@@ -2198,7 +2205,7 @@ function AuditConfigModal({ tenant, onClose }: { tenant: Tenant; onClose: () => 
         )}
 
         <div className="flex justify-end border-t border-gray-100 pt-3">
-          <button onClick={onClose} className="btn-primary text-sm">Cerrar</button>
+          <button type="button" onClick={onClose} className="btn-secondary text-sm min-h-0 py-2 px-4">Cerrar</button>
         </div>
       </div>
     </Modal>
