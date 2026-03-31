@@ -100,9 +100,9 @@ class SolicitudRealtaResolveView(APIView):
         if accion == "aprobar":
             solicitud.estado = SolicitudRealta.Estado.APROBADO
             solicitud.save()
-            # Reactivar animal: vuelve a AÑADIDO, se limpian baja y razon_rechazo
+            # Reactivar animal: vuelve a REGISTRADO, se limpian baja y razon_rechazo
             animal = solicitud.animal
-            animal.estado = "AÑADIDO"
+            animal.estado = "REGISTRADO"
             animal.fecha_baja = None
             animal.motivo_baja = None
             animal.razon_rechazo = ""
@@ -127,7 +127,7 @@ class DashboardTareasPendientesView(APIView):
 
         pendientes_aprobacion = Animal.all_objects.filter(
             tenant=tenant,
-            estado=Animal.Estado.AÑADIDO,
+            estado=Animal.Estado.REGISTRADO,
         ).count()
 
         conflictos_pendientes = Conflicto.all_objects.filter(

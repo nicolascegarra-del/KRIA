@@ -207,7 +207,7 @@ class AnimalListCreateView(generics.ListCreateAPIView):
             existing.socio = socio
             existing.tenant = tenant
             existing.fotos = []
-            existing.estado = Animal.Estado.AÑADIDO
+            existing.estado = Animal.Estado.REGISTRADO
             existing.save()
             return Response(AnimalDetailSerializer(existing).data, status=200)
 
@@ -265,7 +265,7 @@ class AnimalApproveView(APIView):
         except Animal.DoesNotExist:
             return Response({"detail": "Not found."}, status=404)
 
-        if animal.estado not in (Animal.Estado.AÑADIDO, Animal.Estado.RECHAZADO):
+        if animal.estado not in (Animal.Estado.REGISTRADO, Animal.Estado.RECHAZADO):
             return Response({"detail": f"Cannot approve animal in state {animal.estado}."}, status=400)
 
         # Bloquear aprobación si hay alerta de diámetro (anilla no corresponde al sexo)
@@ -526,7 +526,7 @@ class AnimalReproductorApproveView(APIView):
 
 # Motivos de rechazo predefinidos por fase
 MOTIVOS_RECHAZO = {
-    "AÑADIDO": [
+    "REGISTRADO": [
         "Documentación incompleta",
         "Foto de perfil ilegible",
         "Foto de cabeza ilegible",
@@ -665,7 +665,7 @@ class AnimalReactivarView(APIView):
         if animal.estado not in (Animal.Estado.BAJA, Animal.Estado.RECHAZADO, Animal.Estado.SOCIO_EN_BAJA):
             return Response({"detail": f"No se puede reactivar un animal en estado {animal.estado}."}, status=400)
 
-        animal.estado = Animal.Estado.AÑADIDO
+        animal.estado = Animal.Estado.REGISTRADO
         animal.fecha_baja = None
         animal.motivo_baja = None
         animal.razon_rechazo = ""

@@ -2,7 +2,7 @@ import clsx from "clsx";
 import type { AnimalEstado } from "../types";
 
 const STATE_CONFIG: Record<AnimalEstado, { label: string; classes: string }> = {
-  AÑADIDO: { label: "Añadido", classes: "bg-yellow-400 text-yellow-900" },
+  REGISTRADO: { label: "Registrado", classes: "bg-yellow-400 text-yellow-900" },
   APROBADO: { label: "Aprobado", classes: "bg-green-800 text-white" },
   EVALUADO: { label: "Evaluado", classes: "bg-yellow-500 text-yellow-900" },
   RECHAZADO: { label: "Rechazado", classes: "bg-red-700 text-white" },

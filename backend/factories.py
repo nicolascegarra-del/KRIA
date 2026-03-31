@@ -67,7 +67,7 @@ class AnimalFactory(DjangoModelFactory):
     anio_nacimiento = 2024
     sexo = Animal.Sexo.MACHO
     variedad = Animal.Variedad.SALMON
-    estado = Animal.Estado.AÑADIDO
+    estado = Animal.Estado.REGISTRADO
     fotos = []
     historico_pesos = []
     alerta_anilla = ""

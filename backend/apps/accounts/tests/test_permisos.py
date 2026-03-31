@@ -70,7 +70,7 @@ class TestPermisosRol:
     def test_socio_no_puede_aprobar_animal(self, socio_client, socio_user, tenant):
         """Un socio no puede llamar al endpoint de aprobación (403)."""
         from factories import AnimalFactory
-        animal = AnimalFactory(socio=socio_user.socio, tenant=tenant, estado="AÑADIDO")
+        animal = AnimalFactory(socio=socio_user.socio, tenant=tenant, estado="REGISTRADO")
 
         resp = socio_client.post(f"/api/v1/animals/{animal.id}/approve/")
         assert resp.status_code == 403
@@ -78,7 +78,7 @@ class TestPermisosRol:
     def test_socio_no_puede_rechazar_animal(self, socio_client, socio_user, tenant):
         """Un socio no puede llamar al endpoint de rechazo (403)."""
         from factories import AnimalFactory
-        animal = AnimalFactory(socio=socio_user.socio, tenant=tenant, estado="AÑADIDO")
+        animal = AnimalFactory(socio=socio_user.socio, tenant=tenant, estado="REGISTRADO")
 
         resp = socio_client.post(f"/api/v1/animals/{animal.id}/reject/",
                                  {"razon_rechazo": "test"})
@@ -122,7 +122,7 @@ class TestPermisosRol:
 
         # Animal en el tenant activo
         animal_local = AnimalFactory(
-            socio=socio_user.socio, tenant=tenant, estado="AÑADIDO"
+            socio=socio_user.socio, tenant=tenant, estado="REGISTRADO"
         )
 
         # Animal en otro tenant (no debe aparecer en el count)
@@ -130,7 +130,7 @@ class TestPermisosRol:
         otro_user = UserFactory(tenant=otro_tenant)
         otro_socio = SocioFactory(user=otro_user, tenant=otro_tenant)
         from factories import AnimalFactory as AF
-        AF(socio=otro_socio, tenant=otro_tenant, estado="AÑADIDO")
+        AF(socio=otro_socio, tenant=otro_tenant, estado="REGISTRADO")
 
         resp = gestion_client.get("/api/v1/dashboard/tareas-pendientes/")
         assert resp.status_code == 200

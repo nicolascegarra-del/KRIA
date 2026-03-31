@@ -129,7 +129,7 @@ class TestAprobacionConFotos:
 
     def test_aprobar_sin_fotos_da_400(self, gestion_client, socio_user, tenant):
         from factories import AnimalFactory
-        animal = AnimalFactory(socio=socio_user.socio, tenant=tenant, estado="AÑADIDO")
+        animal = AnimalFactory(socio=socio_user.socio, tenant=tenant, estado="REGISTRADO")
 
         resp = gestion_client.post(f"/api/v1/animals/{animal.id}/approve/")
         assert resp.status_code == 400
@@ -138,7 +138,7 @@ class TestAprobacionConFotos:
     def test_aprobar_con_2_fotos_da_400(self, gestion_client, socio_user, tenant):
         from factories import AnimalFactory
         animal = AnimalFactory(
-            socio=socio_user.socio, tenant=tenant, estado="AÑADIDO",
+            socio=socio_user.socio, tenant=tenant, estado="REGISTRADO",
             fotos=[
                 {"tipo": "PERFIL", "key": "k1", "uploaded_at": "2024-01-01"},
                 {"tipo": "CABEZA", "key": "k2", "uploaded_at": "2024-01-01"},
@@ -151,7 +151,7 @@ class TestAprobacionConFotos:
     def test_aprobar_con_3_fotos_tipadas_ok(self, gestion_client, socio_user, tenant):
         from factories import AnimalFactory
         animal = AnimalFactory(
-            socio=socio_user.socio, tenant=tenant, estado="AÑADIDO",
+            socio=socio_user.socio, tenant=tenant, estado="REGISTRADO",
             fotos=[
                 {"tipo": "PERFIL", "key": "k1", "uploaded_at": "2024-01-01"},
                 {"tipo": "CABEZA", "key": "k2", "uploaded_at": "2024-01-01"},
@@ -301,7 +301,7 @@ class TestBloqueoVariedad:
         import unittest.mock as mock
         animal = AnimalFactory(
             socio=socio_user.socio, tenant=tenant,
-            estado="AÑADIDO", variedad="SALMON"
+            estado="REGISTRADO", variedad="SALMON"
         )
 
         with mock.patch("apps.reports.storage.get_presigned_download_url", return_value="http://minio/test.jpg"):

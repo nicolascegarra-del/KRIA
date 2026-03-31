@@ -66,7 +66,7 @@ export interface Granja {
 }
 
 // ─── Animal ───────────────────────────────────────────────────────────────────
-export type AnimalEstado = "AÑADIDO" | "APROBADO" | "EVALUADO" | "RECHAZADO" | "SOCIO_EN_BAJA" | "BAJA";
+export type AnimalEstado = "REGISTRADO" | "APROBADO" | "EVALUADO" | "RECHAZADO" | "SOCIO_EN_BAJA" | "BAJA";
 export type AnimalSexo = "M" | "H";
 export type AnimalVariedad = "SALMON" | "PLATA" | "SIN_DEFINIR";
 

@@ -27,14 +27,14 @@ export default function ValidacionesPage() {
   const toggleExpand = (key: string) =>
     setExpandedId((prev) => (prev === key ? null : key));
 
-  // ── Validaciones (animales AÑADIDO) ──────────────────────────────────────
+  // ── Validaciones (animales REGISTRADO) ───────────────────────────────────
   const [rejectNotas, setRejectNotas] = useState<Record<string, string>>({});
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [approveErrors, setApproveErrors] = useState<Record<string, string>>({});
 
   const { data: validacionesData, isLoading: loadingValidaciones } = useQuery({
-    queryKey: ["animals", { estado: "AÑADIDO" }],
-    queryFn: () => animalsApi.list({ estado: "AÑADIDO" }),
+    queryKey: ["animals", { estado: "REGISTRADO" }],
+    queryFn: () => animalsApi.list({ estado: "REGISTRADO" }),
   });
 
   const approveMutation = useMutation({
@@ -319,7 +319,7 @@ export default function ValidacionesPage() {
       ) : (
         <div className="space-y-2">
 
-          {/* ── Animales AÑADIDO ─────────────────────────────────────────── */}
+          {/* ── Animales REGISTRADO ──────────────────────────────────────── */}
           {animals.map((animal) => {
             const key = `a-${animal.id}`;
             const isExpanded = expandedId === key;

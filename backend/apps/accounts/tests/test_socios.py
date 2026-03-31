@@ -94,7 +94,7 @@ class TestSocioConstraints:
         from apps.animals.models import Animal
 
         a1 = AnimalFactory(socio=socio_user.socio, tenant=tenant, estado="APROBADO")
-        a2 = AnimalFactory(socio=socio_user.socio, tenant=tenant, estado="AÑADIDO")
+        a2 = AnimalFactory(socio=socio_user.socio, tenant=tenant, estado="REGISTRADO")
 
         resp = gestion_client.post(
             f"/api/v1/socios/{socio_user.socio.id}/dar-baja/",

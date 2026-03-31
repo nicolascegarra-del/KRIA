@@ -24,7 +24,7 @@ import {
 import type { Animal, AnimalEstado } from "../../types";
 import clsx from "clsx";
 
-const ACTIVO_STATES: AnimalEstado[] = ["AÑADIDO", "APROBADO", "EVALUADO"];
+const ACTIVO_STATES: AnimalEstado[] = ["REGISTRADO", "APROBADO", "EVALUADO"];
 const NO_ACTIVO_STATES: AnimalEstado[] = ["RECHAZADO", "SOCIO_EN_BAJA", "BAJA"];
 
 type Tab = "animales" | "granjas";

@@ -6,7 +6,7 @@ Cubre:
   - Socio no puede solicitar re-alta de animal en otro estado → 400.
   - Socio no puede solicitar re-alta de animal de otro socio → 403.
   - No se crean solicitudes duplicadas pendientes → 400.
-  - Gestión aprueba → animal vuelve a AÑADIDO, fotos vaciadas.
+  - Gestión aprueba → animal vuelve a REGISTRADO, fotos vaciadas.
   - Gestión deniega → solicitud DENEGADO, animal permanece en SOCIO_EN_BAJA.
   - Socio no puede acceder a /dashboard/solicitudes-realta/ → 403.
   - Gestión puede listar solicitudes pendientes.
@@ -46,9 +46,9 @@ class TestRealtaFlow:
         assert str(resp.data["animal"]) == str(animal.id)
 
     def test_socio_no_puede_solicitar_estado_incorrecto(self, socio_client, tenant, socio_user):
-        """Animal en estado AÑADIDO → no se puede solicitar re-alta → 400."""
+        """Animal en estado REGISTRADO → no se puede solicitar re-alta → 400."""
         animal = AnimalFactory(
-            tenant=tenant, socio=socio_user.socio, estado="AÑADIDO"
+            tenant=tenant, socio=socio_user.socio, estado="REGISTRADO"
         )
         resp = socio_client.post(_solicitar_realta_url(animal.id), {}, format="json")
         assert resp.status_code == 400
@@ -74,7 +74,7 @@ class TestRealtaFlow:
         assert resp2.status_code == 400
 
     def test_gestion_aprueba_realta(self, gestion_client, socio_client, tenant, socio_user):
-        """Gestión aprueba → animal vuelve a AÑADIDO y fotos se vacían."""
+        """Gestión aprueba → animal vuelve a REGISTRADO y fotos se vacían."""
         from apps.animals.models import Animal
         animal = AnimalFactory(
             tenant=tenant,
@@ -95,7 +95,7 @@ class TestRealtaFlow:
         assert resp2.data["estado"] == "APROBADO"
 
         animal.refresh_from_db()
-        assert animal.estado == Animal.Estado.AÑADIDO
+        assert animal.estado == Animal.Estado.REGISTRADO
         assert animal.fotos == []
 
     def test_gestion_deniega_realta(self, gestion_client, socio_client, tenant, socio_user):

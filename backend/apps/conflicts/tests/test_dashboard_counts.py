@@ -40,9 +40,9 @@ class TestDashboardCounts:
             assert campo in resp.data, f"Campo '{campo}' no encontrado en el dashboard"
 
     def test_pendientes_aprobacion_cuenta_correctamente(self, gestion_client, tenant, socio_user):
-        """pendientes_aprobacion refleja animales en estado AÑADIDO del tenant."""
-        AnimalFactory(tenant=tenant, socio=socio_user.socio, estado="AÑADIDO")
-        AnimalFactory(tenant=tenant, socio=socio_user.socio, estado="AÑADIDO")
+        """pendientes_aprobacion refleja animales en estado REGISTRADO del tenant."""
+        AnimalFactory(tenant=tenant, socio=socio_user.socio, estado="REGISTRADO")
+        AnimalFactory(tenant=tenant, socio=socio_user.socio, estado="REGISTRADO")
         AnimalFactory(tenant=tenant, socio=socio_user.socio, estado="APROBADO")  # no cuenta
 
         resp = gestion_client.get(DASHBOARD_URL)
@@ -65,8 +65,8 @@ class TestDashboardCounts:
         otro_tenant = TenantFactory()
         otro_user = UserFactory(tenant=otro_tenant)
         otro_socio = SocioFactory(tenant=otro_tenant, user=otro_user)
-        # Animal en otro tenant en estado AÑADIDO — no debe contar
-        AnimalFactory(tenant=otro_tenant, socio=otro_socio, estado="AÑADIDO")
+        # Animal en otro tenant en estado REGISTRADO — no debe contar
+        AnimalFactory(tenant=otro_tenant, socio=otro_socio, estado="REGISTRADO")
 
         resp = gestion_client.get(DASHBOARD_URL)
         assert resp.status_code == 200
@@ -100,14 +100,14 @@ class TestDashboardCounts:
         assert resp.status_code == 403
 
     def test_motivos_rechazo_devuelve_tres_fases(self, gestion_client):
-        """GET /animals/motivos-rechazo/ devuelve motivos para AÑADIDO, APROBADO y EVALUACION."""
+        """GET /animals/motivos-rechazo/ devuelve motivos para REGISTRADO, APROBADO y EVALUACION."""
         resp = gestion_client.get(MOTIVOS_URL)
         assert resp.status_code == 200, resp.data
-        assert "AÑADIDO" in resp.data
+        assert "REGISTRADO" in resp.data
         assert "APROBADO" in resp.data
         assert "EVALUACION" in resp.data
-        assert isinstance(resp.data["AÑADIDO"], list)
-        assert len(resp.data["AÑADIDO"]) > 0
+        assert isinstance(resp.data["REGISTRADO"], list)
+        assert len(resp.data["REGISTRADO"]) > 0
 
     def test_motivos_rechazo_solo_gestion(self, socio_client):
         """Socio no puede acceder a motivos de rechazo → 403."""

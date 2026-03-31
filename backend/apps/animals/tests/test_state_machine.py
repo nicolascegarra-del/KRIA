@@ -2,7 +2,7 @@
 Tests for the animal state machine (semáforos).
 
 Covers:
-  - Socio edit on APROBADO/EVALUADO reverts to AÑADIDO (signal)
+  - Socio edit on APROBADO/EVALUADO reverts to REGISTRADO (signal)
   - Gestión edit does NOT revert state
   - Evaluación guardada → estado EVALUADO automáticamente
   - UID anilla+año único por tenant, pero puede repetirse cross-tenant
@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..', '..'))
 class TestSemaforoAnimales:
 
     def test_socio_edit_aprobado_reverts_to_añadido(self, socio_user, tenant):
-        """Al editar animal APROBADO como socio, debe volver a AÑADIDO."""
+        """Al editar animal APROBADO como socio, debe volver a REGISTRADO."""
         from factories import AnimalFactory
         animal = AnimalFactory(socio=socio_user.socio, tenant=tenant, estado="APROBADO")
 
@@ -29,10 +29,10 @@ class TestSemaforoAnimales:
         animal.save()
 
         animal.refresh_from_db()
-        assert animal.estado == "AÑADIDO"
+        assert animal.estado == "REGISTRADO"
 
     def test_socio_edit_evaluado_reverts_to_añadido(self, socio_user, tenant):
-        """Al editar animal EVALUADO como socio, debe volver a AÑADIDO."""
+        """Al editar animal EVALUADO como socio, debe volver a REGISTRADO."""
         from factories import AnimalFactory
         animal = AnimalFactory(socio=socio_user.socio, tenant=tenant, estado="EVALUADO")
 
@@ -41,7 +41,7 @@ class TestSemaforoAnimales:
         animal.save()
 
         animal.refresh_from_db()
-        assert animal.estado == "AÑADIDO"
+        assert animal.estado == "REGISTRADO"
 
     def test_gestion_edit_aprobado_stays_aprobado(self, gestion_user, socio_user, tenant):
         """Gestión puede editar animal APROBADO sin revertir el estado."""
@@ -56,16 +56,16 @@ class TestSemaforoAnimales:
         assert animal.estado == "APROBADO"
 
     def test_socio_edit_añadido_stays_añadido(self, socio_user, tenant):
-        """Editar animal ya en AÑADIDO no cambia el estado."""
+        """Editar animal ya en REGISTRADO no cambia el estado."""
         from factories import AnimalFactory
-        animal = AnimalFactory(socio=socio_user.socio, tenant=tenant, estado="AÑADIDO")
+        animal = AnimalFactory(socio=socio_user.socio, tenant=tenant, estado="REGISTRADO")
 
         animal._editing_user = socio_user
         animal.variedad = "PLATA"
         animal.save()
 
         animal.refresh_from_db()
-        assert animal.estado == "AÑADIDO"
+        assert animal.estado == "REGISTRADO"
 
     def test_evaluacion_auto_cambia_a_evaluado(self, gestion_user, socio_user, tenant):
         """Crear una evaluación debe mover el animal a estado EVALUADO (signal)."""

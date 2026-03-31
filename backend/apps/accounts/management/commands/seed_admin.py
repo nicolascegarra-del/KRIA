@@ -263,13 +263,13 @@ class Command(BaseCommand):
 
         specs = [
             # (numero_anilla, fecha, sexo, estado, candidato, aprobado, socio, fotos)
-            ("ES-001-24", datetime.date(2024, 3, 15), Animal.Sexo.MACHO,   Animal.Estado.AÑADIDO,   False, False, socio1, []),
-            ("ES-002-24", datetime.date(2024, 5, 20), Animal.Sexo.HEMBRA,  Animal.Estado.AÑADIDO,   False, False, socio1, []),
+            ("ES-001-24", datetime.date(2024, 3, 15), Animal.Sexo.MACHO,   Animal.Estado.REGISTRADO,   False, False, socio1, []),
+            ("ES-002-24", datetime.date(2024, 5, 20), Animal.Sexo.HEMBRA,  Animal.Estado.REGISTRADO,   False, False, socio1, []),
             ("ES-003-23", datetime.date(2023, 4, 10), Animal.Sexo.MACHO,   Animal.Estado.APROBADO,  True,  False, socio1, fotos_demo),
             ("ES-004-23", datetime.date(2023, 6, 1),  Animal.Sexo.HEMBRA,  Animal.Estado.EVALUADO,  True,  False, socio1, fotos_demo),
             ("ES-005-22", datetime.date(2022, 2, 28), Animal.Sexo.MACHO,   Animal.Estado.APROBADO,  True,  True,  socio1, fotos_demo),
             ("ES-006-22", datetime.date(2022, 7, 14), Animal.Sexo.HEMBRA,  Animal.Estado.RECHAZADO, False, False, socio1, []),
-            ("ES-007-23", datetime.date(2023, 1, 8),  Animal.Sexo.MACHO,   Animal.Estado.AÑADIDO,   False, False, socio2, []),
+            ("ES-007-23", datetime.date(2023, 1, 8),  Animal.Sexo.MACHO,   Animal.Estado.REGISTRADO,   False, False, socio2, []),
             ("ES-008-21", datetime.date(2021, 9, 3),  Animal.Sexo.HEMBRA,  Animal.Estado.EVALUADO,  True,  True,  socio3, fotos_demo),
         ]
 

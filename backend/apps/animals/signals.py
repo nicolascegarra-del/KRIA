@@ -1,6 +1,6 @@
 """
 Animal signals:
-  pre_save  — revert APROBADO/EVALUADO → AÑADIDO if socio edits
+  pre_save  — revert APROBADO/EVALUADO → REGISTRADO if socio edits
   (SOCIO_EN_BAJA transition is handled by a Celery task, not a signal)
 """
 from django.db.models.signals import pre_save
@@ -13,7 +13,7 @@ from .models import Animal
 def revert_state_on_socio_edit(sender, instance, **kwargs):
     """
     If a socio (non-gestión) is saving an APROBADO or EVALUADO animal,
-    revert its state to AÑADIDO.
+    revert its state to REGISTRADO.
 
     We detect "socio edit" by checking the _editing_user attribute
     set by the view/serializer before calling save().
@@ -35,4 +35,4 @@ def revert_state_on_socio_edit(sender, instance, **kwargs):
         return
 
     if old.estado in LOCKED_STATES:
-        instance.estado = Animal.Estado.AÑADIDO
+        instance.estado = Animal.Estado.REGISTRADO

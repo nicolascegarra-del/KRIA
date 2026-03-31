@@ -38,7 +38,7 @@ def _animal_con_fotos(tenant, socio, numero_anilla, anio, sexo, alerta=""):
         numero_anilla=numero_anilla,
         anio_nacimiento=anio,
         sexo=sexo,
-        estado="AÑADIDO",
+        estado="REGISTRADO",
         alerta_anilla=alerta,
         fotos=[
             {"tipo": "PERFIL", "key": "k1", "uploaded_at": "2024-01-01T00:00:00+00:00"},

@@ -36,7 +36,7 @@ class MotivoBaja(UUIDModel):
 
 class Animal(UUIDModel):
     class Estado(models.TextChoices):
-        AÑADIDO = "AÑADIDO", "Añadido"
+        REGISTRADO = "REGISTRADO", "Registrado"
         APROBADO = "APROBADO", "Aprobado"
         EVALUADO = "EVALUADO", "Evaluado"
         RECHAZADO = "RECHAZADO", "Rechazado"
@@ -102,7 +102,7 @@ class Animal(UUIDModel):
     historico_pesos = models.JSONField(default=list, blank=True)
 
     # State machine
-    estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.AÑADIDO)
+    estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.REGISTRADO)
     razon_rechazo = models.TextField(blank=True, default="")
 
     # Baja
