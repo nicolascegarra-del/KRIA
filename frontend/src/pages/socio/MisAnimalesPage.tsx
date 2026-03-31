@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Plus, Search, Bird, RotateCcw, Loader2, XCircle, Pencil, Eye,
   Settings2, GripVertical, X, ArrowUpDown, ArrowUp, ArrowDown,
-  MessageSquare,
+  MessageSquare, Star,
 } from "lucide-react";
 import { animalsApi } from "../../api/animals";
 import { realtaApi } from "../../api/realta";
@@ -274,6 +274,12 @@ export default function MisAnimalesPage() {
     },
   });
 
+  const candidatoMutation = useMutation({
+    mutationFn: ({ id, value }: { id: string; value: boolean }) =>
+      animalsApi.update(id, { candidato_reproductor: value } as any),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["animals"] }),
+  });
+
   const darBajaMutation = useMutation({
     mutationFn: ({ id, fecha_baja, motivo_baja }: { id: string; fecha_baja: string; motivo_baja: string }) =>
       animalsApi.darBaja(id, fecha_baja, motivo_baja),
@@ -371,7 +377,7 @@ export default function MisAnimalesPage() {
           </button>
           <Link to="/mis-animales/nuevo" className="btn-primary flex items-center gap-2">
             <Plus size={18} />
-            Nuevo animal
+            Nuevo Animal
           </Link>
         </div>
       </div>
@@ -476,7 +482,7 @@ export default function MisAnimalesPage() {
           {tab === "activos" && !hasActiveFilters && (
             <Link to="/mis-animales/nuevo" className="btn-primary mt-4 inline-flex">
               <Plus size={18} />
-              Registrar primer animal
+              Nuevo Animal
             </Link>
           )}
           {hasActiveFilters && (
@@ -551,6 +557,21 @@ export default function MisAnimalesPage() {
                             title="Dar de baja"
                           >
                             <XCircle size={14} />
+                          </button>
+                        )}
+                        {/* Proponer candidato a reproductor — solo APROBADO */}
+                        {animal.estado === "APROBADO" && (
+                          <button
+                            onClick={() => candidatoMutation.mutate({ id: animal.id, value: !animal.candidato_reproductor })}
+                            disabled={candidatoMutation.isPending}
+                            className={`p-2 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors ${
+                              animal.candidato_reproductor
+                                ? "text-violet-700 bg-violet-50 hover:bg-violet-100"
+                                : "text-gray-400 hover:bg-violet-50 hover:text-violet-600"
+                            }`}
+                            title={animal.candidato_reproductor ? "Retirar candidatura" : "Proponer como candidato a reproductor"}
+                          >
+                            <Star size={14} fill={animal.candidato_reproductor ? "currentColor" : "none"} />
                           </button>
                         )}
                         {/* Solicitar reactivación — solo no activos */}

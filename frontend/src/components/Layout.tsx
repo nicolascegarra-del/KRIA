@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../store/authStore";
 import { useTenantStore } from "../store/tenantStore";
 import { notificacionesApi } from "../api/notificaciones";
+import { perfilSocioApi } from "../api/perfilSocio";
 import type { Notificacion } from "../types";
 import {
   Bird,
@@ -209,6 +210,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
 
+  const { data: socioData } = useQuery({
+    queryKey: ["socio-me"],
+    queryFn: perfilSocioApi.get,
+    enabled: isSocio,
+  });
+
   const isGestion = !!impersonatingTenant || (user?.is_gestion ?? false);
   const isSuperadmin = user?.is_superadmin ?? false;
   const isSocio = !isGestion && !isSuperadmin;
@@ -400,10 +407,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           )}
         </nav>
 
-        {/* User footer — info only, actions moved to top bar */}
+        {/* User footer */}
         <div className="px-4 py-4 border-t border-white/20">
-          <div className="text-xs text-white/60 truncate">{user?.email}</div>
-          <div className="text-sm font-medium text-white truncate">{user?.full_name}</div>
+          {isSocio && socioData ? (
+            <>
+              <div className="text-sm font-medium text-white truncate">{socioData.nombre_razon_social}</div>
+              <div className="text-xs text-white/60 truncate">{user?.email}</div>
+              {socioData.numero_socio && (
+                <div className="text-xs text-white/40 mt-0.5">Socio Nº {socioData.numero_socio}</div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="text-sm font-medium text-white truncate">{user?.full_name}</div>
+              <div className="text-xs text-white/60 truncate">{user?.email}</div>
+            </>
+          )}
         </div>
       </aside>
 
@@ -483,7 +502,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 aria-label="Mi perfil"
               >
                 <User size={16} />
-                <span className="hidden sm:inline">Mi perfil</span>
+                <span className="hidden sm:inline">Mi Perfil</span>
               </button>
             )}
             <button

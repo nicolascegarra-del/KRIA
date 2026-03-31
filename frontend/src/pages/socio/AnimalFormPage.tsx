@@ -432,7 +432,7 @@ export default function AnimalFormPage() {
                         className="accent-blue-700"
                         disabled={effectiveReadonly}
                       />
-                      Lote de otra ganadería
+                      Lote de Cría de otro Criador
                     </label>
                   </div>
                 </div>
@@ -490,48 +490,8 @@ export default function AnimalFormPage() {
             </div>
           )}
 
-          <div className="border-t pt-4">
-            {/* Campo oculto para react-hook-form */}
-            <input type="hidden" {...register("candidato_reproductor")} />
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Candidato a reproductor</p>
-            {watch("candidato_reproductor") ? (
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-violet-700 bg-violet-50 border border-violet-200 rounded-lg px-3 py-2">
-                  <CheckCircle2 size={15} />
-                  Propuesto como candidato
-                </span>
-                {!effectiveReadonly && (
-                  <button
-                    type="button"
-                    onClick={() => setValue("candidato_reproductor", false)}
-                    className="text-xs text-gray-500 hover:text-red-600 underline"
-                  >
-                    Retirar propuesta
-                  </button>
-                )}
-              </div>
-            ) : canProponerCandidato && !effectiveReadonly ? (
-              <button
-                type="button"
-                onClick={() => setValue("candidato_reproductor", true)}
-                className="btn-secondary flex items-center gap-2 text-sm"
-              >
-                <CheckCircle2 size={15} />
-                Proponer como candidato a reproductor
-              </button>
-            ) : (
-              <div className="flex items-center gap-2 text-sm text-gray-400">
-                <Circle size={15} />
-                <span>No propuesto</span>
-                {!canProponerCandidato && !effectiveReadonly && (
-                  <span className="ml-1 text-xs text-amber-600 flex items-center gap-1">
-                    <AlertCircle size={11} />
-                    Requiere estado <strong className="ml-0.5">Aprobado</strong>
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
+          {/* Campo oculto para react-hook-form — candidato se gestiona desde la lista */}
+          <input type="hidden" {...register("candidato_reproductor")} />
 
           {conflictError && (
             <div className="bg-red-50 border border-red-300 rounded-lg p-3 text-sm text-red-700">
@@ -542,6 +502,94 @@ export default function AnimalFormPage() {
           {serverError && (
             <div className="bg-red-50 border border-red-300 rounded-lg p-3 text-sm text-red-700">
               {serverError}
+            </div>
+          )}
+
+          {/* Fotos — antes de los botones */}
+          {(isEdit || !isGestionCreate) && (
+            <div className="border-t pt-4 space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700">
+                  {isEdit ? "Fotos obligatorias" : "Fotos (opcional)"}
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {isEdit
+                    ? "Se requieren las 3 fotos para poder aprobar el animal."
+                    : "Puedes añadir las fotos ahora — se subirán al registrar el animal."}
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {FOTO_TIPOS.map(({ tipo, label }) => {
+                  const foto = isEdit ? getFotoByTipo(tipo) : undefined;
+                  const previewUrl = !isEdit ? pendingPreviews[tipo] : undefined;
+                  const hasPhoto = !!foto || !!previewUrl;
+                  const isUploading = uploadingTipo === tipo;
+                  return (
+                    <div key={tipo} className="flex flex-col items-center gap-1.5">
+                      <div className="flex items-center gap-1 text-xs font-medium">
+                        {hasPhoto ? (
+                          <CheckCircle2 size={14} className="text-green-600" />
+                        ) : (
+                          <Circle size={14} className="text-gray-300" />
+                        )}
+                        <span className={hasPhoto ? "text-green-700" : "text-gray-400"}>{label}</span>
+                      </div>
+                      <div className="relative w-full aspect-square">
+                        {hasPhoto ? (
+                          <>
+                            <img
+                              src={foto?.url ?? previewUrl}
+                              alt={`Foto ${label}`}
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                            {!effectiveReadonly && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isEdit && foto) {
+                                    deleteFotoMutation.mutate(foto.key);
+                                  } else {
+                                    URL.revokeObjectURL(previewUrl!);
+                                    setPendingPhotos((p) => { const n = { ...p }; delete n[tipo]; return n; });
+                                    setPendingPreviews((p) => { const n = { ...p }; delete n[tipo]; return n; });
+                                  }
+                                }}
+                                disabled={deleteFotoMutation.isPending}
+                                className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-700"
+                                title="Eliminar foto"
+                              >
+                                {deleteFotoMutation.isPending ? <Loader2 size={10} className="animate-spin" /> : <X size={10} />}
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          !effectiveReadonly && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isEdit) {
+                                  setUploadingTipo(tipo);
+                                  fileInputRefs.current[tipo]?.click();
+                                } else {
+                                  pendingFileRefs.current[tipo]?.click();
+                                }
+                              }}
+                              disabled={isUploading || uploadFotoMutation.isPending}
+                              className="w-full h-full rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors"
+                            >
+                              {isUploading ? <Loader2 size={20} className="animate-spin" /> : <><Camera size={20} /><span className="text-xs mt-1">Añadir</span></>}
+                            </button>
+                          )
+                        )}
+                      </div>
+                      <input ref={(el) => { fileInputRefs.current[tipo] = el; }} type="file" accept="image/*" capture="environment" className="hidden"
+                        onChange={(e) => { const file = e.target.files?.[0]; if (file) { uploadFotoMutation.mutate({ file, tipo }); e.target.value = ""; } else { setUploadingTipo(null); } }} />
+                      <input ref={(el) => { pendingFileRefs.current[tipo] = el; }} type="file" accept="image/*" capture="environment" className="hidden"
+                        onChange={(e) => { const file = e.target.files?.[0]; if (file) { const url = URL.createObjectURL(file); setPendingPhotos((p) => ({ ...p, [tipo]: file })); setPendingPreviews((p) => ({ ...p, [tipo]: url })); } e.target.value = ""; }} />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -558,11 +606,10 @@ export default function AnimalFormPage() {
                 {mutation.isPending ? (
                   <><Loader2 size={16} className="animate-spin" /> Guardando...</>
                 ) : (
-                  isEdit ? "Guardar cambios" : "Registrar animal"
+                  isEdit ? "Guardar cambios" : "Registrar Animal"
                 )}
               </button>
             )}
-            {/* Only show "Editar" when readonly via URL param, NOT when rechazado */}
             {readonly && !isRechazado && (
               <button
                 type="button"
@@ -592,142 +639,6 @@ export default function AnimalFormPage() {
           </div>
         )}
       </div>
-
-      {/* Photos section — always shown (edit = immediate upload; create = local until submit) */}
-      {(isEdit || !isGestionCreate) && (
-        <div className="card space-y-3">
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700">
-              {isEdit ? "Fotos obligatorias" : "Fotos (opcional)"}
-            </h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {isEdit
-                ? "Se requieren las 3 fotos para poder aprobar el animal."
-                : "Puedes añadir las fotos ahora — se subirán al registrar el animal."}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            {FOTO_TIPOS.map(({ tipo, label }) => {
-              // Edit mode: use saved photo from API
-              const foto = isEdit ? getFotoByTipo(tipo) : undefined;
-              // Create mode: use local pending preview
-              const previewUrl = !isEdit ? pendingPreviews[tipo] : undefined;
-              const hasPhoto = !!foto || !!previewUrl;
-              const isUploading = uploadingTipo === tipo;
-
-              return (
-                <div key={tipo} className="flex flex-col items-center gap-1.5">
-                  {/* Indicator */}
-                  <div className="flex items-center gap-1 text-xs font-medium">
-                    {hasPhoto ? (
-                      <CheckCircle2 size={14} className="text-green-600" />
-                    ) : (
-                      <Circle size={14} className="text-gray-300" />
-                    )}
-                    <span className={hasPhoto ? "text-green-700" : "text-gray-400"}>{label}</span>
-                  </div>
-
-                  {/* Photo or placeholder */}
-                  <div className="relative w-full aspect-square">
-                    {hasPhoto ? (
-                      <>
-                        <img
-                          src={foto?.url ?? previewUrl}
-                          alt={`Foto ${label}`}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                        {!effectiveReadonly && (
-                          <button
-                            onClick={() => {
-                              if (isEdit && foto) {
-                                deleteFotoMutation.mutate(foto.key);
-                              } else {
-                                // Remove local pending photo
-                                URL.revokeObjectURL(previewUrl!);
-                                setPendingPhotos((p) => { const n = { ...p }; delete n[tipo]; return n; });
-                                setPendingPreviews((p) => { const n = { ...p }; delete n[tipo]; return n; });
-                              }
-                            }}
-                            disabled={deleteFotoMutation.isPending}
-                            className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-700"
-                            title="Eliminar foto"
-                          >
-                            {deleteFotoMutation.isPending ? (
-                              <Loader2 size={10} className="animate-spin" />
-                            ) : (
-                              <X size={10} />
-                            )}
-                          </button>
-                        )}
-                      </>
-                    ) : (
-                      !effectiveReadonly && (
-                        <button
-                          onClick={() => {
-                            if (isEdit) {
-                              setUploadingTipo(tipo);
-                              fileInputRefs.current[tipo]?.click();
-                            } else {
-                              pendingFileRefs.current[tipo]?.click();
-                            }
-                          }}
-                          disabled={isUploading || uploadFotoMutation.isPending}
-                          className="w-full h-full rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors"
-                        >
-                          {isUploading ? (
-                            <Loader2 size={20} className="animate-spin" />
-                          ) : (
-                            <>
-                              <Camera size={20} />
-                              <span className="text-xs mt-1">Añadir</span>
-                            </>
-                          )}
-                        </button>
-                      )
-                    )}
-                  </div>
-
-                  {/* Hidden file input — edit mode (immediate upload) */}
-                  <input
-                    ref={(el) => { fileInputRefs.current[tipo] = el; }}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        uploadFotoMutation.mutate({ file, tipo });
-                        e.target.value = "";
-                      } else {
-                        setUploadingTipo(null);
-                      }
-                    }}
-                  />
-                  {/* Hidden file input — create mode (local preview only) */}
-                  <input
-                    ref={(el) => { pendingFileRefs.current[tipo] = el; }}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const url = URL.createObjectURL(file);
-                        setPendingPhotos((p) => ({ ...p, [tipo]: file }));
-                        setPendingPreviews((p) => ({ ...p, [tipo]: url }));
-                      }
-                      e.target.value = "";
-                    }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Weight history — only in edit mode */}
       {isEdit && (
