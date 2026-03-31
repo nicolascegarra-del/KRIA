@@ -27,6 +27,7 @@ from .serializers import (
 class CriterioEvaluacionListCreateView(generics.ListCreateAPIView):
     serializer_class = CriterioEvaluacionSerializer
     permission_classes = [IsGestion]
+    pagination_class = None
 
     def get_queryset(self):
         return CriterioEvaluacion.objects.filter(tenant=self.request.tenant)
@@ -46,6 +47,7 @@ class CriterioEvaluacionDetailView(generics.RetrieveUpdateDestroyAPIView):
 class PreguntaInstalacionListCreateView(generics.ListCreateAPIView):
     serializer_class = PreguntaInstalacionSerializer
     permission_classes = [IsGestion]
+    pagination_class = None
 
     def get_queryset(self):
         return PreguntaInstalacion.objects.filter(tenant=self.request.tenant)
@@ -186,6 +188,7 @@ def _get_tenant(tenant_pk):
 class SuperAdminCriteriosView(generics.ListCreateAPIView):
     serializer_class = CriterioEvaluacionSerializer
     permission_classes = [IsSuperAdmin]
+    pagination_class = None
 
     def get_queryset(self):
         return CriterioEvaluacion.all_objects.filter(tenant_id=self.kwargs["tenant_pk"])
@@ -206,6 +209,7 @@ class SuperAdminCriterioDetailView(generics.RetrieveUpdateDestroyAPIView):
 class SuperAdminPreguntasView(generics.ListCreateAPIView):
     serializer_class = PreguntaInstalacionSerializer
     permission_classes = [IsSuperAdmin]
+    pagination_class = None
 
     def get_queryset(self):
         return PreguntaInstalacion.all_objects.filter(tenant_id=self.kwargs["tenant_pk"])
