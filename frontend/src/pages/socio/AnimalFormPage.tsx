@@ -169,7 +169,8 @@ export default function AnimalFormPage() {
         if (uploads.length) await Promise.allSettled(uploads);
       }
       if (isGestionCreate) {
-        navigate(`/socios/${socioId}`);
+        const returnTo = searchParams.get("returnTo");
+        navigate(returnTo || `/socios/${socioId}`);
       } else {
         navigate("/mis-animales");
       }

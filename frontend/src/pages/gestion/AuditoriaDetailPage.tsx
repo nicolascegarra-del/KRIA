@@ -7,9 +7,8 @@ import type {
   AuditoriaEstado, AuditoriaAnimal, CriterioEvaluacion, PreguntaInstalacion,
 } from "../../types";
 import {
-  ArrowLeft, ClipboardCheck, Plus, Trash2, Save, Loader2,
-  CheckCircle2, Clock, XCircle, Calendar, ChevronDown, ChevronUp,
-  Search, Bird,
+  ArrowLeft, Plus, Trash2, Save, Loader2,
+  Calendar, ChevronDown, ChevronUp, Bird, ExternalLink,
 } from "lucide-react";
 
 const ESTADO_OPTS: { value: AuditoriaEstado; label: string }[] = [
@@ -162,6 +161,7 @@ export default function AuditoriaDetailPage() {
               auditoriaId={id!}
               criterios={activeCriterios}
               socioId={auditoria.socio}
+              existingAnimalIds={auditoria.animales_evaluados.map(a => a.animal).filter(Boolean) as string[]}
               onDone={() => {
                 setShowAddAnimal(false);
                 qc.invalidateQueries({ queryKey: ["auditoria", id] });
@@ -306,147 +306,131 @@ function AnimalEvaluadoCard({
 
 // ── Panel para añadir animal ──────────────────────────────────────────────────
 
+const ACTIVE_ESTADOS = ["REGISTRADO", "APROBADO", "EVALUADO"];
+
 function AddAnimalPanel({
   auditoriaId,
   criterios,
   socioId,
+  existingAnimalIds,
   onDone,
   onCancel,
 }: {
   auditoriaId: string;
   criterios: CriterioEvaluacion[];
   socioId: string;
+  existingAnimalIds: string[];
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const [mode, setMode] = useState<"existente" | "manual">("existente");
+  const navigate = useNavigate();
+  const [mode, setMode] = useState<"existente" | "nuevo">("existente");
   const [animalId, setAnimalId] = useState("");
-  const [animalLabel, setAnimalLabel] = useState("");
-  const [anillaManual, setAnillaManual] = useState("");
-  const [searchAnilla, setSearchAnilla] = useState("");
-  const [searchAnio, setSearchAnio] = useState(String(new Date().getFullYear()));
   const [puntuaciones, setPuntuaciones] = useState<Record<string, number>>({});
   const [notas, setNotas] = useState("");
 
-  const { data: searchResults, isFetching } = useQuery({
-    queryKey: ["animals-search-audit-add", searchAnilla, searchAnio],
-    queryFn: () =>
-      animalsApi.searchGlobal(searchAnilla, parseInt(searchAnio, 10)),
-    enabled: searchAnilla.length >= 2 && !!searchAnio,
+  const { data: socioAnimalesData, isLoading: loadingAnimales } = useQuery({
+    queryKey: ["animals-socio-auditoria", socioId],
+    queryFn: () => animalsApi.list({ socio_id: socioId, page_size: 200 }),
+    enabled: mode === "existente",
   });
+
+  const disponibles = (socioAnimalesData?.results ?? []).filter(
+    a => ACTIVE_ESTADOS.includes(a.estado) && !existingAnimalIds.includes(a.id)
+  );
 
   const mutation = useMutation({
     mutationFn: () =>
       auditoriasApi.animales.create(auditoriaId, {
-        animal: mode === "existente" ? animalId || null : null,
-        numero_anilla_manual: mode === "manual" ? anillaManual : "",
+        animal: animalId || null,
+        numero_anilla_manual: "",
         puntuaciones,
         notas,
       }),
     onSuccess: onDone,
   });
 
-  const canSubmit =
-    (mode === "existente" && !!animalId) ||
-    (mode === "manual" && !!anillaManual.trim());
+  if (mode === "nuevo") {
+    return (
+      <div className="card border-2 border-primary/20 bg-primary/5 space-y-4">
+        <div className="flex gap-3">
+          <button
+            onClick={() => setMode("existente")}
+            className="text-sm px-3 py-1 rounded-lg border bg-white text-gray-600 border-gray-200"
+          >
+            Animal ya registrado
+          </button>
+          <button
+            className="text-sm px-3 py-1 rounded-lg border bg-primary text-white border-primary"
+          >
+            Dar de alta en el momento
+          </button>
+        </div>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Debes registrar el animal primero. Serás redirigido al formulario de alta y al guardar volverás automáticamente a esta auditoría.
+        </div>
+        <div className="flex gap-2 justify-end">
+          <button onClick={onCancel} className="btn-secondary text-sm">Cancelar</button>
+          <button
+            onClick={() => navigate(`/socios/${socioId}/nuevo-animal?returnTo=/auditorias/${auditoriaId}`)}
+            className="btn-primary text-sm flex items-center gap-1.5"
+          >
+            <ExternalLink size={14} /> Ir al formulario de alta
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="card border-2 border-primary/20 bg-primary/5 space-y-4">
+      {/* Selector de modo */}
       <div className="flex gap-3">
         <button
           onClick={() => setMode("existente")}
-          className={`text-sm px-3 py-1 rounded-lg border transition-colors ${
-            mode === "existente"
-              ? "bg-primary text-white border-primary"
-              : "bg-white text-gray-600 border-gray-200"
-          }`}
+          className="text-sm px-3 py-1 rounded-lg border bg-primary text-white border-primary"
         >
           Animal ya registrado
         </button>
         <button
-          onClick={() => setMode("manual")}
-          className={`text-sm px-3 py-1 rounded-lg border transition-colors ${
-            mode === "manual"
-              ? "bg-primary text-white border-primary"
-              : "bg-white text-gray-600 border-gray-200"
-          }`}
+          onClick={() => setMode("nuevo")}
+          className="text-sm px-3 py-1 rounded-lg border bg-white text-gray-600 border-gray-200"
         >
           Dar de alta en el momento
         </button>
       </div>
 
-      {mode === "existente" && (
-        animalId ? (
-          <div className="flex items-center gap-2 bg-white border border-blue-200 rounded-lg px-3 py-2 text-sm">
-            <span className="flex-1 font-mono font-medium text-blue-800">{animalLabel}</span>
-            <button onClick={() => { setAnimalId(""); setAnimalLabel(""); }} className="text-blue-400 hover:text-blue-700 text-xs">Cambiar</button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  className="input-field pl-8 text-sm font-mono"
-                  placeholder="Nº anilla"
-                  value={searchAnilla}
-                  onChange={e => setSearchAnilla(e.target.value)}
-                />
-              </div>
-              <input
-                type="number"
-                className="input-field w-20 text-sm"
-                placeholder="Año"
-                value={searchAnio}
-                onChange={e => setSearchAnio(e.target.value)}
-                min={2000}
-                max={new Date().getFullYear()}
-              />
-              {isFetching && <Loader2 size={14} className="animate-spin self-center text-gray-400" />}
-            </div>
-            {searchResults && searchResults.length > 0 && (
-              <ul className="bg-white border border-gray-200 rounded-lg shadow-sm divide-y divide-gray-100 max-h-32 overflow-y-auto">
-                {searchResults.map(a => (
-                  <li key={a.id}>
-                    <button
-                      type="button"
-                      className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 flex gap-2"
-                      onClick={() => {
-                        setAnimalId(a.id);
-                        setAnimalLabel(`${a.numero_anilla} / ${a.fecha_nacimiento ? new Date(a.fecha_nacimiento).getFullYear() : "—"}`);
-                        setSearchAnilla("");
-                      }}
-                    >
-                      <span className="font-mono font-medium">{a.numero_anilla}</span>
-                      <span className="text-gray-400">{a.fecha_nacimiento ? new Date(a.fecha_nacimiento).getFullYear() : "—"}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )
-      )}
-
-      {mode === "manual" && (
+      {/* Desplegable de animales del socio */}
+      {loadingAnimales ? (
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Loader2 size={14} className="animate-spin" /> Cargando animales...
+        </div>
+      ) : disponibles.length === 0 ? (
+        <p className="text-sm text-gray-500">
+          {(socioAnimalesData?.results ?? []).length === 0
+            ? "Este socio no tiene animales registrados."
+            : "Todos los animales activos de este socio ya están en la auditoría."}
+        </p>
+      ) : (
         <div>
-          <label className="label text-xs">Nº de anilla *</label>
-          <input
-            type="text"
-            className="input-field text-sm font-mono"
-            placeholder="Introduce el número de anilla"
-            value={anillaManual}
-            onChange={e => setAnillaManual(e.target.value)}
-          />
-          <p className="text-xs text-amber-700 mt-1">
-            Este animal se registrará como evaluado en la auditoría. Recuerda darlo de alta en el sistema después.
-          </p>
+          <label className="label text-xs">Animal *</label>
+          <select
+            className="input-field text-sm"
+            value={animalId}
+            onChange={e => setAnimalId(e.target.value)}
+          >
+            <option value="">— Selecciona un animal —</option>
+            {disponibles.map(a => (
+              <option key={a.id} value={a.id}>
+                {a.numero_anilla} · {a.fecha_nacimiento ? new Date(a.fecha_nacimiento).getFullYear() : "—"} · {a.sexo === "M" ? "Macho" : "Hembra"} · {a.estado}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 
       {/* Criterios de evaluación */}
-      {criterios.length > 0 && (
+      {criterios.length > 0 && animalId && (
         <div>
           <p className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">Puntuaciones</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -457,14 +441,9 @@ function AddAnimalPanel({
                   <span className="text-gray-400">×{c.multiplicador}</span>
                 </div>
                 <input
-                  type="range"
-                  min={0}
-                  max={10}
-                  step={1}
+                  type="range" min={0} max={10} step={1}
                   value={puntuaciones[c.id] ?? 0}
-                  onChange={e =>
-                    setPuntuaciones(p => ({ ...p, [c.id]: parseInt(e.target.value) }))
-                  }
+                  onChange={e => setPuntuaciones(p => ({ ...p, [c.id]: parseInt(e.target.value) }))}
                   className="w-full accent-primary"
                 />
                 <div className="flex justify-between text-xs text-gray-400 mt-0.5">
@@ -478,16 +457,18 @@ function AddAnimalPanel({
         </div>
       )}
 
-      <div>
-        <label className="label text-xs">Notas</label>
-        <textarea className="input-field text-sm" rows={2} value={notas} onChange={e => setNotas(e.target.value)} />
-      </div>
+      {animalId && (
+        <div>
+          <label className="label text-xs">Notas</label>
+          <textarea className="input-field text-sm" rows={2} value={notas} onChange={e => setNotas(e.target.value)} />
+        </div>
+      )}
 
       <div className="flex gap-2 justify-end">
         <button onClick={onCancel} className="btn-secondary text-sm">Cancelar</button>
         <button
           onClick={() => mutation.mutate()}
-          disabled={!canSubmit || mutation.isPending}
+          disabled={!animalId || mutation.isPending}
           className="btn-primary text-sm disabled:opacity-50"
         >
           {mutation.isPending ? <><Loader2 size={13} className="animate-spin" /> Guardando...</> : "Guardar evaluación"}
