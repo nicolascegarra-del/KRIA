@@ -66,6 +66,9 @@ export const auditoriasApi = {
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/auditorias/${id}/`);
   },
+  deleteConfirm: async (id: string, password: string): Promise<void> => {
+    await apiClient.post(`/auditorias/${id}/delete-confirm/`, { password });
+  },
 
   // ── Animales evaluados ───────────────────────────────────────────────────────
   animales: {

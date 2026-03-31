@@ -43,6 +43,8 @@ def generate_report(self, job_id: str):
             file_key = _gen_libro_genealogico(job)
         elif rt == ReportJob.ReportType.CATALOGO_REPRODUCTORES:
             file_key = _gen_catalogo_reproductores_excel(job) if fmt == "excel" else _gen_catalogo_reproductores(job)
+        elif rt == ReportJob.ReportType.AUDITORIA:
+            file_key = _gen_auditoria_pdf(job)
         else:
             raise ValueError(f"Unknown report type: {rt}")
 
@@ -396,6 +398,53 @@ def _gen_catalogo_reproductores(job) -> str:
     context = {"tenant": job.tenant, "pages": pages}
     pdf_bytes = _render_pdf("reports/catalogo_reproductores.html", context)
     key = f"reports/{job.tenant.slug}/catalogo/{uuid.uuid4()}.pdf"
+    from .storage import upload_bytes
+    return upload_bytes(key, pdf_bytes, "application/pdf")
+
+
+def _gen_auditoria_pdf(job) -> str:
+    from apps.audits.models import AuditoriaSession, CriterioEvaluacion
+
+    auditoria_id = job.params.get("auditoria_id")
+    auditoria = AuditoriaSession.all_objects.select_related(
+        "socio", "tenant"
+    ).prefetch_related(
+        "animales_evaluados__animal",
+        "respuestas_instalacion__pregunta",
+    ).get(pk=auditoria_id, tenant=job.tenant)
+
+    criterios = list(CriterioEvaluacion.objects.filter(tenant=job.tenant, is_active=True).order_by("orden", "nombre"))
+
+    # Pre-process animal scores for easy template rendering
+    animales_detalle = []
+    for av in auditoria.animales_evaluados.all():
+        scores = []
+        for c in criterios:
+            scores.append({
+                "nombre": c.nombre,
+                "multiplicador": c.multiplicador,
+                "valor": av.puntuaciones.get(str(c.id), 0),
+            })
+        pct = None
+        if av.puntuacion_maxima and av.puntuacion_maxima > 0:
+            pct = round(float(av.puntuacion_total / av.puntuacion_maxima * 100), 1)
+        animales_detalle.append({
+            "anilla": av.animal.numero_anilla if av.animal else (av.numero_anilla_manual or "—"),
+            "puntuacion_total": av.puntuacion_total,
+            "puntuacion_maxima": av.puntuacion_maxima,
+            "porcentaje": pct,
+            "notas": av.notas,
+            "scores": scores,
+        })
+
+    context = {
+        "tenant": job.tenant,
+        "auditoria": auditoria,
+        "criterios": criterios,
+        "animales_detalle": animales_detalle,
+    }
+    pdf_bytes = _render_pdf("reports/auditoria.html", context)
+    key = f"reports/{job.tenant.slug}/auditorias/{auditoria_id}.pdf"
     from .storage import upload_bytes
     return upload_bytes(key, pdf_bytes, "application/pdf")
 

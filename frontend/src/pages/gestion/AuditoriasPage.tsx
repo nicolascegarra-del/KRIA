@@ -147,6 +147,7 @@ function NuevaAuditoriaModal({
   onCreated: (id: string) => void;
 }) {
   const [socioId, setSocioId] = useState("");
+  const [socioNombre, setSocioNombre] = useState("");
   const [socioSearch, setSocioSearch] = useState("");
   const [fechaPlanificada, setFechaPlanificada] = useState(
     new Date().toISOString().slice(0, 10)
@@ -184,10 +185,8 @@ function NuevaAuditoriaModal({
             <label className="label">Socio *</label>
             {socioId ? (
               <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm">
-                <span className="flex-1 font-medium text-blue-900">
-                  {socios.find(s => s.id === socioId)?.nombre_razon_social ?? socioId}
-                </span>
-                <button onClick={() => setSocioId("")} className="text-blue-400 hover:text-blue-700 text-xs">Cambiar</button>
+                <span className="flex-1 font-medium text-blue-900">{socioNombre}</span>
+                <button onClick={() => { setSocioId(""); setSocioNombre(""); }} className="text-blue-400 hover:text-blue-700 text-xs">Cambiar</button>
               </div>
             ) : (
               <>
@@ -205,7 +204,7 @@ function NuevaAuditoriaModal({
                         <button
                           type="button"
                           className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50"
-                          onClick={() => { setSocioId(s.id); setSocioSearch(""); }}
+                          onClick={() => { setSocioId(s.id); setSocioNombre(s.nombre_razon_social); setSocioSearch(""); }}
                         >
                           <span className="font-medium">{s.nombre_razon_social}</span>
                           <span className="text-gray-400 ml-2 text-xs">{s.dni_nif}</span>

@@ -27,6 +27,11 @@ export const reportsApi = {
     return data;
   },
 
+  auditoria: async (auditoria_id: string): Promise<{ job_id: string }> => {
+    const { data } = await apiClient.post(`/reports/auditoria/${auditoria_id}/`);
+    return data;
+  },
+
   jobStatus: async (job_id: string): Promise<ReportJob> => {
     const { data } = await apiClient.get(`/reports/job/${job_id}/`);
     return data;

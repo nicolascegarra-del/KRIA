@@ -20,6 +20,7 @@ import AnimalFormPage from "./pages/socio/AnimalFormPage";
 import GranjasPage from "./pages/socio/GranjasPage";
 import MisLotesPage from "./pages/socio/MisLotesPage";
 import MisAnillasPage from "./pages/socio/MisAnillasPage";
+import MisAuditoriasPage from "./pages/socio/MisAuditoriasPage";
 
 // Gestion pages
 import GranjasGestionPage from "./pages/gestion/GranjasGestionPage";
@@ -187,6 +188,7 @@ export default function App() {
         <Route path="/mis-granjas" element={<LayoutRoute socioOnly><GranjasPage /></LayoutRoute>} />
         <Route path="/mis-lotes" element={<LayoutRoute socioOnly><MisLotesPage /></LayoutRoute>} />
         <Route path="/mis-anillas" element={<LayoutRoute socioOnly><MisAnillasPage /></LayoutRoute>} />
+        <Route path="/mis-auditorias" element={<LayoutRoute socioOnly><MisAuditoriasPage /></LayoutRoute>} />
 
         {/* Gestion routes */}
         <Route path="/dashboard" element={<LayoutRoute gestionOnly><DashboardPage /></LayoutRoute>} />

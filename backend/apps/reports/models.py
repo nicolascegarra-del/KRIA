@@ -16,6 +16,7 @@ class ReportJob(UUIDModel):
         GENEALOGY_CERT = "GENEALOGY_CERT", "Certificado Genealógico"
         LIBRO_GENEALOGICO = "LIBRO_GENEALOGICO", "Libro Genealógico (Excel)"
         CATALOGO_REPRODUCTORES = "CATALOGO_REPRODUCTORES", "Catálogo Reproductores (PDF)"
+        AUDITORIA = "AUDITORIA", "Informe de Auditoría (PDF)"
 
     tenant = models.ForeignKey(
         "tenants.Tenant", on_delete=models.CASCADE, related_name="report_jobs", db_index=True

@@ -113,3 +113,26 @@ class CatalogoReproductoresView(APIView):
     def post(self, request):
         formato = request.data.get("formato", "pdf")
         return _create_report_job(request, ReportJob.ReportType.CATALOGO_REPRODUCTORES, {"formato": formato})
+
+
+class AuditoriaReportView(APIView):
+    """Genera el informe PDF de una auditoría. Accesible por gestión y por el socio propietario."""
+    permission_classes = [IsSocioOrGestion]
+    throttle_classes = [UploadRateThrottle]
+
+    def post(self, request, auditoria_id):
+        from apps.audits.models import AuditoriaSession
+        try:
+            auditoria = AuditoriaSession.objects.get(pk=auditoria_id, tenant=request.tenant)
+        except AuditoriaSession.DoesNotExist:
+            return Response({"detail": "Auditoría no encontrada."}, status=404)
+
+        # Socios solo pueden generar el informe de sus propias auditorías
+        if not get_effective_is_gestion(request):
+            try:
+                if auditoria.socio != request.user.socio:
+                    return Response({"detail": "Auditoría no encontrada."}, status=404)
+            except Exception:
+                return Response({"detail": "Sin perfil de socio."}, status=400)
+
+        return _create_report_job(request, ReportJob.ReportType.AUDITORIA, {"auditoria_id": str(auditoria_id)})

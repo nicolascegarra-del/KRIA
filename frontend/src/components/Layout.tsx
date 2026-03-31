@@ -71,6 +71,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/mis-granjas",              label: "Mis Granjas",           icon: <Building size={18} />,        socioOnly: true, requiresGranjas: true },
   { to: "/mis-lotes",                label: "Mis Lotes",             icon: <Layers size={18} />,          socioOnly: true },
   { to: "/mis-anillas",              label: "Mis Anillas",           icon: <Tag size={18} />,             socioOnly: true },
+  { to: "/mis-auditorias",           label: "Mis Auditorías",        icon: <ClipboardCheck size={18} />,  socioOnly: true },
 ];
 
 // Bottom nav items for socios (mobile)

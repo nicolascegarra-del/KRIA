@@ -17,6 +17,7 @@ urlpatterns = [
     # Sesiones
     path("", views.AuditoriaSessionListCreateView.as_view()),
     path("<uuid:pk>/", views.AuditoriaSessionDetailView.as_view()),
+    path("<uuid:pk>/delete-confirm/", views.AuditoriaDeleteConfirmView.as_view()),
 
     # Animales evaluados (sub-recurso)
     path("<uuid:auditoria_pk>/animales/", views.AuditoriaAnimalListCreateView.as_view()),

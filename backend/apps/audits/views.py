@@ -3,7 +3,7 @@ from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.permissions import IsGestion, IsSuperAdmin
+from core.permissions import IsGestion, IsSocioOrGestion, IsSuperAdmin
 
 from .models import (
     AuditoriaAnimal,
@@ -68,27 +68,42 @@ class PreguntaInstalacionDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class AuditoriaSessionListCreateView(generics.ListCreateAPIView):
     serializer_class = AuditoriaSessionSerializer
-    permission_classes = [IsGestion]
+    permission_classes = [IsSocioOrGestion]
     pagination_class = None
 
     def get_queryset(self):
+        from core.permissions import get_effective_is_gestion
         qs = AuditoriaSession.objects.filter(
             tenant=self.request.tenant
         ).select_related("socio").prefetch_related("animales_evaluados")
-        socio_id = self.request.query_params.get("socio")
-        if socio_id:
-            qs = qs.filter(socio_id=socio_id)
-        estado = self.request.query_params.get("estado")
-        if estado:
-            qs = qs.filter(estado=estado)
+
+        # Socios solo ven sus propias auditorías
+        if not get_effective_is_gestion(self.request):
+            try:
+                qs = qs.filter(socio=self.request.user.socio)
+            except Exception:
+                return qs.none()
+        else:
+            socio_id = self.request.query_params.get("socio")
+            if socio_id:
+                qs = qs.filter(socio_id=socio_id)
+            estado = self.request.query_params.get("estado")
+            if estado:
+                qs = qs.filter(estado=estado)
         return qs
 
     def perform_create(self, serializer):
         serializer.save(tenant=self.request.tenant, created_by=self.request.user)
 
+    def create(self, request, *args, **kwargs):
+        from core.permissions import get_effective_is_gestion
+        if not get_effective_is_gestion(request):
+            return Response({"detail": "No tienes permiso para crear auditorías."}, status=status.HTTP_403_FORBIDDEN)
+        return super().create(request, *args, **kwargs)
+
 
 class AuditoriaSessionDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsGestion]
+    permission_classes = [IsSocioOrGestion]
 
     def get_serializer_class(self):
         if self.request.method == "GET":
@@ -96,12 +111,31 @@ class AuditoriaSessionDetailView(generics.RetrieveUpdateDestroyAPIView):
         return AuditoriaSessionSerializer
 
     def get_queryset(self):
-        return AuditoriaSession.objects.filter(
+        from core.permissions import get_effective_is_gestion
+        qs = AuditoriaSession.objects.filter(
             tenant=self.request.tenant
         ).select_related("socio").prefetch_related(
             "animales_evaluados__animal",
             "respuestas_instalacion__pregunta",
         )
+        if not get_effective_is_gestion(self.request):
+            try:
+                qs = qs.filter(socio=self.request.user.socio)
+            except Exception:
+                return qs.none()
+        return qs
+
+    def update(self, request, *args, **kwargs):
+        from core.permissions import get_effective_is_gestion
+        if not get_effective_is_gestion(request):
+            return Response({"detail": "No tienes permiso."}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        from core.permissions import get_effective_is_gestion
+        if not get_effective_is_gestion(request):
+            return Response({"detail": "No tienes permiso."}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
 
 
 # ── Animales evaluados ────────────────────────────────────────────────────────
@@ -175,6 +209,29 @@ class AuditoriaRespuestaBulkView(APIView):
             AuditoriaRespuestaSerializer(saved, many=True).data,
             status=status.HTTP_200_OK,
         )
+
+
+# ── Eliminación de auditoría con contraseña ──────────────────────────────────
+
+class AuditoriaDeleteConfirmView(APIView):
+    """
+    POST {password: "..."} — valida la contraseña del usuario y elimina la auditoría.
+    """
+    permission_classes = [IsGestion]
+
+    def post(self, request, pk):
+        password = request.data.get("password", "")
+        if not request.user.check_password(password):
+            return Response(
+                {"detail": "Contraseña incorrecta."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            auditoria = AuditoriaSession.objects.get(pk=pk, tenant=request.tenant)
+        except AuditoriaSession.DoesNotExist:
+            return Response({"detail": "Auditoría no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+        auditoria.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # ── SuperAdmin: configurar criterios/preguntas para cualquier tenant ──────────

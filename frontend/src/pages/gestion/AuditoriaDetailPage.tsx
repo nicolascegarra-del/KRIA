@@ -3,12 +3,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { auditoriasApi } from "../../api/auditorias";
 import { animalsApi } from "../../api/animals";
+import { reportsApi } from "../../api/reports";
 import type {
-  AuditoriaEstado, AuditoriaAnimal, CriterioEvaluacion, PreguntaInstalacion,
+  AuditoriaEstado, AuditoriaAnimal, CriterioEvaluacion, PreguntaInstalacion, ReportJob,
 } from "../../types";
 import {
   ArrowLeft, Plus, Trash2, Save, Loader2,
   Calendar, ChevronDown, ChevronUp, Bird, ExternalLink,
+  FileText, Download, Clock, CheckCircle2, Eye, EyeOff,
 } from "lucide-react";
 
 const ESTADO_OPTS: { value: AuditoriaEstado; label: string }[] = [
@@ -31,6 +33,9 @@ export default function AuditoriaDetailPage() {
   const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState<"animales" | "instalaciones">("animales");
   const [showAddAnimal, setShowAddAnimal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pdfJobId, setPdfJobId] = useState<string | null>(null);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   const { data: auditoria, isLoading } = useQuery({
     queryKey: ["auditoria", id],
@@ -92,19 +97,63 @@ export default function AuditoriaDetailPage() {
             {auditoria.auditores && ` · ${auditoria.auditores}`}
           </p>
         </div>
-        {/* Cambio de estado */}
-        <select
-          className="input-field text-sm w-36"
-          value={auditoria.estado}
-          onChange={e =>
-            updateMutation.mutate({ estado: e.target.value as AuditoriaEstado })
-          }
-        >
-          {ESTADO_OPTS.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Generar PDF */}
+          <button
+            onClick={async () => {
+              setGeneratingPdf(true);
+              try {
+                const res = await reportsApi.auditoria(id!);
+                setPdfJobId(res.job_id);
+              } finally {
+                setGeneratingPdf(false);
+              }
+            }}
+            disabled={generatingPdf}
+            className="btn-secondary text-sm flex items-center gap-1.5"
+            title="Generar informe PDF"
+          >
+            {generatingPdf ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+            PDF
+          </button>
+
+          {/* Eliminar */}
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="btn-secondary text-sm text-red-600 border-red-200 hover:bg-red-50 flex items-center gap-1.5"
+            title="Eliminar auditoría"
+          >
+            <Trash2 size={14} /> Eliminar
+          </button>
+
+          {/* Cambio de estado */}
+          <select
+            className="input-field text-sm w-36"
+            value={auditoria.estado}
+            onChange={e =>
+              updateMutation.mutate({ estado: e.target.value as AuditoriaEstado })
+            }
+          >
+            {ESTADO_OPTS.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
+
+      {/* Estado del job PDF */}
+      {pdfJobId && (
+        <AuditoriaPdfStatus jobId={pdfJobId} onClose={() => setPdfJobId(null)} />
+      )}
+
+      {/* Modal eliminar */}
+      {showDeleteModal && (
+        <DeleteAuditoriaModal
+          auditoriaId={id!}
+          onClose={() => setShowDeleteModal(false)}
+          onDeleted={() => navigate("/auditorias")}
+        />
+      )}
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200">
@@ -181,6 +230,120 @@ export default function AuditoriaDetailPage() {
           onSaved={() => qc.invalidateQueries({ queryKey: ["auditoria", id] })}
         />
       )}
+    </div>
+  );
+}
+
+// ── PDF status banner ─────────────────────────────────────────────────────────
+
+function AuditoriaPdfStatus({ jobId, onClose }: { jobId: string; onClose: () => void }) {
+  const { data } = useQuery<ReportJob>({
+    queryKey: ["report-job", jobId],
+    queryFn: () => reportsApi.jobStatus(jobId),
+    refetchInterval: (query) => {
+      const s = query.state.data?.status;
+      return s === "PENDING" || s === "PROCESSING" ? 2000 : false;
+    },
+  });
+
+  const isDone = data?.status === "DONE";
+  const isFailed = data?.status === "FAILED";
+
+  return (
+    <div className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm ${
+      isDone ? "bg-green-50 border border-green-200 text-green-800"
+      : isFailed ? "bg-red-50 border border-red-200 text-red-700"
+      : "bg-blue-50 border border-blue-200 text-blue-800"
+    }`}>
+      {isDone ? <CheckCircle2 size={16} /> : isFailed ? null : <Clock size={16} className="animate-pulse" />}
+      <span className="flex-1">
+        {!data || data.status === "PENDING" ? "Generando informe PDF..." :
+         data.status === "PROCESSING" ? "Procesando informe..." :
+         isDone ? "Informe listo" : "Error al generar el informe"}
+      </span>
+      {isDone && data?.download_url && (
+        <a
+          href={data.download_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 font-semibold hover:underline"
+        >
+          <Download size={14} /> Descargar
+        </a>
+      )}
+      <button onClick={onClose} className="text-current opacity-50 hover:opacity-100 text-xs ml-2">✕</button>
+    </div>
+  );
+}
+
+// ── Modal eliminar auditoría con contraseña ───────────────────────────────────
+
+function DeleteAuditoriaModal({
+  auditoriaId,
+  onClose,
+  onDeleted,
+}: {
+  auditoriaId: string;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const [password, setPassword] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
+  const [error, setError] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: () => auditoriasApi.deleteConfirm(auditoriaId, password),
+    onSuccess: onDeleted,
+    onError: (err: any) => {
+      setError(err?.response?.data?.detail ?? "Contraseña incorrecta.");
+    },
+  });
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+        <div className="p-5 border-b border-gray-100">
+          <h2 className="text-base font-bold text-red-700 flex items-center gap-2">
+            <Trash2 size={18} /> Eliminar Auditoría
+          </h2>
+        </div>
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-gray-600">
+            Esta acción es irreversible. Se eliminarán todos los datos de esta auditoría incluyendo evaluaciones y respuestas de instalaciones.
+          </p>
+          <div>
+            <label className="label text-sm">Confirma con tu contraseña</label>
+            <div className="relative">
+              <input
+                type={showPwd ? "text" : "password"}
+                className="input-field pr-10 text-sm"
+                value={password}
+                autoFocus
+                onChange={e => { setPassword(e.target.value); setError(""); }}
+                onKeyDown={e => { if (e.key === "Enter" && password) mutation.mutate(); }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 min-h-0"
+              >
+                {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+          </div>
+        </div>
+        <div className="p-5 border-t border-gray-100 flex gap-3 justify-end">
+          <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
+          <button
+            onClick={() => mutation.mutate()}
+            disabled={!password || mutation.isPending}
+            className="btn-primary text-sm bg-red-600 hover:bg-red-700 border-red-600 disabled:opacity-50"
+          >
+            {mutation.isPending ? <><Loader2 size={14} className="animate-spin" /> Eliminando...</> : "Eliminar definitivamente"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
