@@ -370,7 +370,7 @@ export default function SociosPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const [filterEstado, setFilterEstado] = useState("");
+  const [filterEstado, setFilterEstado] = useState("ALTA");
   const [filterCuota, setFilterCuota] = useState("");
   const [ordering, setOrdering] = useState("numero_socio");
   const [page, setPage] = useState(1);

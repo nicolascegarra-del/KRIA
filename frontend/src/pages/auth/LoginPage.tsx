@@ -57,9 +57,7 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="relative z-10">
-          <div className="inline-flex bg-white rounded-xl px-4 py-2">
-            <img src="/kria-logo.jpg" alt="KRIA" className="h-10 object-contain" style={{ mixBlendMode: "multiply" }} />
-          </div>
+          <img src="/kria-logo.jpg" alt="KRIA" className="h-12 object-contain" />
         </div>
 
         {/* Copy */}
@@ -114,7 +112,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Logo móvil */}
           <div className="lg:hidden text-center mb-8">
-            <img src="/kria-logo.jpg" alt="KRIA" className="h-12 object-contain mx-auto mb-2" style={{ mixBlendMode: "multiply" }} />
+            <img src="/kria-logo-dark.png" alt="KRIA" className="h-12 object-contain mx-auto mb-2" />
             <p className="text-sm text-gray-500 mt-1">Libros Genealógicos Avícolas</p>
           </div>
 
