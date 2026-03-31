@@ -26,6 +26,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        globIgnores: ["**/kria-logo*.{jpg,png}"],
         runtimeCaching: [
           {
             urlPattern: /^https?:\/\/.*\/api\/v1\/animals/,
