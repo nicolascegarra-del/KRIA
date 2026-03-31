@@ -102,7 +102,7 @@ function PageWrapper({ title, children }: { title: string; children: React.React
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
-          <img src="/kria-logo.jpg" alt="KRIA" className="h-10 object-contain mx-auto mb-2" style={{ mixBlendMode: "multiply" }} />
+          <img src="/kria-logo.png" alt="KRIA" className="h-10 object-contain mx-auto mb-2" />
           <h1 className="text-xl font-bold text-gray-900">{title}</h1>
         </div>
         <div className="card">{children}</div>

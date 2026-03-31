@@ -294,11 +294,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {/* Logo / Brand */}
         <div className="flex items-center gap-3 px-6 py-5 border-b border-white/20">
           {branding?.logo_url && (!isSuperadmin || impersonatingTenant) ? (
-            <img src={branding.logo_url} alt="Logo" className="w-8 h-8 rounded object-cover" />
+            <img src={branding.logo_url} alt="Logo" className="w-8 h-8 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
           ) : (
-            <div className="bg-white rounded-lg px-2 py-1 flex items-center justify-center shrink-0">
-              <img src="/kria-logo.jpg" alt="KRIA" className="h-5 object-contain" style={{ mixBlendMode: "multiply" }} />
-            </div>
+            <img src="/kria-logo.png" alt="KRIA" className="h-7 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
           )}
           <div>
             <div className="font-bold text-sm leading-tight">
@@ -441,9 +439,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </button>
           )}
           {branding?.logo_url && (!isSuperadmin || impersonatingTenant) ? (
-            <img src={branding.logo_url} alt="Logo" className="w-7 h-7 rounded object-cover shrink-0" />
+            <img src={branding.logo_url} alt="Logo" className="w-7 h-7 object-contain shrink-0" />
           ) : (
-            <img src="/kria-logo.jpg" alt="KRIA" className="h-6 object-contain shrink-0" style={{ mixBlendMode: "multiply" }} />
+            <img src="/kria-logo.png" alt="KRIA" className="h-6 object-contain shrink-0" />
           )}
           <span className="font-semibold text-gray-800 flex-1 min-w-0 truncate">
             {isSuperadmin && !impersonatingTenant ? "KRIA" : (branding?.name ?? "KRIA")}

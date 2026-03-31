@@ -8,8 +8,8 @@ class Tenant(models.Model):
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=100, unique=True)
     logo_url = models.URLField(blank=True, default="")
-    primary_color = models.CharField(max_length=7, default="#1565C0")   # hex
-    secondary_color = models.CharField(max_length=7, default="#FBC02D")
+    primary_color = models.CharField(max_length=7, default="#051937")   # hex
+    secondary_color = models.CharField(max_length=7, default="#2E6DB4")
     custom_domain = models.CharField(max_length=200, blank=True, default="", db_index=True)
     is_active = models.BooleanField(default=True)
     max_socios = models.PositiveIntegerField(
