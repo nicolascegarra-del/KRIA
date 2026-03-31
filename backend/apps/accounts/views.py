@@ -66,35 +66,42 @@ class PasswordResetRequestView(APIView):
         email = serializer.validated_data["email"]
         tenant = getattr(request, "tenant", None)
 
-        try:
-            user = User.objects.get(email=email, tenant=tenant)
-        except User.DoesNotExist:
-            # Don't leak user existence
+        # Tenant may not resolve for public endpoints on the main domain
+        # (e.g. kria.klyp.es vs agamur.klyp.es). Search across all tenants
+        # by email in that case, but exclude superadmins (they don't reset via this flow).
+        if tenant:
+            users = list(User.objects.filter(email=email, tenant=tenant, is_active=True, is_superadmin=False))
+        else:
+            users = list(User.objects.filter(email=email, is_active=True, is_superadmin=False))
+
+        if not users:
             return Response({"detail": "If that email exists, a reset link was sent."})
 
-        token = uuid.uuid4()
-        user.reset_token = token
-        user.reset_token_created = timezone.now()
-        user.save(update_fields=["reset_token", "reset_token_created"])
-
-        reset_url = f"{settings.FRONTEND_URL}/auth/reset-password?token={token}"
-        tenant_name = tenant.name if tenant else "KRIA"
-
-        # Render HTML template
         from django.template.loader import render_to_string
-        html_body = render_to_string("email/password_reset.html", {
-            "tenant_name": tenant_name,
-            "reset_url": reset_url,
-        })
 
-        send_platform_mail(
-            subject=f"Restablecimiento de contraseña — {tenant_name}",
-            body=f"Haz clic en el enlace para restablecer tu contraseña:\n{reset_url}\n\nEste enlace expira en 24 horas.",
-            html_body=html_body,
-            recipient_list=[email],
-            tipo="RESET_PASSWORD",
-            fail_silently=True,
-        )
+        for user in users:
+            token = uuid.uuid4()
+            user.reset_token = token
+            user.reset_token_created = timezone.now()
+            user.save(update_fields=["reset_token", "reset_token_created"])
+
+            reset_url = f"{settings.FRONTEND_URL}/auth/reset-password?token={token}"
+            tenant_name = user.tenant.name if user.tenant_id else "KRIA"
+
+            html_body = render_to_string("email/password_reset.html", {
+                "tenant_name": tenant_name,
+                "reset_url": reset_url,
+            })
+
+            send_platform_mail(
+                subject=f"Restablecimiento de contraseña — {tenant_name}",
+                body=f"Haz clic en el enlace para restablecer tu contraseña:\n{reset_url}\n\nEste enlace expira en 24 horas.",
+                html_body=html_body,
+                recipient_list=[email],
+                tipo="RESET_PASSWORD",
+                fail_silently=True,
+            )
+
         return Response({"detail": "If that email exists, a reset link was sent."})
 
 
