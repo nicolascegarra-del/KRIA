@@ -6,6 +6,7 @@ interface TenantState {
   branding: TenantBranding | null;
   slug: string | null;
   setBranding: (branding: TenantBranding) => void;
+  clearBranding: () => void;
   setSlug: (slug: string) => void;
 }
 
@@ -15,6 +16,7 @@ export const useTenantStore = create<TenantState>()(
       branding: null,
       slug: null,
       setBranding: (branding) => set({ branding, slug: branding.slug }),
+      clearBranding: () => set({ branding: null }),
       setSlug: (slug) => set({ slug }),
     }),
     { name: "kria-tenant" }

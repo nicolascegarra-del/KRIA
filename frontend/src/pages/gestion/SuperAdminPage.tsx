@@ -974,21 +974,6 @@ export default function SuperAdminPage() {
                       <span className="text-xs text-gray-400 ml-auto font-mono">slug: {tenantForm.slug}</span>
                     )}
                   </div>
-                  <div className="border border-gray-200 rounded-lg p-3 space-y-2">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Opciones / Verticales</p>
-                    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
-                      <input type="checkbox" checked={tenantForm.granjas_enabled} onChange={(e) => setTenantForm({ ...tenantForm, granjas_enabled: e.target.checked })} className="rounded" />
-                      Módulo Granjas
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
-                      <input type="checkbox" checked={tenantForm.importaciones_enabled} onChange={(e) => setTenantForm({ ...tenantForm, importaciones_enabled: e.target.checked })} className="rounded" />
-                      Módulo Importaciones
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
-                      <input type="checkbox" checked={tenantForm.auditorias_enabled} onChange={(e) => setTenantForm({ ...tenantForm, auditorias_enabled: e.target.checked })} className="rounded" />
-                      Módulo Auditorías
-                    </label>
-                  </div>
                 </div>
               </div>
             </div>
@@ -1149,6 +1134,29 @@ export default function SuperAdminPage() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* ── OPCIONES / VERTICALES ── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 pb-1.5 border-b border-gray-100">
+              <div className="w-1 h-4 bg-purple-400 rounded-full shrink-0" />
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5"><Settings2 size={11} /> Opciones / Verticales</span>
+              <span className="text-xs text-gray-400">— módulos disponibles para esta asociación</span>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                <input type="checkbox" checked={tenantForm.granjas_enabled} onChange={(e) => setTenantForm({ ...tenantForm, granjas_enabled: e.target.checked })} className="rounded" />
+                Módulo Granjas
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                <input type="checkbox" checked={tenantForm.importaciones_enabled} onChange={(e) => setTenantForm({ ...tenantForm, importaciones_enabled: e.target.checked })} className="rounded" />
+                Módulo Importaciones
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                <input type="checkbox" checked={tenantForm.auditorias_enabled} onChange={(e) => setTenantForm({ ...tenantForm, auditorias_enabled: e.target.checked })} className="rounded" />
+                Módulo Auditorías
+              </label>
             </div>
           </div>
 

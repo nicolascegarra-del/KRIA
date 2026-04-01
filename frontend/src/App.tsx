@@ -118,8 +118,8 @@ function InactivityManager({ timeoutMinutes }: { timeoutMinutes: number }) {
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
-  const { user, clearAuth, endImpersonation } = useAuthStore();
-  const { branding, setBranding } = useTenantStore();
+  const { user, clearAuth, endImpersonation, impersonatingTenant } = useAuthStore();
+  const { branding, setBranding, clearBranding } = useTenantStore();
   const [inactivityTimeout, setInactivityTimeout] = useState(0);
 
   // Listen for forced logout
@@ -147,6 +147,15 @@ export default function App() {
       .then(({ data }) => { setBranding(data); applyBranding(data); })
       .catch(() => {/* Offline — branding from persisted store */});
   }, [user?.tenant_id, setBranding]);
+
+  // Fetch branding when superadmin is impersonating a tenant; clear it when impersonation ends
+  useEffect(() => {
+    if (!impersonatingTenant) { clearBranding(); return; }
+    apiClient
+      .get<TenantBranding>("/tenants/current/branding/")
+      .then(({ data }) => { setBranding(data); applyBranding(data); })
+      .catch(() => {});
+  }, [impersonatingTenant?.id, setBranding, clearBranding]);
 
   // Apply branding from cache immediately (skip for superadmins — they have no tenant branding)
   useEffect(() => {
