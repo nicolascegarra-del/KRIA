@@ -127,7 +127,7 @@ class DashboardTareasPendientesView(APIView):
 
         pendientes_aprobacion = Animal.all_objects.filter(
             tenant=tenant,
-            estado=Animal.Estado.REGISTRADO,
+            estado__in=[Animal.Estado.REGISTRADO, Animal.Estado.MODIFICADO],
         ).count()
 
         conflictos_pendientes = Conflicto.all_objects.filter(

@@ -265,7 +265,7 @@ class AnimalApproveView(APIView):
         except Animal.DoesNotExist:
             return Response({"detail": "Not found."}, status=404)
 
-        if animal.estado not in (Animal.Estado.REGISTRADO, Animal.Estado.RECHAZADO):
+        if animal.estado not in (Animal.Estado.REGISTRADO, Animal.Estado.MODIFICADO, Animal.Estado.RECHAZADO):
             return Response({"detail": f"Cannot approve animal in state {animal.estado}."}, status=400)
 
         # Bloquear aprobación si hay alerta de diámetro (anilla no corresponde al sexo)
@@ -526,6 +526,12 @@ class AnimalReproductorApproveView(APIView):
 
 # Motivos de rechazo predefinidos por fase
 MOTIVOS_RECHAZO = {
+    "MODIFICADO": [
+        "Modificación no válida",
+        "Datos incorrectos tras modificación",
+        "Documentación no actualizada",
+        "Otros",
+    ],
     "REGISTRADO": [
         "Documentación incompleta",
         "Foto de perfil ilegible",

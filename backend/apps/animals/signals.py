@@ -1,6 +1,6 @@
 """
 Animal signals:
-  pre_save  — revert APROBADO/EVALUADO → REGISTRADO if socio edits
+  pre_save  — revert APROBADO/EVALUADO → MODIFICADO if socio edits
   (SOCIO_EN_BAJA transition is handled by a Celery task, not a signal)
 """
 from django.db.models.signals import pre_save
@@ -35,4 +35,4 @@ def revert_state_on_socio_edit(sender, instance, **kwargs):
         return
 
     if old.estado in LOCKED_STATES:
-        instance.estado = Animal.Estado.REGISTRADO
+        instance.estado = Animal.Estado.MODIFICADO

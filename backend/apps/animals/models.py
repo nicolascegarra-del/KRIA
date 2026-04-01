@@ -37,6 +37,7 @@ class MotivoBaja(UUIDModel):
 class Animal(UUIDModel):
     class Estado(models.TextChoices):
         REGISTRADO = "REGISTRADO", "Registrado"
+        MODIFICADO = "MODIFICADO", "Modificado"
         APROBADO = "APROBADO", "Aprobado"
         EVALUADO = "EVALUADO", "Evaluado"
         RECHAZADO = "RECHAZADO", "Rechazado"

@@ -37,6 +37,11 @@ export default function ValidacionesPage() {
     queryFn: () => animalsApi.list({ estado: "REGISTRADO" }),
   });
 
+  const { data: modificadosData } = useQuery({
+    queryKey: ["animals", { estado: "MODIFICADO" }],
+    queryFn: () => animalsApi.list({ estado: "MODIFICADO" }),
+  });
+
   const approveMutation = useMutation({
     mutationFn: (id: string) => {
       setApprovingId(id);
@@ -234,7 +239,10 @@ export default function ValidacionesPage() {
     },
   });
 
-  const animals = validacionesData?.results ?? [];
+  const animals = [
+    ...(validacionesData?.results ?? []),
+    ...(modificadosData?.results ?? []),
+  ];
   const candidatos: Animal[] = candidatosData?.results ?? [];
   const conflictos = conflictosData?.results ?? [];
 
