@@ -7,7 +7,7 @@
       size: A4;
       margin: 1.8cm 2cm;
       @bottom-center {
-        content: "Pág. " counter(page) " · Informe de Auditoría";
+        content: "Pág. " counter(page) " · Informe de Auditoría · {{ tenant.name }}";
         font-size: 7.5pt;
         color: #999;
       }
@@ -23,69 +23,95 @@
       margin: 0;
     }
 
-    .header-table {
-      width: 100%;
-      border-collapse: collapse;
+    /* ── Cabecera ─────────────────────────────────────────────── */
+    .cert-header {
+      display: flex;
+      align-items: center;
       border-bottom: 4px solid {{ tenant.primary_color }};
-      padding-bottom: 0.6em;
-      margin-bottom: 1em;
+      padding-bottom: 0.7em;
+      margin-bottom: 1.4em;
+      gap: 1em;
     }
-    .header-table td {
-      padding: 0 0 8px 0;
-      border-bottom: none;
-      background: transparent;
-    }
-    .tenant-name {
-      font-size: 15pt;
+    .cert-header-text { flex: 1; }
+    .cert-org-name {
+      font-size: 16pt;
       font-weight: bold;
       color: {{ tenant.primary_color }};
+      line-height: 1.1;
     }
-    .report-subtitle {
+    .cert-doc-type {
       font-size: 9pt;
-      color: #666;
-      margin-top: 2px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 0.15em;
     }
-    .report-date {
+    .cert-date {
       font-size: 8pt;
       color: #888;
       text-align: right;
-      vertical-align: top;
-    }
-
-    h2 {
-      font-size: 12pt;
-      color: {{ tenant.primary_color }};
-      border-bottom: 1px solid #e0e0e0;
-      padding-bottom: 0.2em;
-      margin-top: 1.2em;
-      margin-bottom: 0.4em;
-    }
-
-    .info-table {
-      width: 100%;
-      border-collapse: collapse;
-      background: #f8f9fa;
-      border: 1px solid #e0e0e0;
-      border-radius: 4px;
-      margin-bottom: 1em;
-      font-size: 9.5pt;
-    }
-    .info-table td {
-      padding: 4px 10px;
-      border-bottom: none;
-      background: transparent;
-    }
-    .info-label {
-      color: #666;
-      width: 130px;
       white-space: nowrap;
     }
-    .info-value {
+
+    /* ── Secciones ──────────────────────────────────────────────── */
+    .section { margin-bottom: 1.2em; }
+    .section-title {
+      font-size: 9pt;
       font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: {{ tenant.primary_color }};
+      border-bottom: 1.5px solid {{ tenant.primary_color }};
+      padding-bottom: 0.2em;
+      margin-bottom: 0.6em;
+    }
+
+    /* ── Grid de datos ──────────────────────────────────────────── */
+    .data-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+    }
+    .data-field {
+      width: 33%;
+      padding: 0.35em 0.5em 0.35em 0;
+    }
+    .data-field.half { width: 50%; }
+    .data-field.full { width: 100%; }
+    .data-label {
+      font-size: 7.5pt;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.1em;
+    }
+    .data-value {
+      font-size: 10pt;
+      font-weight: 600;
       color: #1a1a1a;
     }
 
-    /* Estado chip */
+    /* ── Tablas ─────────────────────────────────────────────────── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0.8em;
+    }
+    th {
+      background: {{ tenant.primary_color }};
+      color: white;
+      padding: 5px 8px;
+      text-align: left;
+      font-size: 9pt;
+    }
+    td {
+      padding: 5px 8px;
+      border: 1px solid #dde3ea;
+      font-size: 9pt;
+    }
+    tr:nth-child(even) td { background: #f8f9fb; }
+
+    /* ── Chip de estado ─────────────────────────────────────────── */
     .chip {
       display: inline-block;
       padding: 2px 8px;
@@ -98,101 +124,30 @@
     .chip-COMPLETADA  { background: #C8E6C9; color: #1B5E20; }
     .chip-CANCELADA   { background: #E0E0E0; color: #424242; }
 
-    /* Tabla de animales */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 0.5em 0 1em;
-      font-size: 9pt;
-    }
-    th {
-      background: {{ tenant.primary_color }};
-      color: white;
-      padding: 5px 8px;
-      text-align: left;
-      font-weight: bold;
-    }
-    td {
-      padding: 4px 8px;
-      border-bottom: 1px solid #e8e8e8;
-      vertical-align: middle;
-    }
-    tr:nth-child(even) td { background: #f5f5f5; }
-
-    .score-bar-wrap {
-      background: #e0e0e0;
-      border-radius: 3px;
-      height: 6px;
-      width: 80px;
-      display: inline-block;
-      vertical-align: middle;
-      margin-right: 4px;
-    }
-    .score-bar-fill {
-      background: {{ tenant.primary_color }};
-      border-radius: 3px;
-      height: 6px;
-    }
-
-    /* Criterios detalle */
+    /* ── Animal block ───────────────────────────────────────────── */
     .animal-block {
-      margin-bottom: 1.4em;
+      margin-bottom: 1.2em;
       page-break-inside: avoid;
     }
     .animal-title {
       font-weight: bold;
-      font-size: 10.5pt;
+      font-size: 10pt;
       background: #f0f4f8;
       padding: 5px 10px;
       border-left: 4px solid {{ tenant.primary_color }};
-      margin-bottom: 0.4em;
+      margin-bottom: 0.5em;
     }
 
-    .criterios-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 0.4em 0 0.6em;
-      font-size: 8.5pt;
-    }
-    .criterios-table td {
-      padding: 2px 8px;
-      border-bottom: none;
-      background: transparent;
-      vertical-align: middle;
-    }
-    .criterio-nombre {
-      color: #444;
-      width: 45%;
-    }
-    .criterio-valor {
-      font-weight: bold;
-      width: 30px;
-      text-align: center;
-      color: {{ tenant.primary_color }};
-    }
-    .criterio-mult {
-      color: #aaa;
-      font-size: 7.5pt;
-      width: 40px;
-    }
-
-    /* Instalaciones */
+    /* ── Preguntas ──────────────────────────────────────────────── */
     .pregunta-block {
-      margin-bottom: 0.7em;
-      font-size: 9.5pt;
-      border-bottom: 1px solid #f0f0f0;
+      margin-bottom: 0.8em;
       padding-bottom: 0.5em;
+      border-bottom: 1px solid #f0f0f0;
     }
-    .pregunta-texto {
-      font-weight: bold;
-      color: #333;
-    }
-    .pregunta-respuesta {
-      color: #555;
-      margin-top: 2px;
-      padding-left: 12px;
-    }
+    .pregunta-texto { font-weight: bold; color: #333; font-size: 9.5pt; }
+    .pregunta-respuesta { color: #555; padding-left: 12px; font-size: 9pt; margin-top: 2px; }
 
+    /* ── Notas ──────────────────────────────────────────────────── */
     .notas-box {
       background: #fffbf0;
       border: 1px solid #ffe082;
@@ -201,168 +156,196 @@
       font-size: 9pt;
       color: #5d4037;
       margin-top: 0.5em;
+      margin-bottom: 1em;
     }
 
-    .page-break { page-break-after: always; }
-
-    .firma-table {
-      width: 100%;
-      margin-top: 3em;
-      border-collapse: collapse;
-    }
-    .firma-table td {
-      width: 33%;
+    /* ── Firma ──────────────────────────────────────────────────── */
+    .firma-row td {
+      border: none;
       border-top: 1px solid #999;
       padding-top: 6px;
+      text-align: center;
       font-size: 8.5pt;
       color: #666;
-      text-align: center;
       background: transparent;
-      border-bottom: none;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────────── */
+    .cert-footer {
+      margin-top: 2em;
+      padding-top: 0.6em;
+      border-top: 1px solid #ddd;
+      font-size: 7.5pt;
+      color: #999;
     }
   </style>
 </head>
 <body>
 
-  <!-- Cabecera -->
-  <table class="header-table">
-    <tr>
-      <td>
-        <div class="tenant-name">{{ tenant.name }}</div>
-        <div class="report-subtitle">Informe de Auditoría de Socio</div>
-      </td>
-      <td class="report-date">Generado: {% now "d/m/Y H:i" %}</td>
-    </tr>
-  </table>
-
-  <!-- Datos generales -->
-  <h2>Datos de la Auditoría</h2>
-  <table class="info-table">
-    <tr>
-      <td class="info-label">Socio:</td>
-      <td class="info-value">{{ auditoria.socio.nombre_razon_social }}</td>
-      <td class="info-label">DNI/NIF:</td>
-      <td class="info-value">{{ auditoria.socio.dni_nif }}</td>
-    </tr>
-    <tr>
-      <td class="info-label">Fecha planificada:</td>
-      <td class="info-value">{{ auditoria.fecha_planificada|date:"d/m/Y" }}</td>
-      <td class="info-label">Estado:</td>
-      <td class="info-value"><span class="chip chip-{{ auditoria.estado }}">{{ auditoria.get_estado_display }}</span></td>
-    </tr>
-    {% if auditoria.fecha_realizacion %}
-    <tr>
-      <td class="info-label">Fecha realización:</td>
-      <td class="info-value">{{ auditoria.fecha_realizacion|date:"d/m/Y" }}</td>
-      <td></td><td></td>
-    </tr>
-    {% endif %}
-    {% if auditoria.auditores %}
-    <tr>
-      <td class="info-label">Auditores:</td>
-      <td class="info-value" colspan="3">{{ auditoria.auditores }}</td>
-    </tr>
-    {% endif %}
-    {% if auditoria.socio.codigo_rega %}
-    <tr>
-      <td class="info-label">Cód. REGA:</td>
-      <td class="info-value">{{ auditoria.socio.codigo_rega }}</td>
-      <td></td><td></td>
-    </tr>
-    {% endif %}
-  </table>
-
-  {% if auditoria.notas_generales %}
-  <div class="notas-box">
-    <strong>Observaciones generales:</strong> {{ auditoria.notas_generales }}
-  </div>
-  {% endif %}
-
-  <!-- Resumen de animales -->
-  {% if animales_detalle %}
-  <h2>Resumen de Evaluación de Animales</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Nº Anilla</th>
-        <th>Puntuación</th>
-        <th>%</th>
-        <th>Notas</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for av in animales_detalle %}
-      <tr>
-        <td style="font-family: monospace; font-weight: bold;">{{ av.anilla }}</td>
-        <td>{{ av.puntuacion_total }}/{{ av.puntuacion_maxima }}</td>
-        <td>
-          {% if av.porcentaje %}
-            <span class="score-bar-wrap"><span class="score-bar-fill" style="width: {{ av.porcentaje }}%;"></span></span>
-            {{ av.porcentaje }}%
-          {% else %}—{% endif %}
-        </td>
-        <td style="color: #666;">{{ av.notas|default:"" }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% endif %}
-
-  <!-- Detalle por animal con criterios -->
-  {% if criterios and animales_detalle %}
-  <h2>Detalle por Animal</h2>
-  {% for av in animales_detalle %}
-  <div class="animal-block">
-    <div class="animal-title">
-      {{ av.anilla }}
-      &nbsp;·&nbsp;{{ av.puntuacion_total }}/{{ av.puntuacion_maxima }}
-      {% if av.porcentaje %}&nbsp;({{ av.porcentaje }}%){% endif %}
-    </div>
-    <table class="criterios-table">
-      {% for s in av.scores %}
-      <tr>
-        <td class="criterio-nombre">{{ s.nombre }}</td>
-        <td class="criterio-mult">(×{{ s.multiplicador }})</td>
-        <td class="criterio-valor">{{ s.valor }}</td>
-      </tr>
-      {% endfor %}
-    </table>
-    {% if av.notas %}
-    <div style="padding: 4px 10px; font-size: 8.5pt; color: #666; font-style: italic;">
-      Notas: {{ av.notas }}
+  <!-- CABECERA -->
+  <div class="cert-header">
+    {% if tenant.logo_url %}
+    <div style="flex-shrink:0;">
+      <img src="{{ tenant.logo_url }}" alt="{{ tenant.name }}" style="height:54px;width:auto;" />
     </div>
     {% endif %}
+    <div class="cert-header-text">
+      <div class="cert-org-name">{{ tenant.name }}</div>
+      <div class="cert-doc-type">Informe de Auditoria de Socio</div>
+    </div>
+    <div class="cert-date">Generado el {% now "d/m/Y" %} a las {% now "H:i" %}h</div>
   </div>
-  {% endfor %}
-  {% endif %}
 
-  <!-- Instalaciones -->
-  {% if auditoria.respuestas_instalacion.all %}
-  <h2>Cuestionario de Instalaciones</h2>
-  {% for resp in auditoria.respuestas_instalacion.all %}
-  <div class="pregunta-block">
-    <div class="pregunta-texto">{{ resp.pregunta.texto }}</div>
-    <div class="pregunta-respuesta">
-      {% if resp.pregunta.tipo == "SINO" %}
-        {% if resp.respuesta == "si" %}✓ Sí{% elif resp.respuesta == "no" %}✗ No{% else %}—{% endif %}
-      {% elif resp.pregunta.tipo == "PUNTUACION" %}
-        Puntuación: {{ resp.respuesta }}/10
-      {% else %}
-        {{ resp.respuesta|default:"—" }}
+  <!-- DATOS GENERALES -->
+  <div class="section">
+    <div class="section-title">Datos de la Auditoria</div>
+    <div class="data-grid">
+      <div class="data-field half">
+        <div class="data-label">Socio</div>
+        <div class="data-value">{{ auditoria.socio.nombre_razon_social }}</div>
+      </div>
+      <div class="data-field">
+        <div class="data-label">DNI / NIF</div>
+        <div class="data-value">{{ auditoria.socio.dni_nif }}</div>
+      </div>
+      <div class="data-field">
+        <div class="data-label">Estado</div>
+        <div class="data-value">
+          <span class="chip chip-{{ auditoria.estado }}">{{ auditoria.get_estado_display }}</span>
+        </div>
+      </div>
+      <div class="data-field">
+        <div class="data-label">Fecha planificada</div>
+        <div class="data-value">{{ auditoria.fecha_planificada|date:"d/m/Y" }}</div>
+      </div>
+      {% if auditoria.fecha_realizacion %}
+      <div class="data-field">
+        <div class="data-label">Fecha realizacion</div>
+        <div class="data-value">{{ auditoria.fecha_realizacion|date:"d/m/Y" }}</div>
+      </div>
+      {% endif %}
+      {% if auditoria.auditores %}
+      <div class="data-field full">
+        <div class="data-label">Auditores</div>
+        <div class="data-value">{{ auditoria.auditores }}</div>
+      </div>
+      {% endif %}
+      {% if auditoria.socio.codigo_rega %}
+      <div class="data-field">
+        <div class="data-label">Codigo REGA</div>
+        <div class="data-value">{{ auditoria.socio.codigo_rega }}</div>
+      </div>
       {% endif %}
     </div>
+
+    {% if auditoria.notas_generales %}
+    <div class="notas-box">
+      <strong>Observaciones generales:</strong> {{ auditoria.notas_generales }}
+    </div>
+    {% endif %}
   </div>
-  {% endfor %}
+
+  <!-- RESUMEN DE ANIMALES -->
+  {% if animales_detalle %}
+  <div class="section">
+    <div class="section-title">Resumen de Evaluacion de Animales</div>
+    <table>
+      <thead>
+        <tr>
+          <th>N. Anilla</th>
+          <th>Puntuacion</th>
+          <th>Porcentaje</th>
+          <th>Notas</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for av in animales_detalle %}
+        <tr>
+          <td style="font-family:monospace;font-weight:bold;">{{ av.anilla }}</td>
+          <td>{{ av.puntuacion_total }} / {{ av.puntuacion_maxima }}</td>
+          <td>{% if av.porcentaje %}{{ av.porcentaje }}%{% else %}-{% endif %}</td>
+          <td>{{ av.notas|default:"" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {% endif %}
 
-  <!-- Firma -->
-  <table class="firma-table">
-    <tr>
+  <!-- DETALLE POR ANIMAL -->
+  {% if criterios and animales_detalle %}
+  <div class="section">
+    <div class="section-title">Detalle por Animal</div>
+    {% for av in animales_detalle %}
+    <div class="animal-block">
+      <div class="animal-title">
+        {{ av.anilla }}
+        &nbsp;-&nbsp; {{ av.puntuacion_total }} / {{ av.puntuacion_maxima }}
+        {% if av.porcentaje %} ({{ av.porcentaje }}%){% endif %}
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Criterio</th>
+            <th>Multiplicador</th>
+            <th>Puntuacion (0-10)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in av.scores %}
+          <tr>
+            <td>{{ s.nombre }}</td>
+            <td style="text-align:center;">x{{ s.multiplicador }}</td>
+            <td style="text-align:center;font-weight:bold;">{{ s.valor }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if av.notas %}
+      <p style="font-size:8.5pt;color:#555;font-style:italic;margin-top:0.3em;">
+        Notas: {{ av.notas }}
+      </p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- CUESTIONARIO DE INSTALACIONES -->
+  {% if auditoria.respuestas_instalacion.all %}
+  <div class="section">
+    <div class="section-title">Cuestionario de Instalaciones</div>
+    {% for resp in auditoria.respuestas_instalacion.all %}
+    <div class="pregunta-block">
+      <div class="pregunta-texto">{{ resp.pregunta.texto }}</div>
+      <div class="pregunta-respuesta">
+        {% if resp.pregunta.tipo == "SINO" %}
+          {% if resp.respuesta == "si" %}Si{% elif resp.respuesta == "no" %}No{% else %}-{% endif %}
+        {% elif resp.pregunta.tipo == "PUNTUACION" %}
+          Puntuacion: {{ resp.respuesta }}/10
+        {% else %}
+          {{ resp.respuesta|default:"-" }}
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- FIRMAS -->
+  <table style="margin-top:3em;">
+    <tr class="firma-row">
       <td>Firma del Auditor</td>
       <td>Firma del Socio</td>
-      <td>Sello de la Asociación</td>
+      <td>Sello de la Asociacion</td>
     </tr>
   </table>
+
+  <!-- PIE -->
+  <div class="cert-footer">
+    Este documento ha sido generado por <strong>{{ tenant.name }}</strong> con caracter informativo.
+    Kria - Plataforma de Gestion de Asociaciones Avicolas.
+  </div>
 
 </body>
 </html>
