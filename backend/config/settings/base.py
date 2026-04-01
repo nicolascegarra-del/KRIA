@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "apps.anillas",
     "apps.documentos",
     "apps.audits",
+    "apps.health",
 ]
 
 MIDDLEWARE = [
@@ -188,6 +189,18 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_ROUTES = {
     "apps.imports.tasks.*": {"queue": "imports"},
     "apps.reports.tasks.*": {"queue": "reports"},
+}
+
+from celery.schedules import crontab
+CELERY_BEAT_SCHEDULE = {
+    "health-check-morning": {
+        "task": "apps.health.tasks.run_health_check",
+        "schedule": crontab(hour=7, minute=30),
+    },
+    "health-check-evening": {
+        "task": "apps.health.tasks.run_health_check",
+        "schedule": crontab(hour=19, minute=30),
+    },
 }
 
 # ─── Cache ────────────────────────────────────────────────────────────────────

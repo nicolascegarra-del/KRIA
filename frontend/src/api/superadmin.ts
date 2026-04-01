@@ -124,7 +124,7 @@ export const superadminApi = {
     const { data } = await apiClient.post<GestionUser>("/superadmin/superadmins/", payload);
     return data;
   },
-  updateSuperAdmin: async (id: string, payload: { email?: string; first_name?: string; last_name?: string; password?: string; notif_nueva_asociacion?: boolean; notif_asociacion_suspendida?: boolean; notif_asociacion_activada?: boolean; notif_asociacion_eliminada?: boolean; notif_propuesta_mejora?: boolean }): Promise<GestionUser> => {
+  updateSuperAdmin: async (id: string, payload: { email?: string; first_name?: string; last_name?: string; password?: string; notif_nueva_asociacion?: boolean; notif_asociacion_suspendida?: boolean; notif_asociacion_activada?: boolean; notif_asociacion_eliminada?: boolean; notif_propuesta_mejora?: boolean; notif_health_check?: boolean }): Promise<GestionUser> => {
     const { data } = await apiClient.patch<GestionUser>(`/superadmin/superadmins/${id}/`, payload);
     return data;
   },

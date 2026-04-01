@@ -80,6 +80,10 @@ class User(AbstractBaseUser, PermissionsMixin, UUIDModel):
         default=False,
         help_text="Recibir email cuando un socio o gestor envíe una propuesta de mejora",
     )
+    notif_health_check = models.BooleanField(
+        default=False,
+        help_text="Recibir informe de estado del sistema dos veces al día (7:30 y 19:30)",
+    )
 
     objects = UserManager()
 
