@@ -412,6 +412,25 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           )}
         </nav>
 
+        {/* Propuestas de Mejora — encima del separador */}
+        {!(isSuperadmin && !impersonatingTenant) && (
+          <div className="px-4 pb-2">
+            <Link
+              to="/propuestas-mejora"
+              onClick={() => setSidebarOpen(false)}
+              className={clsx(
+                "flex items-center gap-1.5 text-[11px] transition-colors",
+                location.pathname === "/propuestas-mejora"
+                  ? "text-white/80"
+                  : "text-white/30 hover:text-white/60"
+              )}
+            >
+              <Lightbulb size={12} />
+              Propuestas de Mejora
+            </Link>
+          </div>
+        )}
+
         {/* User footer */}
         <div className="px-4 py-4 border-t border-white/20">
           {isSocio && socioData ? (
@@ -427,21 +446,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <div className="text-sm font-medium text-white truncate">{user?.full_name}</div>
               <div className="text-xs text-white/60 truncate">{user?.email}</div>
             </>
-          )}
-          {!(isSuperadmin && !impersonatingTenant) && (
-            <Link
-              to="/propuestas-mejora"
-              onClick={() => setSidebarOpen(false)}
-              className={clsx(
-                "flex items-center gap-1.5 mt-3 text-[11px] transition-colors",
-                location.pathname === "/propuestas-mejora"
-                  ? "text-white/80"
-                  : "text-white/30 hover:text-white/60"
-              )}
-            >
-              <Lightbulb size={12} />
-              Propuestas de mejora
-            </Link>
           )}
         </div>
       </aside>
