@@ -58,7 +58,8 @@ const NAV_ITEMS: NavItem[] = [
 { to: "/socios",                   label: "Socios",                icon: <Users size={18} />,           gestionOnly: true },
   { to: "/granjas",                  label: "Granjas",               icon: <Building2 size={18} />,       gestionOnly: true, requiresGranjas: true },
   { to: "/anillas",                  label: "Anillas",               icon: <Tag size={18} />,             gestionOnly: true },
-  { to: "/importar",                 label: "Importar",              icon: <Upload size={18} />,          gestionOnly: true },
+  { to: "/importar",                 label: "Importar socios",       icon: <Upload size={18} />,          gestionOnly: true },
+  { to: "/importar-animales",        label: "Importar animales",     icon: <Upload size={18} />,          gestionOnly: true },
   { to: "/reportes",                 label: "Reportes",              icon: <FileText size={18} />,        gestionOnly: true },
   { to: "/auditorias",              label: "Auditorías",            icon: <ClipboardCheck size={18} />,  gestionOnly: true },
   // SuperAdmin

@@ -30,6 +30,7 @@ import ValidacionesPage from "./pages/gestion/ValidacionesPage";
 import SociosPage from "./pages/gestion/SociosPage";
 import SocioDetailPage from "./pages/gestion/SocioDetailPage";
 import ImportPage from "./pages/gestion/ImportPage";
+import ImportAnimalesPage from "./pages/gestion/ImportAnimalesPage";
 import ReportesPage from "./pages/gestion/ReportesPage";
 import EvaluacionPage from "./pages/gestion/EvaluacionPage";
 import CandidatosReproductorPage from "./pages/gestion/CandidatosReproductorPage";
@@ -202,6 +203,7 @@ export default function App() {
         <Route path="/granjas" element={<LayoutRoute gestionOnly><GranjasGestionPage /></LayoutRoute>} />
         <Route path="/anillas" element={<LayoutRoute gestionOnly><AnillasPage /></LayoutRoute>} />
         <Route path="/importar" element={<LayoutRoute gestionOnly><ImportPage /></LayoutRoute>} />
+        <Route path="/importar-animales" element={<LayoutRoute gestionOnly><ImportAnimalesPage /></LayoutRoute>} />
         <Route path="/reportes" element={<LayoutRoute gestionOnly><ReportesPage /></LayoutRoute>} />
         <Route path="/evaluaciones/nuevo" element={<LayoutRoute gestionOnly><EvaluacionPage /></LayoutRoute>} />
         <Route path="/reproductores/candidatos" element={<LayoutRoute gestionOnly><CandidatosReproductorPage /></LayoutRoute>} />

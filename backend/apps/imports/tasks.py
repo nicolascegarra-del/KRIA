@@ -234,3 +234,176 @@ def process_import_job(self, job_id: str):
     finally:
         job.finished_at = timezone.now()
         job.save(update_fields=["status", "result_summary", "error_log", "finished_at"])
+
+
+@shared_task(name="imports.process_animal_import_job", queue="imports", bind=True, max_retries=0)
+def process_animal_import_job(self, job_id: str):
+    """Import animals from Excel. Columns: numero_anilla, fecha_nacimiento, sexo, variedad,
+    socio_dni, socio_numero_socio, padre_anilla, madre_anilla, madre_lote_externo,
+    fecha_incubacion, ganaderia_nacimiento, ganaderia_actual."""
+    from .models import ImportJob
+    from apps.accounts.models import Socio
+    from apps.animals.models import Animal
+
+    try:
+        job = ImportJob.all_objects.select_related("tenant").get(pk=job_id)
+    except ImportJob.DoesNotExist:
+        logger.error(f"ImportJob {job_id} not found.")
+        return
+
+    job.status = ImportJob.Status.PROCESSING
+    job.save(update_fields=["status"])
+
+    tenant = job.tenant
+
+    try:
+        import pandas as pd
+        import datetime as _dt
+        from apps.reports.storage import get_minio_client
+
+        client = get_minio_client()
+        bucket = __import__("django.conf", fromlist=["settings"]).settings.MINIO_BUCKET_NAME
+        response = client.get_object(bucket, job.file_key)
+        file_bytes = response.read()
+        response.close()
+
+        df = pd.read_excel(io.BytesIO(file_bytes), dtype=str)
+        df.columns = [c.strip().lower() for c in df.columns]
+        df = df.fillna("")
+        # Skip fully blank rows and template description rows
+        df = df[df.apply(lambda r: any(str(v).strip() for v in r), axis=1)]
+        if "numero_anilla" in df.columns:
+            df = df[~df["numero_anilla"].str.lower().str.startswith("número")]
+            df = df[~df["numero_anilla"].str.lower().str.startswith("numero")]
+        df = df.reset_index(drop=True)
+
+        def _parse_date(raw):
+            raw = str(raw).strip()
+            if not raw:
+                return None
+            for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d %H:%M:%S"):
+                try:
+                    return _dt.datetime.strptime(raw, fmt).date()
+                except ValueError:
+                    continue
+            return None
+
+        def _find_socio(row):
+            dni = str(row.get("socio_dni", "")).strip()
+            num = str(row.get("socio_numero_socio", "")).strip()
+            if dni:
+                return Socio.all_objects.filter(tenant=tenant, dni_nif=dni).first()
+            if num:
+                return Socio.all_objects.filter(tenant=tenant, numero_socio=num).first()
+            return None
+
+        created_count = 0
+        updated_count = 0
+        errors = []
+
+        for idx, row in df.iterrows():
+            try:
+                anilla = str(row.get("numero_anilla", "")).strip()
+                fecha_nac_raw = str(row.get("fecha_nacimiento", "")).strip()
+                sexo_raw = str(row.get("sexo", "")).strip().upper()
+                variedad_raw = str(row.get("variedad", "")).strip().upper()
+
+                if not anilla:
+                    errors.append(f"Fila {idx+2}: numero_anilla vacío, se omite.")
+                    continue
+
+                fecha_nac = _parse_date(fecha_nac_raw)
+                if not fecha_nac:
+                    errors.append(f"Fila {idx+2}: fecha_nacimiento inválida ('{fecha_nac_raw}'), se omite.")
+                    continue
+
+                # Normalise sexo
+                if sexo_raw in ("MACHO",):
+                    sexo_raw = "M"
+                elif sexo_raw in ("HEMBRA",):
+                    sexo_raw = "H"
+                if sexo_raw not in ("M", "H"):
+                    errors.append(f"Fila {idx+2}: sexo inválido ('{sexo_raw}'), debe ser M o H, se omite.")
+                    continue
+
+                # Variedad
+                valid_variedades = ("SALMON", "PLATA", "SIN_DEFINIR")
+                variedad = variedad_raw if variedad_raw in valid_variedades else "SALMON"
+
+                # Socio
+                socio = _find_socio(row)
+                if not socio:
+                    errors.append(f"Fila {idx+2}: no se encontró socio con dni='{row.get('socio_dni','')}' / num='{row.get('socio_numero_socio','')}', se omite.")
+                    continue
+
+                # Optional fields
+                fecha_inc = _parse_date(row.get("fecha_incubacion", ""))
+                ganaderia_nac = str(row.get("ganaderia_nacimiento", "")).strip()
+                ganaderia_act = str(row.get("ganaderia_actual", "")).strip()
+                madre_lote_ext = str(row.get("madre_lote_externo", "")).strip()
+
+                # Genealogy — resolve by anilla within tenant
+                padre_obj = None
+                padre_anilla = str(row.get("padre_anilla", "")).strip()
+                if padre_anilla:
+                    padre_obj = Animal.all_objects.filter(tenant=tenant, numero_anilla=padre_anilla).first()
+                    if not padre_obj:
+                        errors.append(f"Fila {idx+2}: padre '{padre_anilla}' no encontrado, se ignora.")
+
+                madre_obj = None
+                madre_anilla = str(row.get("madre_anilla", "")).strip()
+                if madre_anilla:
+                    madre_obj = Animal.all_objects.filter(tenant=tenant, numero_anilla=madre_anilla).first()
+                    if not madre_obj:
+                        errors.append(f"Fila {idx+2}: madre '{madre_anilla}' no encontrado, se ignora.")
+
+                animal_fields = {
+                    "sexo": sexo_raw,
+                    "variedad": variedad,
+                    "padre": padre_obj,
+                    "madre_animal": madre_obj,
+                    "madre_lote_externo": madre_lote_ext,
+                    "fecha_incubacion": fecha_inc,
+                    "ganaderia_nacimiento": ganaderia_nac,
+                    "ganaderia_actual": ganaderia_act,
+                }
+
+                animal, a_created = Animal.all_objects.get_or_create(
+                    tenant=tenant,
+                    numero_anilla=anilla,
+                    fecha_nacimiento=fecha_nac,
+                    defaults={"socio": socio, **animal_fields},
+                )
+
+                if a_created:
+                    created_count += 1
+                else:
+                    # Update only non-empty fields
+                    update_fields = []
+                    for field, val in animal_fields.items():
+                        if val not in (None, ""):
+                            setattr(animal, field, val)
+                            update_fields.append(field)
+                    if update_fields:
+                        animal.save(update_fields=update_fields)
+                    updated_count += 1
+
+            except Exception as e:
+                errors.append(f"Fila {idx+2}: {str(e)}")
+
+        job.result_summary = {
+            "total_rows": len(df),
+            "created": created_count,
+            "updated": updated_count,
+            "errors": errors,
+        }
+        job.status = ImportJob.Status.DONE
+
+    except Exception as e:
+        job.status = ImportJob.Status.FAILED
+        job.error_log = traceback.format_exc()
+        logger.error(f"AnimalImportJob {job_id} failed: {e}")
+
+    finally:
+        job.finished_at = timezone.now()
+        job.save(update_fields=["status", "result_summary", "error_log", "finished_at"])
