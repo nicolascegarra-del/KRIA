@@ -573,9 +573,9 @@ export default function AnimalFormPage() {
                           )
                         )}
                       </div>
-                      <input ref={(el) => { fileInputRefs.current[tipo] = el; }} type="file" accept="image/*" capture="environment" className="hidden"
+                      <input ref={(el) => { fileInputRefs.current[tipo] = el; }} type="file" accept="image/*" className="hidden"
                         onChange={(e) => { const file = e.target.files?.[0]; if (file) { uploadFotoMutation.mutate({ file, tipo }); e.target.value = ""; } else { setUploadingTipo(null); } }} />
-                      <input ref={(el) => { pendingFileRefs.current[tipo] = el; }} type="file" accept="image/*" capture="environment" className="hidden"
+                      <input ref={(el) => { pendingFileRefs.current[tipo] = el; }} type="file" accept="image/*" className="hidden"
                         onChange={(e) => { const file = e.target.files?.[0]; if (file) { const url = URL.createObjectURL(file); setPendingPhotos((p) => ({ ...p, [tipo]: file })); setPendingPreviews((p) => ({ ...p, [tipo]: url })); } e.target.value = ""; }} />
                     </div>
                   );
