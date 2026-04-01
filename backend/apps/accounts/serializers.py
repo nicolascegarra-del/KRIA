@@ -92,7 +92,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "email", "first_name", "last_name", "is_gestion", "is_superadmin", "is_active", "date_joined", "notif_nueva_asociacion", "notif_asociacion_suspendida", "notif_asociacion_activada", "notif_asociacion_eliminada"]
+        fields = ["id", "email", "first_name", "last_name", "is_gestion", "is_superadmin", "is_active", "date_joined", "notif_nueva_asociacion", "notif_asociacion_suspendida", "notif_asociacion_activada", "notif_asociacion_eliminada", "notif_propuesta_mejora"]
         read_only_fields = ["id", "date_joined"]
 
 

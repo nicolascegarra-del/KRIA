@@ -34,6 +34,7 @@ import {
   ClipboardCheck,
   AlertCircle,
   Mail,
+  Lightbulb,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -46,6 +47,7 @@ interface NavItem {
   superadminOnly?: boolean;
   exact?: boolean;  // usar coincidencia exacta de ruta para el estado activo
   requiresGranjas?: boolean;  // ocultar si granjas_enabled === false
+  subtle?: boolean;  // estilo tenue, para items secundarios
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -59,6 +61,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/importar",                 label: "Importar",              icon: <Upload size={18} />,          gestionOnly: true },
   { to: "/reportes",                 label: "Reportes",              icon: <FileText size={18} />,        gestionOnly: true },
   { to: "/auditorias",              label: "Auditorías",            icon: <ClipboardCheck size={18} />,  gestionOnly: true },
+  { to: "/propuestas-mejora",       label: "Propuestas de Mejora",  icon: <Lightbulb size={18} />,        gestionOnly: true, subtle: true },
   // SuperAdmin
   { to: "/superadmin",               label: "Dashboard",             icon: <LayoutDashboard size={18} />, superadminOnly: true, exact: true },
   { to: "/superadmin/asociaciones",  label: "Asociaciones",          icon: <Building size={18} />,        superadminOnly: true },
@@ -72,6 +75,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/mis-lotes",                label: "Mis Lotes",             icon: <Layers size={18} />,          socioOnly: true },
   { to: "/mis-anillas",              label: "Mis Anillas",           icon: <Tag size={18} />,             socioOnly: true },
   { to: "/mis-auditorias",           label: "Mis Auditorías",        icon: <ClipboardCheck size={18} />,  socioOnly: true },
+  { to: "/propuestas-mejora",        label: "Propuestas de Mejora",  icon: <Lightbulb size={18} />,        socioOnly: true, subtle: true },
 ];
 
 // Bottom nav items for socios (mobile)
@@ -340,9 +344,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     onClick={() => setSidebarOpen(false)}
                     className={clsx(
                       "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                      (item.exact ? location.pathname === item.to : location.pathname.startsWith(item.to))
-                        ? "bg-white/20 text-white"
-                        : "text-white/70 hover:bg-white/10 hover:text-white"
+                      item.subtle && !(item.exact ? location.pathname === item.to : location.pathname.startsWith(item.to))
+                        ? "text-white/35 hover:bg-white/10 hover:text-white/60"
+                        : (item.exact ? location.pathname === item.to : location.pathname.startsWith(item.to))
+                          ? "bg-white/20 text-white"
+                          : "text-white/70 hover:bg-white/10 hover:text-white"
                     )}
                   >
                     {item.icon}
@@ -370,9 +376,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     onClick={() => setSidebarOpen(false)}
                     className={clsx(
                       "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                      (item.exact ? location.pathname === item.to : location.pathname.startsWith(item.to))
-                        ? "bg-white/20 text-white"
-                        : "text-white/70 hover:bg-white/10 hover:text-white"
+                      item.subtle && !(item.exact ? location.pathname === item.to : location.pathname.startsWith(item.to))
+                        ? "text-white/35 hover:bg-white/10 hover:text-white/60"
+                        : (item.exact ? location.pathname === item.to : location.pathname.startsWith(item.to))
+                          ? "bg-white/20 text-white"
+                          : "text-white/70 hover:bg-white/10 hover:text-white"
                     )}
                   >
                     {item.icon}

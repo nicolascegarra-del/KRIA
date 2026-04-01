@@ -76,6 +76,10 @@ class User(AbstractBaseUser, PermissionsMixin, UUIDModel):
         default=False,
         help_text="Recibir email cuando se elimine una asociación",
     )
+    notif_propuesta_mejora = models.BooleanField(
+        default=False,
+        help_text="Recibir email cuando un socio o gestor envíe una propuesta de mejora",
+    )
 
     objects = UserManager()
 

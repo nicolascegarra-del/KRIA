@@ -167,6 +167,7 @@ interface UserEditForm {
   notif_asociacion_suspendida: boolean;
   notif_asociacion_activada: boolean;
   notif_asociacion_eliminada: boolean;
+  notif_propuesta_mejora: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -206,7 +207,7 @@ export default function SuperAdminPage() {
   const [addingUser, setAddingUser] = useState(false);
   const [addUserForm, setAddUserForm] = useState<GestionUserCreate>(USER_DEFAULTS);
   const [editingUser, setEditingUser] = useState<GestionUser | null>(null);
-  const [editUserForm, setEditUserForm] = useState<UserEditForm>({ email: "", first_name: "", last_name: "", password: "", notif_nueva_asociacion: false, notif_asociacion_suspendida: false, notif_asociacion_activada: false, notif_asociacion_eliminada: false });
+  const [editUserForm, setEditUserForm] = useState<UserEditForm>({ email: "", first_name: "", last_name: "", password: "", notif_nueva_asociacion: false, notif_asociacion_suspendida: false, notif_asociacion_activada: false, notif_asociacion_eliminada: false, notif_propuesta_mejora: false });
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
 
   // ── Audit config modal state ───────────────────────────────────────────────
@@ -215,7 +216,7 @@ export default function SuperAdminPage() {
   // ── SuperAdmin modal state ─────────────────────────────────────────────────
   const [saModalOpen, setSaModalOpen] = useState(false);
   const [editingSa, setEditingSa] = useState<GestionUser | null>(null);
-  const [saForm, setSaForm] = useState<UserEditForm>({ email: "", first_name: "", last_name: "", password: "", notif_nueva_asociacion: false, notif_asociacion_suspendida: false, notif_asociacion_activada: false, notif_asociacion_eliminada: false });
+  const [saForm, setSaForm] = useState<UserEditForm>({ email: "", first_name: "", last_name: "", password: "", notif_nueva_asociacion: false, notif_asociacion_suspendida: false, notif_asociacion_activada: false, notif_asociacion_eliminada: false, notif_propuesta_mejora: false });
   const [deleteSaId, setDeleteSaId] = useState<string | null>(null);
 
   const [error, setError, clearError] = useAutoCloseError();
@@ -557,9 +558,9 @@ export default function SuperAdminPage() {
   };
 
   // ── SA helpers ─────────────────────────────────────────────────────────────
-  const closeSaModal = () => { setSaModalOpen(false); setEditingSa(null); setSaForm({ email: "", first_name: "", last_name: "", password: "", notif_nueva_asociacion: false, notif_asociacion_suspendida: false, notif_asociacion_activada: false, notif_asociacion_eliminada: false }); clearSaError(); };
-  const openCreateSa = () => { setEditingSa(null); setSaForm({ email: "", first_name: "", last_name: "", password: "", notif_nueva_asociacion: false, notif_asociacion_suspendida: false, notif_asociacion_activada: false, notif_asociacion_eliminada: false }); clearSaError(); setSaModalOpen(true); };
-  const openEditSa = (u: GestionUser) => { setEditingSa(u); setSaForm({ email: u.email, first_name: u.first_name, last_name: u.last_name, password: "", notif_nueva_asociacion: u.notif_nueva_asociacion ?? false, notif_asociacion_suspendida: u.notif_asociacion_suspendida ?? false, notif_asociacion_activada: u.notif_asociacion_activada ?? false, notif_asociacion_eliminada: u.notif_asociacion_eliminada ?? false }); clearSaError(); setSaModalOpen(true); };
+  const closeSaModal = () => { setSaModalOpen(false); setEditingSa(null); setSaForm({ email: "", first_name: "", last_name: "", password: "", notif_nueva_asociacion: false, notif_asociacion_suspendida: false, notif_asociacion_activada: false, notif_asociacion_eliminada: false, notif_propuesta_mejora: false }); clearSaError(); };
+  const openCreateSa = () => { setEditingSa(null); setSaForm({ email: "", first_name: "", last_name: "", password: "", notif_nueva_asociacion: false, notif_asociacion_suspendida: false, notif_asociacion_activada: false, notif_asociacion_eliminada: false, notif_propuesta_mejora: false }); clearSaError(); setSaModalOpen(true); };
+  const openEditSa = (u: GestionUser) => { setEditingSa(u); setSaForm({ email: u.email, first_name: u.first_name, last_name: u.last_name, password: "", notif_nueva_asociacion: u.notif_nueva_asociacion ?? false, notif_asociacion_suspendida: u.notif_asociacion_suspendida ?? false, notif_asociacion_activada: u.notif_asociacion_activada ?? false, notif_asociacion_eliminada: u.notif_asociacion_eliminada ?? false, notif_propuesta_mejora: u.notif_propuesta_mejora ?? false }); clearSaError(); setSaModalOpen(true); };
   const handleSaSubmit = (e: React.FormEvent) => {
     e.preventDefault(); clearSaError();
     const payload = { ...saForm, ...(saForm.password ? {} : { password: undefined }) };
@@ -1260,7 +1261,7 @@ export default function SuperAdminPage() {
                       <td className="px-3 py-2 text-xs text-gray-400 italic">cifrada</td>
                       <td className="px-3 py-2">
                         <div className="flex gap-1">
-                          <button className="btn-ghost p-1" title="Editar / cambiar contraseña" onClick={() => { setEditingUser(u); setAddingUser(false); setEditUserForm({ email: u.email, first_name: u.first_name, last_name: u.last_name, password: "", notif_nueva_asociacion: false, notif_asociacion_suspendida: false, notif_asociacion_activada: false, notif_asociacion_eliminada: false }); }}>
+                          <button className="btn-ghost p-1" title="Editar / cambiar contraseña" onClick={() => { setEditingUser(u); setAddingUser(false); setEditUserForm({ email: u.email, first_name: u.first_name, last_name: u.last_name, password: "", notif_nueva_asociacion: false, notif_asociacion_suspendida: false, notif_asociacion_activada: false, notif_asociacion_eliminada: false, notif_propuesta_mejora: false }); }}>
                             <Pencil size={13} />
                           </button>
                           {u.is_active
@@ -1396,6 +1397,7 @@ export default function SuperAdminPage() {
                 { key: "notif_asociacion_suspendida", label: "Asociación suspendida" },
                 { key: "notif_asociacion_activada",   label: "Asociación reactivada" },
                 { key: "notif_asociacion_eliminada",  label: "Asociación eliminada" },
+                { key: "notif_propuesta_mejora",      label: "Propuestas de mejora" },
               ] as { key: keyof typeof saForm; label: string }[]).map(({ key, label }) => (
                 <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
                   <input

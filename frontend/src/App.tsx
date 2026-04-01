@@ -13,6 +13,7 @@ import PasswordResetPage from "./pages/auth/PasswordResetPage";
 
 // Shared pages
 import PerfilPage from "./pages/PerfilPage";
+import PropuestaMejoraPage from "./pages/PropuestaMejoraPage";
 
 // Socio pages
 import MisAnimalesPage from "./pages/socio/MisAnimalesPage";
@@ -180,6 +181,7 @@ export default function App() {
 
         {/* Shared — autenticado (cualquier rol) */}
         <Route path="/perfil" element={<LayoutRoute><PerfilPage /></LayoutRoute>} />
+        <Route path="/propuestas-mejora" element={<LayoutRoute><PropuestaMejoraPage /></LayoutRoute>} />
 
         {/* Socio routes */}
         <Route path="/mis-animales" element={<LayoutRoute socioOnly><MisAnimalesPage /></LayoutRoute>} />

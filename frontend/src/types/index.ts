@@ -389,6 +389,7 @@ export interface GestionUser {
   notif_asociacion_suspendida?: boolean;
   notif_asociacion_activada?: boolean;
   notif_asociacion_eliminada?: boolean;
+  notif_propuesta_mejora?: boolean;
 }
 
 export interface TenantCreatePayload extends Partial<Tenant> {

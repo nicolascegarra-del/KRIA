@@ -561,3 +561,67 @@ class SolicitudCambioResolverView(APIView):
         solicitud.save(update_fields=["estado"])
         _notificar_cambio_datos(request.tenant, solicitud.socio, accion)
         return Response({"ok": True, "estado": solicitud.estado})
+
+
+class PropuestaMejoraView(APIView):
+    """POST /api/v1/auth/propuesta-mejora/ — envía una propuesta de mejora a los superadmins."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        texto = (request.data.get("texto") or "").strip()
+        if not texto:
+            return Response({"detail": "El texto de la propuesta no puede estar vacío."}, status=400)
+        if len(texto) > 2000:
+            return Response({"detail": "El texto no puede superar los 2000 caracteres."}, status=400)
+
+        tenant = request.tenant
+        user = request.user
+
+        # Construir información del remitente
+        remitente_asociacion = tenant.name
+        remitente_nombre = user.full_name or user.email
+        remitente_email = user.email
+        es_socio = not user.is_gestion
+
+        if es_socio:
+            try:
+                socio = user.socio
+                remitente_nombre = socio.nombre_razon_social
+                if socio.numero_socio:
+                    remitente_nombre += f" (Nº {socio.numero_socio})"
+            except Exception:
+                pass
+
+        rol = "Socio" if es_socio else "Gestor"
+
+        subject = f"Propuesta de Mejora — {remitente_asociacion}"
+        body = (
+            f"Se ha recibido una nueva propuesta de mejora desde la plataforma KRIA.\n\n"
+            f"Asociación: {remitente_asociacion}\n"
+            f"Remitente: {remitente_nombre}\n"
+            f"Email: {remitente_email}\n"
+            f"Rol: {rol}\n\n"
+            f"{'─' * 50}\n\n"
+            f"{texto}\n\n"
+            f"{'─' * 50}\n\n"
+            f"Puedes responder directamente a este email para contactar con el remitente."
+        )
+
+        try:
+            emails = list(
+                User.objects.filter(is_superadmin=True, is_active=True, notif_propuesta_mejora=True)
+                .exclude(email="")
+                .values_list("email", flat=True)
+            )
+            if emails:
+                send_platform_mail(
+                    subject=subject,
+                    body=body,
+                    recipient_list=emails,
+                    tipo="NOTIF_PROPUESTA_MEJORA",
+                    fail_silently=True,
+                )
+        except Exception:
+            pass
+
+        return Response({"detail": "Propuesta enviada. Gracias por tu feedback."}, status=200)
