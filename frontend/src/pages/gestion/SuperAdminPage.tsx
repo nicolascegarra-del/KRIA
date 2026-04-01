@@ -1727,6 +1727,7 @@ export default function SuperAdminPage() {
                   <option value="NUEVA_ASOCIACION">Nueva asociación</option>
                   <option value="ALTA_SOCIO">Alta de socio</option>
                   <option value="RESET_PASSWORD">Reset de contraseña</option>
+                  <option value="HEALTH_CHECK">Health Check</option>
                   <option value="GENERAL">General</option>
                 </select>
               </div>

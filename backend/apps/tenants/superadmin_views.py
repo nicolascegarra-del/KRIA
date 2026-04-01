@@ -487,7 +487,7 @@ class SuperAdminSuperAdminDetailView(APIView):
 
         for field in ("first_name", "last_name", "email", "notif_nueva_asociacion",
                       "notif_asociacion_suspendida", "notif_asociacion_activada", "notif_asociacion_eliminada",
-                      "notif_propuesta_mejora"):
+                      "notif_propuesta_mejora", "notif_health_check"):
             if field in request.data:
                 setattr(user, field, request.data[field])
 

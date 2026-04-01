@@ -144,6 +144,8 @@ def _send_health_email(results: list[tuple[str, bool, str]]):
 
     body = "\n".join(lines)
 
+    success = False
+    error_msg = ""
     try:
         send_mail(
             subject=subject,
@@ -152,8 +154,24 @@ def _send_health_email(results: list[tuple[str, bool, str]]):
             recipient_list=recipients,
             fail_silently=False,
         )
+        success = True
     except Exception as e:
+        error_msg = str(e)
         logger.error(f"Health check: error enviando email: {e}")
+
+    # Persist to MailLog
+    try:
+        from apps.accounts.models import MailLog
+        MailLog.objects.create(
+            tipo="HEALTH_CHECK",
+            destinatarios=", ".join(recipients),
+            asunto=subject,
+            cuerpo=body,
+            success=success,
+            error=error_msg,
+        )
+    except Exception as e:
+        logger.error(f"Health check: error guardando MailLog: {e}")
 
 
 @shared_task(name="apps.health.tasks.run_health_check", bind=True, max_retries=0)
