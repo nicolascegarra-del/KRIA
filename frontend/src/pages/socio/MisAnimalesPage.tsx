@@ -4,19 +4,20 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Plus, Search, Bird, RotateCcw, Loader2, XCircle, Pencil, Eye,
   Settings2, GripVertical, X, ArrowUpDown, ArrowUp, ArrowDown,
-  MessageSquare,
+  MessageSquare, TreeDeciduous,
 } from "lucide-react";
 import { animalsApi } from "../../api/animals";
 import { realtaApi } from "../../api/realta";
 import { configuracionApi } from "../../api/configuracion";
 import AnimalStateChip from "../../components/AnimalStateChip";
+import GenealogyTooltip from "../../components/GenealogyTooltip";
 import type { Animal, AnimalEstado } from "../../types";
 
 // ── Tipos de tab ──────────────────────────────────────────────────────────────
 
 type Tab = "activos" | "no_activos";
 
-const ACTIVO_STATES: AnimalEstado[] = ["REGISTRADO", "APROBADO", "EVALUADO"];
+const ACTIVO_STATES: AnimalEstado[] = ["REGISTRADO", "MODIFICADO", "APROBADO", "EVALUADO"];
 const NO_ACTIVO_STATES: AnimalEstado[] = ["RECHAZADO", "SOCIO_EN_BAJA", "BAJA"];
 
 // ── Columnas ──────────────────────────────────────────────────────────────────
@@ -239,6 +240,15 @@ export default function MisAnimalesPage() {
   // Solicitar reactivación inline
   const [realtaOpenId, setRealtaOpenId] = useState<string | null>(null);
   const [realtaNotas, setRealtaNotas] = useState("");
+
+  // Árbol genealógico
+  const [genealogyAnimalId, setGenealogyAnimalId] = useState<string | null>(null);
+  const [genealogyAnimal, setGenealogyAnimal] = useState<Animal | null>(null);
+  const { data: genealogyData, isLoading: genealogyLoading } = useQuery({
+    queryKey: ["genealogy", genealogyAnimalId],
+    queryFn: () => animalsApi.genealogy(genealogyAnimalId!),
+    enabled: !!genealogyAnimalId,
+  });
 
   // Persist column config
   useEffect(() => {
@@ -514,6 +524,14 @@ export default function MisAnimalesPage() {
                     ))}
                     <td className="px-3 py-2 whitespace-nowrap">
                       <div className="flex items-center gap-1 justify-end">
+                        {/* Árbol genealógico — siempre */}
+                        <button
+                          onClick={() => { setGenealogyAnimalId(animal.id); setGenealogyAnimal(animal); }}
+                          className="p-2 rounded-lg text-gray-500 hover:bg-green-50 hover:text-green-700 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                          title="Ver árbol genealógico"
+                        >
+                          <TreeDeciduous size={14} />
+                        </button>
                         {/* Visualizar — siempre */}
                         <button
                           onClick={() => navigate(`/mis-animales/${animal.id}?readonly=true`)}
@@ -685,6 +703,55 @@ export default function MisAnimalesPage() {
           onChange={setColState}
           onClose={() => setShowColPanel(false)}
         />
+      )}
+
+      {/* Modal árbol genealógico */}
+      {genealogyAnimalId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+              <TreeDeciduous size={20} className="text-green-600" />
+              <div className="flex-1 min-w-0">
+                <h2 className="font-bold text-gray-900 text-base">Árbol Genealógico</h2>
+                {genealogyAnimal && (
+                  <p className="text-xs text-gray-500 font-mono">{genealogyAnimal.numero_anilla}</p>
+                )}
+              </div>
+              <button
+                onClick={() => { setGenealogyAnimalId(null); setGenealogyAnimal(null); }}
+                className="p-2 rounded-lg text-gray-400 hover:bg-gray-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-auto p-5">
+              {genealogyLoading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 size={28} className="animate-spin text-green-600" />
+                </div>
+              ) : genealogyData?.tree ? (
+                <>
+                  <p className="text-xs text-gray-400 mb-4">
+                    Pulsa sobre cualquier animal del árbol para ir a su ficha.
+                  </p>
+                  <GenealogyTooltip
+                    tree={genealogyData.tree}
+                    onNodeClick={(nodeId) => {
+                      setGenealogyAnimalId(null);
+                      setGenealogyAnimal(null);
+                      navigate(`/mis-animales/${nodeId}`);
+                    }}
+                  />
+                </>
+              ) : (
+                <p className="text-center text-gray-400 py-12">No hay datos genealógicos disponibles.</p>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

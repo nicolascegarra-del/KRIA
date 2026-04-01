@@ -7,7 +7,6 @@ import { granjasApi } from "../../api/granjas";
 import { lotesApi } from "../../api/lotes";
 import { useTenantStore } from "../../store/tenantStore";
 import AnimalStateChip from "../../components/AnimalStateChip";
-import GenealogyTooltip from "../../components/GenealogyTooltip";
 import { Loader2, ArrowLeft, Info, Camera, X, Scale, Plus, CheckCircle2, Circle, XCircle, AlertCircle } from "lucide-react";
 import type { Animal, FotoTipo } from "../../types";
 
@@ -40,7 +39,6 @@ export default function AnimalFormPage() {
   const { branding } = useTenantStore();
   const granjasEnabled = branding?.granjas_enabled !== false;
   const qc = useQueryClient();
-  const [showGenealogia, setShowGenealogia] = useState(false);
   const [conflictError, setConflictError] = useState("");
   const [serverError, setServerError] = useState("");
   const [madreMode, setMadreMode] = useState<"individual" | "lote" | "externo">("individual");
@@ -80,12 +78,6 @@ export default function AnimalFormPage() {
   const effectiveReadonly = readonly || isRechazado;
   // Solo se puede proponer como candidato si el animal está APROBADO (y no es gestión)
   const canProponerCandidato = isGestionCreate || !isEdit || animal?.estado === "APROBADO";
-
-  const { data: genealogy } = useQuery({
-    queryKey: ["genealogy", id],
-    queryFn: () => animalsApi.genealogy(id!),
-    enabled: isEdit && showGenealogia,
-  });
 
   const { data: granjasData } = useQuery({
     queryKey: ["granjas"],
@@ -621,22 +613,6 @@ export default function AnimalFormPage() {
           </div>
         </form>
 
-        {/* Genealogy visualization */}
-        {isEdit && (
-          <div className="border-t pt-4">
-            <button
-              onClick={() => setShowGenealogia(!showGenealogia)}
-              className="text-sm text-blue-700 hover:underline"
-            >
-              {showGenealogia ? "Ocultar" : "Ver"} árbol genealógico
-            </button>
-            {showGenealogia && genealogy?.tree && (
-              <div className="mt-3 overflow-x-auto">
-                <GenealogyTooltip tree={genealogy.tree} />
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Weight history — only in edit mode */}

@@ -20,13 +20,13 @@ interface GenealogyNode {
 
 interface Props {
   tree: GenealogyNode;
-  width?: number;
-  height?: number;
+  onNodeClick?: (id: string) => void;
 }
 
 function flattenToHierarchy(node: GenealogyNode | null | undefined): any {
   if (!node) return null;
   return {
+    id: node.id,
     anilla: node.anilla,
     anio: node.anio,
     sexo: node.sexo,
@@ -54,8 +54,10 @@ function getColors(sexo: string | null, tipo?: string): Colors {
   return { fill: "#F3F4F6", stroke: "#9CA3AF", text: "#374151", symbol: "—" };
 }
 
-export default function GenealogyTooltip({ tree }: Props) {
+export default function GenealogyTooltip({ tree, onNodeClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const onNodeClickRef = useRef(onNodeClick);
+  onNodeClickRef.current = onNodeClick;
 
   useEffect(() => {
     if (!containerRef.current || !tree) return;
@@ -121,7 +123,13 @@ export default function GenealogyTooltip({ tree }: Props) {
       .data(nodes)
       .enter()
       .append("g")
-      .attr("transform", (d: any) => `translate(${d.y},${d.x})`);
+      .attr("transform", (d: any) => `translate(${d.y},${d.x})`)
+      .style("cursor", (d: any) => d.data.id && d.data.tipo !== "LOTE" ? "pointer" : "default")
+      .on("click", (_event: any, d: any) => {
+        if (d.data.id && d.data.tipo !== "LOTE" && onNodeClickRef.current) {
+          onNodeClickRef.current(d.data.id);
+        }
+      });
 
     // Shadow / drop-shadow filter
     const defs = svg.append("defs");
