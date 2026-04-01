@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { Eye, EyeOff, Loader2, BookOpen, Shield, BarChart2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, BookOpen, Shield, BarChart2, Bird } from "lucide-react";
 import { authApi } from "../../api/auth";
 import { useAuthStore } from "../../store/authStore";
 
@@ -57,7 +57,7 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="relative z-10">
-          <img src="/kria-logo.jpg" alt="KRIA" className="h-12 object-contain" />
+          <Bird size={40} className="text-white" />
         </div>
 
         {/* Copy */}
@@ -112,7 +112,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Logo móvil */}
           <div className="lg:hidden text-center mb-8">
-            <img src="/kria-logo-dark.png" alt="KRIA" className="h-12 object-contain mx-auto mb-2" />
+            <Bird size={36} className="text-gray-700 mx-auto mb-2" />
             <p className="text-sm text-gray-500 mt-1">Libros Genealógicos Avícolas</p>
           </div>
 

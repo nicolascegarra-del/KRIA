@@ -306,7 +306,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {branding?.logo_url && (!isSuperadmin || impersonatingTenant) ? (
             <img src={branding.logo_url} alt="Logo" className="w-8 h-8 object-contain" style={{ filter: "brightness(0) invert(1)" }} />
           ) : (
-            <img src="/kria-logo.jpg" alt="KRIA" className="h-7 object-contain shrink-0" />
+            <Bird size={28} className="text-white shrink-0" />
           )}
           <div>
             <div className="font-bold text-sm leading-tight">
@@ -486,7 +486,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {branding?.logo_url && (!isSuperadmin || impersonatingTenant) ? (
             <img src={branding.logo_url} alt="Logo" className="w-7 h-7 object-contain shrink-0" />
           ) : (
-            <img src="/kria-logo-dark.png" alt="KRIA" className="h-6 object-contain shrink-0" />
+            <Bird size={22} className="text-gray-600 shrink-0" />
           )}
           <span className="font-semibold text-gray-800 flex-1 min-w-0 truncate">
             {isSuperadmin && !impersonatingTenant ? "KRIA" : (branding?.name ?? "KRIA")}

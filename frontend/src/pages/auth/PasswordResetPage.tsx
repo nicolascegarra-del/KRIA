@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { authApi } from "../../api/auth";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, Bird } from "lucide-react";
 
 export default function PasswordResetPage() {
   const [params] = useSearchParams();
@@ -102,7 +102,7 @@ function PageWrapper({ title, children }: { title: string; children: React.React
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
-          <img src="/kria-logo.jpg" alt="KRIA" className="h-10 object-contain mx-auto mb-2" style={{ mixBlendMode: "multiply" }} />
+          <Bird size={32} className="text-gray-600 mx-auto mb-2" />
           <h1 className="text-xl font-bold text-gray-900">{title}</h1>
         </div>
         <div className="card">{children}</div>
