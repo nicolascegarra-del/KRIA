@@ -45,9 +45,11 @@ interface NavItem {
   gestionOnly?: boolean;
   socioOnly?: boolean;
   superadminOnly?: boolean;
-  exact?: boolean;  // usar coincidencia exacta de ruta para el estado activo
-  requiresGranjas?: boolean;  // ocultar si granjas_enabled === false
-  subtle?: boolean;  // estilo tenue, para items secundarios
+  exact?: boolean;
+  requiresGranjas?: boolean;
+  requiresImportaciones?: boolean;
+  requiresAuditorias?: boolean;
+  subtle?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -58,9 +60,9 @@ const NAV_ITEMS: NavItem[] = [
 { to: "/socios",                   label: "Socios",                icon: <Users size={18} />,           gestionOnly: true },
   { to: "/granjas",                  label: "Granjas",               icon: <Building2 size={18} />,       gestionOnly: true, requiresGranjas: true },
   { to: "/anillas",                  label: "Anillas",               icon: <Tag size={18} />,             gestionOnly: true },
-  { to: "/importar",                 label: "Importaciones",         icon: <Upload size={18} />,          gestionOnly: true },
+  { to: "/importar",                 label: "Importaciones",         icon: <Upload size={18} />,          gestionOnly: true, requiresImportaciones: true },
   { to: "/reportes",                 label: "Reportes",              icon: <FileText size={18} />,        gestionOnly: true },
-  { to: "/auditorias",              label: "Auditorías",            icon: <ClipboardCheck size={18} />,  gestionOnly: true },
+  { to: "/auditorias",              label: "Auditorías",            icon: <ClipboardCheck size={18} />,  gestionOnly: true, requiresAuditorias: true },
   // SuperAdmin
   { to: "/superadmin",               label: "Dashboard",             icon: <LayoutDashboard size={18} />, superadminOnly: true, exact: true },
   { to: "/superadmin/asociaciones",  label: "Asociaciones",          icon: <Building size={18} />,        superadminOnly: true },
@@ -73,7 +75,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/mis-granjas",              label: "Mis Granjas",           icon: <Building size={18} />,        socioOnly: true, requiresGranjas: true },
   { to: "/mis-lotes",                label: "Mis Lotes",             icon: <Layers size={18} />,          socioOnly: true },
   { to: "/mis-anillas",              label: "Mis Anillas",           icon: <Tag size={18} />,             socioOnly: true },
-  { to: "/mis-auditorias",           label: "Mis Auditorías",        icon: <ClipboardCheck size={18} />,  socioOnly: true },
+  { to: "/mis-auditorias",           label: "Mis Auditorías",        icon: <ClipboardCheck size={18} />,  socioOnly: true, requiresAuditorias: true },
 ];
 
 // Bottom nav items for socios (mobile)
@@ -253,10 +255,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     navigate("/superadmin");
   };
 
-  const granjasEnabled = branding?.granjas_enabled !== false; // default true when not yet loaded
+  const granjasEnabled = branding?.granjas_enabled !== false;
+  const importacionesEnabled = branding?.importaciones_enabled !== false;
+  const auditoriasEnabled = branding?.auditorias_enabled !== false;
 
   const visibleItems = NAV_ITEMS.filter((item) => {
-    // Superadmin sin impersonar: solo ve items superadminOnly
     if (isSuperadmin && !impersonatingTenant) {
       return !!item.superadminOnly;
     }
@@ -264,6 +267,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     if (item.gestionOnly && !isGestion) return false;
     if (item.socioOnly && isGestion) return false;
     if (item.requiresGranjas && !granjasEnabled) return false;
+    if (item.requiresImportaciones && !importacionesEnabled) return false;
+    if (item.requiresAuditorias && !auditoriasEnabled) return false;
     return true;
   });
 

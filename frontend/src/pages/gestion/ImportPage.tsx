@@ -377,7 +377,7 @@ export default function ImportPage() {
         <div className="mb-4">
           <h1 className="text-xl font-bold text-gray-900">Importaciones</h1>
           <p className="text-sm text-gray-500">
-            {selected === "socios" ? "Importar socios desde Excel" : "Importar animales desde Excel"}
+            {selected === "socios" ? "Importar Socios desde Excel" : "Importar Animales desde Excel"}
           </p>
         </div>
         <ImportFlow tipo={selected} onBack={() => setSelected(null)} />
@@ -406,7 +406,7 @@ export default function ImportPage() {
           </div>
           <div>
             <h2 className="text-base font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
-              Importar socios
+              Importar Socios
             </h2>
             <p className="text-sm text-gray-500 mt-1">
               Carga masiva de socios desde Excel. Soporta alta, actualización y gestión de bajas.
@@ -434,7 +434,7 @@ export default function ImportPage() {
           </div>
           <div>
             <h2 className="text-base font-semibold text-gray-900 group-hover:text-green-700 transition-colors">
-              Importar animales
+              Importar Animales
             </h2>
             <p className="text-sm text-gray-500 mt-1">
               Carga masiva de animales desde Excel. Permite vincular genealogía y asignar socio.

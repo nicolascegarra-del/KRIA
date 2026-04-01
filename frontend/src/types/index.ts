@@ -12,6 +12,8 @@ export interface TenantBranding {
   primary_color: string;
   secondary_color: string;
   granjas_enabled: boolean;
+  importaciones_enabled: boolean;
+  auditorias_enabled: boolean;
   anilla_sizes: AnillaSize[];
 }
 
@@ -330,8 +332,10 @@ export interface Tenant {
   telefono2_nombre?: string;
   telefono2_cargo?: string;
   telefono2_email?: string;
-  // Features
+  // Features / Verticales
   granjas_enabled?: boolean;
+  importaciones_enabled?: boolean;
+  auditorias_enabled?: boolean;
   anilla_sizes?: AnillaSize[];
   email_notificaciones?: string;
   created_at?: string;

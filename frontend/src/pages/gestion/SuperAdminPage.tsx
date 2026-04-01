@@ -40,6 +40,8 @@ interface TenantForm {
   telefono1: string; telefono1_nombre: string; telefono1_cargo: string; telefono1_email: string;
   telefono2: string; telefono2_nombre: string; telefono2_cargo: string; telefono2_email: string;
   granjas_enabled: boolean;
+  importaciones_enabled: boolean;
+  auditorias_enabled: boolean;
   anilla_sizes: AnillaSize[];
   smtp_host: string; smtp_port: number; smtp_user: string; smtp_password: string;
   smtp_from_email: string; smtp_from_name: string; smtp_use_tls: boolean; smtp_use_ssl: boolean;
@@ -52,7 +54,7 @@ const TENANT_DEFAULTS: TenantForm = {
   domicilio: "", cod_postal: "", municipio: "", provincia: "",
   telefono1: "", telefono1_nombre: "", telefono1_cargo: "", telefono1_email: "",
   telefono2: "", telefono2_nombre: "", telefono2_cargo: "", telefono2_email: "",
-  granjas_enabled: true, anilla_sizes: [],
+  granjas_enabled: true, importaciones_enabled: true, auditorias_enabled: true, anilla_sizes: [],
   smtp_host: "", smtp_port: 587, smtp_user: "", smtp_password: "",
   smtp_from_email: "", smtp_from_name: "", smtp_use_tls: true, smtp_use_ssl: false,
 };
@@ -519,6 +521,8 @@ export default function SuperAdminPage() {
       telefono2: t.telefono2 ?? "", telefono2_nombre: t.telefono2_nombre ?? "",
       telefono2_cargo: t.telefono2_cargo ?? "", telefono2_email: t.telefono2_email ?? "",
       granjas_enabled: t.granjas_enabled ?? true,
+      importaciones_enabled: t.importaciones_enabled ?? true,
+      auditorias_enabled: t.auditorias_enabled ?? true,
       anilla_sizes: t.anilla_sizes ?? [],
       smtp_host: t.smtp_host ?? "", smtp_port: t.smtp_port ?? 587,
       smtp_user: t.smtp_user ?? "", smtp_password: t.smtp_password ?? "",
@@ -960,18 +964,31 @@ export default function SuperAdminPage() {
                     <input className="input-field" type="number" min="0" value={tenantForm.max_socios} onChange={(e) => setTenantForm({ ...tenantForm, max_socios: parseInt(e.target.value) || 0 })} />
                   </div>
                 </div>
-                <div className="flex items-center gap-5 pt-0.5">
-                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
-                    <input type="checkbox" checked={tenantForm.is_active} onChange={(e) => setTenantForm({ ...tenantForm, is_active: e.target.checked })} className="rounded" />
-                    Asociación activa
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
-                    <input type="checkbox" checked={tenantForm.granjas_enabled} onChange={(e) => setTenantForm({ ...tenantForm, granjas_enabled: e.target.checked })} className="rounded" />
-                    Módulo Granjas
-                  </label>
-                  {editingTenant && (
-                    <span className="text-xs text-gray-400 ml-auto font-mono">slug: {tenantForm.slug}</span>
-                  )}
+                <div className="space-y-3 pt-0.5">
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                      <input type="checkbox" checked={tenantForm.is_active} onChange={(e) => setTenantForm({ ...tenantForm, is_active: e.target.checked })} className="rounded" />
+                      Asociación activa
+                    </label>
+                    {editingTenant && (
+                      <span className="text-xs text-gray-400 ml-auto font-mono">slug: {tenantForm.slug}</span>
+                    )}
+                  </div>
+                  <div className="border border-gray-200 rounded-lg p-3 space-y-2">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Opciones / Verticales</p>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                      <input type="checkbox" checked={tenantForm.granjas_enabled} onChange={(e) => setTenantForm({ ...tenantForm, granjas_enabled: e.target.checked })} className="rounded" />
+                      Módulo Granjas
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                      <input type="checkbox" checked={tenantForm.importaciones_enabled} onChange={(e) => setTenantForm({ ...tenantForm, importaciones_enabled: e.target.checked })} className="rounded" />
+                      Módulo Importaciones
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                      <input type="checkbox" checked={tenantForm.auditorias_enabled} onChange={(e) => setTenantForm({ ...tenantForm, auditorias_enabled: e.target.checked })} className="rounded" />
+                      Módulo Auditorías
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>

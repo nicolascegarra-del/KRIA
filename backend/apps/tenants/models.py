@@ -36,6 +36,8 @@ class Tenant(models.Model):
 
     # ── Feature flags ────────────────────────────────────────────────────────
     granjas_enabled = models.BooleanField(default=True, help_text="Habilita granjas múltiples para socios.")
+    importaciones_enabled = models.BooleanField(default=True, help_text="Habilita el módulo de importaciones masivas.")
+    auditorias_enabled = models.BooleanField(default=True, help_text="Habilita el módulo de auditorías.")
 
     # ── Configuración de anillas ─────────────────────────────────────────────
     anilla_sizes = models.JSONField(
