@@ -304,12 +304,7 @@ class AnimalGenealogyView(APIView):
 
     def get(self, request, pk):
         try:
-            animal = Animal.objects.select_related(
-                "padre", "padre__padre", "padre__madre_animal",
-                "madre_animal", "madre_animal__padre", "madre_animal__madre_animal",
-                "madre_lote", "madre_lote__macho",
-                "madre_lote__macho__padre", "madre_lote__macho__madre_animal",
-            ).get(pk=pk)
+            animal = Animal.objects.get(pk=pk)
         except Animal.DoesNotExist:
             return Response({"detail": "Not found."}, status=404)
 

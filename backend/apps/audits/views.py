@@ -129,7 +129,21 @@ class AuditoriaSessionDetailView(generics.RetrieveUpdateDestroyAPIView):
         from core.permissions import get_effective_is_gestion
         if not get_effective_is_gestion(request):
             return Response({"detail": "No tienes permiso."}, status=status.HTTP_403_FORBIDDEN)
-        return super().update(request, *args, **kwargs)
+
+        instance = self.get_object()
+        estado_prev = instance.estado
+        response = super().update(request, *args, **kwargs)
+
+        # When an audit transitions to COMPLETADA, mark all audited animals as EVALUADO
+        instance.refresh_from_db()
+        if estado_prev != AuditoriaSession.Estado.COMPLETADA and instance.estado == AuditoriaSession.Estado.COMPLETADA:
+            from apps.animals.models import Animal
+            animal_ids = instance.animales_evaluados.filter(
+                animal__isnull=False
+            ).values_list("animal_id", flat=True)
+            Animal.all_objects.filter(pk__in=animal_ids).update(estado=Animal.Estado.EVALUADO)
+
+        return response
 
     def destroy(self, request, *args, **kwargs):
         from core.permissions import get_effective_is_gestion

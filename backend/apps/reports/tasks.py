@@ -120,12 +120,9 @@ def _gen_genealogy_cert(job) -> str:
     from apps.animals.serializers import _build_genealogy_node
 
     animal_id = job.params.get("animal_id")
-    animal = Animal.all_objects.select_related(
-        "padre", "padre__padre", "padre__madre_animal",
-        "madre_animal", "madre_animal__padre", "madre_animal__madre_animal",
-    ).get(pk=animal_id, tenant=job.tenant)
+    animal = Animal.all_objects.get(pk=animal_id, tenant=job.tenant)
 
-    tree = _build_genealogy_node(animal, max_depth=3)
+    tree = _build_genealogy_node(animal)
     context = {"tenant": job.tenant, "animal": animal, "tree": tree, "watermark": "CERTIFICADO"}
     pdf_bytes = _render_pdf("reports/genealogy_cert.html", context)
     key = f"reports/{job.tenant.slug}/genealogy/{animal_id}.pdf"

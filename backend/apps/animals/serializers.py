@@ -184,14 +184,21 @@ class AnimalWriteSerializer(serializers.ModelSerializer):
         return data
 
 
-def _build_genealogy_node(animal, depth=0, max_depth=3):
-    """Recursively build a 3-generation genealogy tree."""
+def _build_genealogy_node(animal, depth=0, max_depth=20, _visited=None):
+    """Recursively build a full genealogy tree with cycle protection."""
     if animal is None or depth >= max_depth:
         return None
 
+    if _visited is None:
+        _visited = set()
+    animal_id = str(animal.id)
+    if animal_id in _visited:
+        return None
+    _visited = _visited | {animal_id}  # immutable copy per branch to allow shared ancestors
+
     madre_node = None
     if animal.madre_animal_id:
-        madre_node = _build_genealogy_node(animal.madre_animal, depth + 1, max_depth)
+        madre_node = _build_genealogy_node(animal.madre_animal, depth + 1, max_depth, _visited)
     elif animal.madre_lote_id:
         lote = animal.madre_lote
         madre_node = {
@@ -202,7 +209,7 @@ def _build_genealogy_node(animal, depth=0, max_depth=3):
             "variedad": None,
             "estado": None,
             "tipo": "LOTE",
-            "padre": _build_genealogy_node(lote.macho, depth + 1, max_depth) if lote.macho else None,
+            "padre": _build_genealogy_node(lote.macho, depth + 1, max_depth, _visited) if lote.macho else None,
             "madre": None,
         }
     elif animal.madre_lote_externo:
@@ -226,7 +233,7 @@ def _build_genealogy_node(animal, depth=0, max_depth=3):
         "variedad": animal.variedad,
         "estado": animal.estado,
         "tipo": "ANIMAL",
-        "padre": _build_genealogy_node(animal.padre, depth + 1, max_depth),
+        "padre": _build_genealogy_node(animal.padre, depth + 1, max_depth, _visited),
         "madre": madre_node,
     }
 
