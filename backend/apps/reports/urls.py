@@ -6,6 +6,7 @@ from .views import (
     IndividualReportView,
     InventoryReportView,
     LibroGenealogicView,
+    ReportJobDownloadView,
     ReportJobStatusView,
 )
 
@@ -17,4 +18,5 @@ urlpatterns = [
     path("catalogo-reproductores/", CatalogoReproductoresView.as_view(), name="report-catalogo"),
     path("auditoria/<uuid:auditoria_id>/", AuditoriaReportView.as_view(), name="report-auditoria"),
     path("job/<uuid:job_id>/", ReportJobStatusView.as_view(), name="report-job-status"),
+    path("job/<uuid:job_id>/download/", ReportJobDownloadView.as_view(), name="report-job-download"),
 ]

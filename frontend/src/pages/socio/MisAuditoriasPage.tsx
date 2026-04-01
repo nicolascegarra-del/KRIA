@@ -33,14 +33,12 @@ function PdfJobInline({ jobId }: { jobId: string }) {
   }
   if (data.status === "DONE" && data.download_url) {
     return (
-      <a
-        href={data.download_url}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
+        onClick={() => reportsApi.downloadFile(jobId)}
         className="flex items-center gap-1 text-xs text-blue-700 font-semibold hover:underline"
       >
         <Download size={12} /> Descargar PDF
-      </a>
+      </button>
     );
   }
   return <span className="text-xs text-red-500">Error al generar</span>;

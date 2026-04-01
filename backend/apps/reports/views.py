@@ -1,3 +1,4 @@
+from django.http import StreamingHttpResponse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -38,10 +39,48 @@ class ReportJobStatusView(APIView):
         }
 
         if job.status == ReportJob.Status.DONE and job.file_key:
-            from .storage import get_presigned_download_url
-            data["download_url"] = get_presigned_download_url(job.file_key, expiry_hours=24)
+            data["download_url"] = f"/api/v1/reports/job/{job_id}/download/"
 
         return Response(data)
+
+
+class ReportJobDownloadView(APIView):
+    """Streams the generated file directly from MinIO to the browser."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, job_id):
+        try:
+            job = ReportJob.objects.get(pk=job_id, tenant=request.tenant)
+        except ReportJob.DoesNotExist:
+            return Response({"detail": "Not found."}, status=404)
+
+        if job.status != ReportJob.Status.DONE or not job.file_key:
+            return Response({"detail": "Report not ready."}, status=404)
+
+        from django.conf import settings
+        from .storage import get_minio_client
+        import os
+
+        client = get_minio_client()
+        bucket = settings.MINIO_BUCKET_NAME
+
+        response_obj = client.get_object(bucket, job.file_key)
+
+        # Determine content type and filename
+        ext = os.path.splitext(job.file_key)[1].lower()
+        content_types = {
+            ".pdf": "application/pdf",
+            ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }
+        content_type = content_types.get(ext, "application/octet-stream")
+        filename = os.path.basename(job.file_key)
+
+        streaming = StreamingHttpResponse(
+            response_obj.stream(32 * 1024),
+            content_type=content_type,
+        )
+        streaming["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return streaming
 
 
 class InventoryReportView(APIView):

@@ -262,14 +262,12 @@ function AuditoriaPdfStatus({ jobId, onClose }: { jobId: string; onClose: () => 
          isDone ? "Informe listo" : "Error al generar el informe"}
       </span>
       {isDone && data?.download_url && (
-        <a
-          href={data.download_url}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={() => reportsApi.downloadFile(jobId)}
           className="flex items-center gap-1 font-semibold hover:underline"
         >
           <Download size={14} /> Descargar
-        </a>
+        </button>
       )}
       {isFailed && data?.error_log && (
         <details className="text-xs max-w-xs">

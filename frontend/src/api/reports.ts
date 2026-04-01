@@ -36,4 +36,21 @@ export const reportsApi = {
     const { data } = await apiClient.get(`/reports/job/${job_id}/`);
     return data;
   },
+
+  downloadFile: async (job_id: string, filename?: string): Promise<void> => {
+    const response = await apiClient.get(`/reports/job/${job_id}/download/`, {
+      responseType: "blob",
+    });
+    const blob = new Blob([response.data], {
+      type: response.headers["content-type"] || "application/octet-stream",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename || `informe_${job_id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
 };

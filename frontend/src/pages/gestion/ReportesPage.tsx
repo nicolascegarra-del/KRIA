@@ -101,15 +101,13 @@ function ReportJobStatus({ jobId }: { jobId: string }) {
         <span className="text-gray-600">{data.status}</span>
       </div>
       {data.status === "DONE" && data.download_url && (
-        <a
-          href={data.download_url}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={() => reportsApi.downloadFile(jobId)}
           className="flex items-center gap-1 text-blue-700 hover:underline"
         >
           <Download size={12} />
           Descargar
-        </a>
+        </button>
       )}
       {data.status === "FAILED" && (
         <p className="text-red-600">Error al generar</p>
