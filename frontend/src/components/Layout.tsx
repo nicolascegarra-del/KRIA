@@ -61,7 +61,6 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/importar",                 label: "Importar",              icon: <Upload size={18} />,          gestionOnly: true },
   { to: "/reportes",                 label: "Reportes",              icon: <FileText size={18} />,        gestionOnly: true },
   { to: "/auditorias",              label: "Auditorías",            icon: <ClipboardCheck size={18} />,  gestionOnly: true },
-  { to: "/propuestas-mejora",       label: "Propuestas de Mejora",  icon: <Lightbulb size={18} />,        gestionOnly: true, subtle: true },
   // SuperAdmin
   { to: "/superadmin",               label: "Dashboard",             icon: <LayoutDashboard size={18} />, superadminOnly: true, exact: true },
   { to: "/superadmin/asociaciones",  label: "Asociaciones",          icon: <Building size={18} />,        superadminOnly: true },
@@ -75,7 +74,6 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/mis-lotes",                label: "Mis Lotes",             icon: <Layers size={18} />,          socioOnly: true },
   { to: "/mis-anillas",              label: "Mis Anillas",           icon: <Tag size={18} />,             socioOnly: true },
   { to: "/mis-auditorias",           label: "Mis Auditorías",        icon: <ClipboardCheck size={18} />,  socioOnly: true },
-  { to: "/propuestas-mejora",        label: "Propuestas de Mejora",  icon: <Lightbulb size={18} />,        socioOnly: true, subtle: true },
 ];
 
 // Bottom nav items for socios (mobile)
@@ -429,6 +427,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <div className="text-sm font-medium text-white truncate">{user?.full_name}</div>
               <div className="text-xs text-white/60 truncate">{user?.email}</div>
             </>
+          )}
+          {!(isSuperadmin && !impersonatingTenant) && (
+            <Link
+              to="/propuestas-mejora"
+              onClick={() => setSidebarOpen(false)}
+              className={clsx(
+                "flex items-center gap-1.5 mt-3 text-[11px] transition-colors",
+                location.pathname === "/propuestas-mejora"
+                  ? "text-white/80"
+                  : "text-white/30 hover:text-white/60"
+              )}
+            >
+              <Lightbulb size={12} />
+              Propuestas de mejora
+            </Link>
           )}
         </div>
       </aside>
