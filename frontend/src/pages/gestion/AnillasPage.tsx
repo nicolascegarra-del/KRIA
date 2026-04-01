@@ -8,7 +8,6 @@ import SuccessToast from "../../components/SuccessToast";
 import { useAutoCloseError } from "../../hooks/useAutoCloseError";
 import { useTenantStore } from "../../store/tenantStore";
 import { Tag, Plus, Trash2, Loader2 } from "lucide-react";
-import type { Socio } from "../../types";
 
 interface EntregaForm {
   socio: string;
@@ -32,6 +31,8 @@ export default function AnillasPage() {
   const anillaSizes = branding?.anilla_sizes ?? [];
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<EntregaForm>(FORM_DEFAULTS);
+  const [socioNombre, setSocioNombre] = useState("");
+  const [socioSearch, setSocioSearch] = useState("");
   const [filterAnio, setFilterAnio] = useState(String(new Date().getFullYear()));
   const [error, setError, clearError] = useAutoCloseError();
   const [successMsg, setSuccessMsg] = useState("");
@@ -42,8 +43,9 @@ export default function AnillasPage() {
   });
 
   const { data: sociosData } = useQuery({
-    queryKey: ["socios-all"],
-    queryFn: () => sociosApi.list({ page: 1 }),
+    queryKey: ["socios-search-anillas", socioSearch],
+    queryFn: () => sociosApi.list({ search: socioSearch }),
+    enabled: socioSearch.length >= 2,
   });
 
   const createMutation = useMutation({
@@ -52,6 +54,8 @@ export default function AnillasPage() {
       qc.invalidateQueries({ queryKey: ["anillas"] });
       setModalOpen(false);
       setForm(FORM_DEFAULTS);
+      setSocioNombre("");
+      setSocioSearch("");
       setSuccessMsg("Entrega de anillas registrada.");
     },
     onError: (e: any) => {
@@ -83,7 +87,7 @@ export default function AnillasPage() {
   };
 
   const entregas = entregasData?.results ?? [];
-  const socios: Socio[] = sociosData?.results ?? [];
+  const socioResults = sociosData?.results ?? [];
 
   return (
     <div className="space-y-4 max-w-4xl">
@@ -98,7 +102,7 @@ export default function AnillasPage() {
           <p className="text-sm text-gray-500">Rangos asignados a socios por campaña</p>
         </div>
         <button
-          onClick={() => { setForm(FORM_DEFAULTS); clearError(); setModalOpen(true); }}
+          onClick={() => { setForm(FORM_DEFAULTS); setSocioNombre(""); setSocioSearch(""); clearError(); setModalOpen(true); }}
           className="btn-primary flex items-center gap-2"
         >
           <Plus size={16} />
@@ -186,23 +190,48 @@ export default function AnillasPage() {
 
       {/* Modal nueva entrega */}
       {modalOpen && (
-        <Modal title="Nueva entrega de anillas" onClose={() => { setModalOpen(false); clearError(); }}>
+        <Modal title="Nueva entrega de anillas" onClose={() => { setModalOpen(false); setSocioNombre(""); setSocioSearch(""); clearError(); }}>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Socio *</label>
-              <select
-                className="input-field"
-                value={form.socio}
-                onChange={(e) => setForm((f) => ({ ...f, socio: e.target.value }))}
-                required
-              >
-                <option value="">Seleccionar socio...</option>
-                {socios.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.nombre_razon_social} {s.numero_socio ? `(Nº ${s.numero_socio})` : ""}
-                  </option>
-                ))}
-              </select>
+              {form.socio ? (
+                <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm">
+                  <span className="flex-1 font-medium text-blue-900">{socioNombre}</span>
+                  <button
+                    type="button"
+                    onClick={() => { setForm(f => ({ ...f, socio: "" })); setSocioNombre(""); setSocioSearch(""); }}
+                    className="text-blue-400 hover:text-blue-700 text-xs"
+                  >
+                    Cambiar
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    className="input-field text-sm"
+                    placeholder="Buscar socio por nombre o DNI..."
+                    value={socioSearch}
+                    onChange={e => setSocioSearch(e.target.value)}
+                  />
+                  {socioResults.length > 0 && (
+                    <ul className="mt-1 border border-gray-200 rounded-lg bg-white shadow-sm max-h-36 overflow-y-auto divide-y divide-gray-100">
+                      {socioResults.map(s => (
+                        <li key={s.id}>
+                          <button
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50"
+                            onClick={() => { setForm(f => ({ ...f, socio: s.id })); setSocioNombre(s.nombre_razon_social); setSocioSearch(""); }}
+                          >
+                            <span className="font-medium">{s.nombre_razon_social}</span>
+                            <span className="text-gray-400 ml-2 text-xs">{s.dni_nif}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
             </div>
 
             <div>
@@ -267,7 +296,7 @@ export default function AnillasPage() {
             <div className="flex gap-3 pt-1">
               <button
                 type="button"
-                onClick={() => { setModalOpen(false); clearError(); }}
+                onClick={() => { setModalOpen(false); setSocioNombre(""); setSocioSearch(""); clearError(); }}
                 className="btn-secondary flex-1"
               >
                 Cancelar
