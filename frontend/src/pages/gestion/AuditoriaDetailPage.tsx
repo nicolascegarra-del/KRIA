@@ -271,6 +271,12 @@ function AuditoriaPdfStatus({ jobId, onClose }: { jobId: string; onClose: () => 
           <Download size={14} /> Descargar
         </a>
       )}
+      {isFailed && data?.error_log && (
+        <details className="text-xs max-w-xs">
+          <summary className="cursor-pointer text-red-600 hover:underline">Ver error</summary>
+          <pre className="mt-1 text-red-500 whitespace-pre-wrap break-all text-[10px] max-h-32 overflow-y-auto">{data.error_log}</pre>
+        </details>
+      )}
       <button onClick={onClose} className="text-current opacity-50 hover:opacity-100 text-xs ml-2">✕</button>
     </div>
   );

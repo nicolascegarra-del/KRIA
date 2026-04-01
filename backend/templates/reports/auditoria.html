@@ -7,7 +7,7 @@
       size: A4;
       margin: 1.8cm 2cm;
       @bottom-center {
-        content: "Pág. " counter(page) " · Informe de Auditoría · " string(titulo);
+        content: "Pág. " counter(page) " · Informe de Auditoría";
         font-size: 7.5pt;
         color: #999;
       }
@@ -23,21 +23,22 @@
       margin: 0;
     }
 
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
       border-bottom: 4px solid {{ tenant.primary_color }};
       padding-bottom: 0.6em;
       margin-bottom: 1em;
     }
-
-    .header-left { }
+    .header-table td {
+      padding: 0 0 8px 0;
+      border-bottom: none;
+      background: transparent;
+    }
     .tenant-name {
       font-size: 15pt;
       font-weight: bold;
       color: {{ tenant.primary_color }};
-      string-set: titulo self;
     }
     .report-subtitle {
       font-size: 9pt;
@@ -48,6 +49,7 @@
       font-size: 8pt;
       color: #888;
       text-align: right;
+      vertical-align: top;
     }
 
     h2 {
@@ -59,24 +61,24 @@
       margin-bottom: 0.4em;
     }
 
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4px 20px;
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
       background: #f8f9fa;
       border: 1px solid #e0e0e0;
       border-radius: 4px;
-      padding: 10px 14px;
       margin-bottom: 1em;
-    }
-    .info-row {
-      display: flex;
-      gap: 6px;
       font-size: 9.5pt;
+    }
+    .info-table td {
+      padding: 4px 10px;
+      border-bottom: none;
+      background: transparent;
     }
     .info-label {
       color: #666;
-      min-width: 110px;
+      width: 130px;
+      white-space: nowrap;
     }
     .info-value {
       font-weight: bold;
@@ -146,28 +148,32 @@
       margin-bottom: 0.4em;
     }
 
-    .criterios-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4px 16px;
-      padding: 0 10px;
-    }
-    .criterio-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
+    .criterios-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.4em 0 0.6em;
       font-size: 8.5pt;
-      padding: 2px 0;
+    }
+    .criterios-table td {
+      padding: 2px 8px;
+      border-bottom: none;
+      background: transparent;
+      vertical-align: middle;
     }
     .criterio-nombre {
-      flex: 1;
       color: #444;
+      width: 45%;
     }
     .criterio-valor {
       font-weight: bold;
-      width: 16px;
-      text-align: right;
+      width: 30px;
+      text-align: center;
       color: {{ tenant.primary_color }};
+    }
+    .criterio-mult {
+      color: #aaa;
+      font-size: 7.5pt;
+      width: 40px;
     }
 
     /* Instalaciones */
@@ -199,72 +205,72 @@
 
     .page-break { page-break-after: always; }
 
-    .firma-section {
+    .firma-table {
+      width: 100%;
       margin-top: 3em;
-      display: flex;
-      gap: 40px;
+      border-collapse: collapse;
     }
-    .firma-box {
-      flex: 1;
+    .firma-table td {
+      width: 33%;
       border-top: 1px solid #999;
-      padding-top: 4px;
+      padding-top: 6px;
       font-size: 8.5pt;
       color: #666;
       text-align: center;
+      background: transparent;
+      border-bottom: none;
     }
   </style>
 </head>
 <body>
 
   <!-- Cabecera -->
-  <div class="header">
-    <div class="header-left">
-      <div class="tenant-name">{{ tenant.name }}</div>
-      <div class="report-subtitle">Informe de Auditoría de Socio</div>
-    </div>
-    <div class="report-date">Generado: {% now "d/m/Y H:i" %}</div>
-  </div>
+  <table class="header-table">
+    <tr>
+      <td>
+        <div class="tenant-name">{{ tenant.name }}</div>
+        <div class="report-subtitle">Informe de Auditoría de Socio</div>
+      </td>
+      <td class="report-date">Generado: {% now "d/m/Y H:i" %}</td>
+    </tr>
+  </table>
 
   <!-- Datos generales -->
   <h2>Datos de la Auditoría</h2>
-  <div class="info-grid">
-    <div class="info-row">
-      <span class="info-label">Socio:</span>
-      <span class="info-value">{{ auditoria.socio.nombre_razon_social }}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">DNI/NIF:</span>
-      <span class="info-value">{{ auditoria.socio.dni_nif }}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">Fecha planificada:</span>
-      <span class="info-value">{{ auditoria.fecha_planificada|date:"d/m/Y" }}</span>
-    </div>
+  <table class="info-table">
+    <tr>
+      <td class="info-label">Socio:</td>
+      <td class="info-value">{{ auditoria.socio.nombre_razon_social }}</td>
+      <td class="info-label">DNI/NIF:</td>
+      <td class="info-value">{{ auditoria.socio.dni_nif }}</td>
+    </tr>
+    <tr>
+      <td class="info-label">Fecha planificada:</td>
+      <td class="info-value">{{ auditoria.fecha_planificada|date:"d/m/Y" }}</td>
+      <td class="info-label">Estado:</td>
+      <td class="info-value"><span class="chip chip-{{ auditoria.estado }}">{{ auditoria.get_estado_display }}</span></td>
+    </tr>
     {% if auditoria.fecha_realizacion %}
-    <div class="info-row">
-      <span class="info-label">Fecha realización:</span>
-      <span class="info-value">{{ auditoria.fecha_realizacion|date:"d/m/Y" }}</span>
-    </div>
+    <tr>
+      <td class="info-label">Fecha realización:</td>
+      <td class="info-value">{{ auditoria.fecha_realizacion|date:"d/m/Y" }}</td>
+      <td></td><td></td>
+    </tr>
     {% endif %}
-    <div class="info-row">
-      <span class="info-label">Estado:</span>
-      <span class="info-value">
-        <span class="chip chip-{{ auditoria.estado }}">{{ auditoria.get_estado_display }}</span>
-      </span>
-    </div>
     {% if auditoria.auditores %}
-    <div class="info-row">
-      <span class="info-label">Auditores:</span>
-      <span class="info-value">{{ auditoria.auditores }}</span>
-    </div>
+    <tr>
+      <td class="info-label">Auditores:</td>
+      <td class="info-value" colspan="3">{{ auditoria.auditores }}</td>
+    </tr>
     {% endif %}
     {% if auditoria.socio.codigo_rega %}
-    <div class="info-row">
-      <span class="info-label">Cód. REGA:</span>
-      <span class="info-value">{{ auditoria.socio.codigo_rega }}</span>
-    </div>
+    <tr>
+      <td class="info-label">Cód. REGA:</td>
+      <td class="info-value">{{ auditoria.socio.codigo_rega }}</td>
+      <td></td><td></td>
+    </tr>
     {% endif %}
-  </div>
+  </table>
 
   {% if auditoria.notas_generales %}
   <div class="notas-box">
@@ -312,14 +318,15 @@
       &nbsp;·&nbsp;{{ av.puntuacion_total }}/{{ av.puntuacion_maxima }}
       {% if av.porcentaje %}&nbsp;({{ av.porcentaje }}%){% endif %}
     </div>
-    <div class="criterios-grid">
+    <table class="criterios-table">
       {% for s in av.scores %}
-      <div class="criterio-row">
-        <span class="criterio-nombre">{{ s.nombre }} <span style="color:#aaa;font-size:7.5pt;">(×{{ s.multiplicador }})</span></span>
-        <span class="criterio-valor">{{ s.valor }}</span>
-      </div>
+      <tr>
+        <td class="criterio-nombre">{{ s.nombre }}</td>
+        <td class="criterio-mult">(×{{ s.multiplicador }})</td>
+        <td class="criterio-valor">{{ s.valor }}</td>
+      </tr>
       {% endfor %}
-    </div>
+    </table>
     {% if av.notas %}
     <div style="padding: 4px 10px; font-size: 8.5pt; color: #666; font-style: italic;">
       Notas: {{ av.notas }}
@@ -349,11 +356,13 @@
   {% endif %}
 
   <!-- Firma -->
-  <div class="firma-section">
-    <div class="firma-box">Firma del Auditor</div>
-    <div class="firma-box">Firma del Socio</div>
-    <div class="firma-box">Sello de la Asociación</div>
-  </div>
+  <table class="firma-table">
+    <tr>
+      <td>Firma del Auditor</td>
+      <td>Firma del Socio</td>
+      <td>Sello de la Asociación</td>
+    </tr>
+  </table>
 
 </body>
 </html>
