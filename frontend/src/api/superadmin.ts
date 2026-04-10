@@ -25,6 +25,10 @@ export const superadminApi = {
     const { data } = await apiClient.post(`/superadmin/tenants/${id}/delete-anillas/`);
     return data;
   },
+  deleteTenantAnimales: async (id: string): Promise<{ detail: string; count: number }> => {
+    const { data } = await apiClient.post(`/superadmin/tenants/${id}/delete-animales/`);
+    return data;
+  },
   suspendTenant: async (id: string) => {
     const { data } = await apiClient.post<Tenant>(`/superadmin/tenants/${id}/suspend/`);
     return data;

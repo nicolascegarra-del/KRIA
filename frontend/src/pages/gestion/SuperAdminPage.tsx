@@ -14,7 +14,7 @@ import {
   UserPlus, Pencil, ChevronRight, Mail, CheckCircle2, XCircle,
   Settings, AlertTriangle, Wrench, ScrollText, Clock, Tag,
   MapPin, Phone, AtSign, Settings2, GripVertical, X, Eye,
-  ClipboardCheck, Archive, Download, FileArchive, RefreshCw,
+  ClipboardCheck, Archive, Download, FileArchive, RefreshCw, PawPrint,
 } from "lucide-react";
 import type { BackupJob } from "../../types";
 import type { Tenant, GestionUserCreate, GestionUser, AnillaSize, PlatformSettings, PreguntaInstalacion } from "../../types";
@@ -261,6 +261,8 @@ export default function SuperAdminPage() {
   // ── Gestiones Avanzadas state ──────────────────────────────────────────────
   const [deleteSociosTarget, setDeleteSociosTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleteSociosConfirm, setDeleteSociosConfirm] = useState("");
+  const [deleteAnimalesTarget, setDeleteAnimalesTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteAnimalesConfirm, setDeleteAnimalesConfirm] = useState("");
   const [deleteAnillasTarget, setDeleteAnillasTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleteAnillasConfirm, setDeleteAnillasConfirm] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -494,6 +496,18 @@ export default function SuperAdminPage() {
   });
 
   // ── Platform settings mutations ────────────────────────────────────────────
+  const deleteAnimalesMutation = useMutation({
+    mutationFn: (id: string) => superadminApi.deleteTenantAnimales(id),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["superadmin-tenants"] });
+      qc.invalidateQueries({ queryKey: ["superadmin-stats"] });
+      setDeleteAnimalesTarget(null);
+      setDeleteAnimalesConfirm("");
+      setSuccessMsg(data.detail);
+    },
+    onError: (e: any) => setError(e?.response?.data?.detail ?? "Error al eliminar animales."),
+  });
+
   const deleteAnillasMutation = useMutation({
     mutationFn: (id: string) => superadminApi.deleteTenantAnillas(id),
     onSuccess: (data) => {
@@ -1537,11 +1551,6 @@ export default function SuperAdminPage() {
             <p className="text-sm text-gray-500">Operaciones por asociación — selecciona la asociación y ejecuta la acción</p>
           </div>
 
-          <div className="flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-xl p-3">
-            <AlertTriangle size={16} className="text-orange-500 shrink-0 mt-0.5" />
-            <p className="text-sm text-orange-800">Las acciones destructivas son <strong>irreversibles</strong>. Úsalas únicamente cuando sea estrictamente necesario.</p>
-          </div>
-
           {loadingTenants ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[1,2,3].map(i => <div key={i} className="card h-44 animate-pulse bg-gray-50" />)}
@@ -1614,6 +1623,39 @@ export default function SuperAdminPage() {
                   }}
                 >
                   <Trash2 size={14} /> Eliminar todos los socios
+                </button>
+              </div>
+
+              {/* ── Eliminar Animales ────────────────────────────────────────── */}
+              <div className="card flex flex-col gap-3 border-red-100">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
+                    <PawPrint size={18} className="text-red-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm text-gray-900">Eliminar Animales</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Elimina <strong>todos</strong> los animales y sus evaluaciones. Los socios permanecen.</p>
+                  </div>
+                </div>
+                <select
+                  className="input-field text-sm"
+                  value={advancedTenant["animales"] ?? ""}
+                  onChange={(e) => setAdvancedTenant(p => ({ ...p, animales: e.target.value }))}
+                >
+                  <option value="">— Seleccionar asociación —</option>
+                  {tenants.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                <button
+                  className="btn-danger text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+                  disabled={!advancedTenant["animales"]}
+                  onClick={() => {
+                    const t = tenants.find(t => t.id === advancedTenant["animales"]);
+                    if (t) { setDeleteAnimalesTarget({ id: t.id, name: t.name }); setDeleteAnimalesConfirm(""); }
+                  }}
+                >
+                  <Trash2 size={14} /> Eliminar todos los animales
                 </button>
               </div>
 
@@ -2175,6 +2217,44 @@ export default function SuperAdminPage() {
                 onClick={() => deleteAnillasMutation.mutate(deleteAnillasTarget.id)}
               >
                 {deleteAnillasMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : "Confirmar eliminación"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Modal confirmación eliminar animales ─────────────────────────── */}
+      {deleteAnimalesTarget && (
+        <Modal onClose={() => setDeleteAnimalesTarget(null)} title="Eliminar todos los animales">
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg p-3">
+              <AlertTriangle size={18} className="text-red-600 shrink-0 mt-0.5" />
+              <div className="text-sm text-red-800">
+                <p className="font-semibold mb-1">Acción irreversible</p>
+                <p>Se eliminarán <strong>todos los animales y sus evaluaciones</strong> de <strong>{deleteAnimalesTarget.name}</strong>. Los socios y usuarios permanecerán.</p>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Escribe el nombre de la asociación para confirmar:
+              </label>
+              <p className="text-xs font-mono bg-gray-100 rounded px-2 py-1 mb-2 select-all">{deleteAnimalesTarget.name}</p>
+              <input
+                className="input-field"
+                placeholder={deleteAnimalesTarget.name}
+                value={deleteAnimalesConfirm}
+                onChange={e => setDeleteAnimalesConfirm(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button className="btn-secondary flex-1" onClick={() => setDeleteAnimalesTarget(null)}>Cancelar</button>
+              <button
+                className="btn-danger flex-1"
+                disabled={deleteAnimalesConfirm !== deleteAnimalesTarget.name || deleteAnimalesMutation.isPending}
+                onClick={() => deleteAnimalesMutation.mutate(deleteAnimalesTarget.id)}
+              >
+                {deleteAnimalesMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : "Eliminar todos los animales"}
               </button>
             </div>
           </div>

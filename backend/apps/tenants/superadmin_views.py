@@ -664,6 +664,26 @@ class SuperAdminTenantDeleteAnillasView(APIView):
         return Response({"detail": f"Se han eliminado {count} entregas de anillas.", "count": count})
 
 
+class SuperAdminTenantDeleteAnimalesView(APIView):
+    """POST /api/v1/superadmin/tenants/:id/delete-animales/
+    Elimina todos los animales (y datos en cascada: evaluaciones, lotes, conflictos…)
+    de una asociación. Los socios y usuarios permanecen.
+    """
+    permission_classes = [IsSuperAdmin]
+
+    def post(self, request, pk):
+        from apps.animals.models import Animal
+        try:
+            tenant = Tenant.objects.exclude(slug="system").get(pk=pk)
+        except Tenant.DoesNotExist:
+            return Response({"detail": "Not found."}, status=404)
+
+        qs = Animal.all_objects.filter(tenant=tenant)
+        count = qs.count()
+        qs.delete()
+        return Response({"detail": f"Se han eliminado {count} animales.", "count": count})
+
+
 class SuperAdminLogsView(APIView):
     """
     GET /api/v1/superadmin/logs/

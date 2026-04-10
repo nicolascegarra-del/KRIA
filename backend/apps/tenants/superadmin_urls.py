@@ -20,6 +20,7 @@ from .superadmin_views import (
     TenantSmtpTestView,
     SuperAdminTenantDeleteSociosView,
     SuperAdminTenantDeleteAnillasView,
+    SuperAdminTenantDeleteAnimalesView,
     SuperAdminLogsView,
     SuperAdminMailLogView,
     SuperAdminClearAccessLogView,
@@ -38,6 +39,7 @@ urlpatterns = [
     path("tenants/<uuid:pk>/test-smtp/", TenantSmtpTestView.as_view(), name="superadmin-tenants-test-smtp"),
     path("tenants/<uuid:pk>/delete-socios/", SuperAdminTenantDeleteSociosView.as_view(), name="superadmin-tenant-delete-socios"),
     path("tenants/<uuid:pk>/delete-anillas/", SuperAdminTenantDeleteAnillasView.as_view(), name="superadmin-tenant-delete-anillas"),
+    path("tenants/<uuid:pk>/delete-animales/", SuperAdminTenantDeleteAnimalesView.as_view(), name="superadmin-tenant-delete-animales"),
     # Usuarios admin (gestión, no superadmin)
     path("admin-users/", SuperAdminAdminUsersListView.as_view(), name="superadmin-admin-users-list"),
     path("users/<uuid:pk>/", SuperAdminUserDetailView.as_view(), name="superadmin-user-detail"),
