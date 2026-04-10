@@ -183,6 +183,10 @@ export const superadminApi = {
       const { data } = await apiClient.get<{ url: string; filename: string }>(`/backups/jobs/${id}/download/`);
       return data;
     },
+    clearJobs: async (): Promise<{ detail: string; count: number }> => {
+      const { data } = await apiClient.delete<{ detail: string; count: number }>("/backups/jobs/clear/");
+      return data;
+    },
   },
 
   // ── Audit config (por tenant) ──────────────────────────────────────────────

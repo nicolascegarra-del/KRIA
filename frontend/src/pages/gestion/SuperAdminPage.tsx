@@ -277,6 +277,7 @@ export default function SuperAdminPage() {
   const [backupImportFile, setBackupImportFile] = useState<File | null>(null);
   const [backupImportError, setBackupImportError] = useState("");
   const backupImportRef = useRef<HTMLInputElement>(null);
+  const [showClearBackupJobs, setShowClearBackupJobs] = useState(false);
 
   const { data: backupJobs = [], refetch: refetchBackupJobs } = useQuery<BackupJob[]>({
     queryKey: ["backup-jobs"],
@@ -307,6 +308,16 @@ export default function SuperAdminPage() {
       setSuccessMsg("Importación iniciada. Consulta el historial para ver el progreso.");
     },
     onError: (e: any) => setBackupImportError(e?.response?.data?.detail ?? "Error al iniciar la importación."),
+  });
+
+  const clearBackupJobsMutation = useMutation({
+    mutationFn: () => superadminApi.backups.clearJobs(),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["backup-jobs"] });
+      setShowClearBackupJobs(false);
+      setSuccessMsg(data.detail);
+    },
+    onError: () => setError("Error al limpiar el historial."),
   });
 
   const handleBackupDownload = async (job: BackupJob) => {
@@ -1980,44 +1991,6 @@ export default function SuperAdminPage() {
             )}
           </div>
 
-          {/* ── Exportar — acceso rápido ── */}
-          <div className="card space-y-4">
-            <div className="flex items-center justify-between pb-1.5 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <div className="w-1 h-4 bg-violet-400 rounded-full shrink-0" />
-                <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <Archive size={14} /> Exportar asociación
-                </h2>
-              </div>
-            </div>
-            <p className="text-sm text-gray-500">
-              También puedes exportar directamente desde el icono <Archive size={12} className="inline" /> en la tabla de Asociaciones.
-            </p>
-            {(tenantsData?.results ?? tenantsData as any ?? []).length === 0 ? (
-              <p className="text-sm text-gray-400">No hay asociaciones.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {(tenantsData?.results ?? tenantsData as any ?? []).map((t: any) => (
-                  <button
-                    key={t.id}
-                    className="flex items-center gap-3 border border-gray-200 rounded-lg px-3 py-2.5 hover:bg-gray-50 transition-colors text-left"
-                    onClick={() => exportMutation.mutate(t.id)}
-                    disabled={exportMutation.isPending}
-                  >
-                    <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center overflow-hidden" style={{ background: t.primary_color }}>
-                      {t.logo_url ? <img src={t.logo_url} alt="" className="w-full h-full object-cover" /> : <Building size={14} className="text-white" />}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">{t.name}</p>
-                      <p className="text-xs text-gray-400 font-mono">{t.slug}</p>
-                    </div>
-                    <Archive size={14} className="text-emerald-600 shrink-0" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
           {/* ── Historial de trabajos ── */}
           <div className="card">
             <div className="flex items-center justify-between pb-1.5 border-b border-gray-100 mb-4">
@@ -2025,13 +1998,24 @@ export default function SuperAdminPage() {
                 <div className="w-1 h-4 bg-violet-400 rounded-full shrink-0" />
                 <h2 className="text-sm font-semibold text-gray-700">Historial de trabajos</h2>
               </div>
-              <button
-                className="btn-ghost p-1.5"
-                title="Actualizar"
-                onClick={() => refetchBackupJobs()}
-              >
-                <RefreshCw size={14} />
-              </button>
+              <div className="flex items-center gap-1">
+                {backupJobs.some(j => j.status === "COMPLETED" || j.status === "FAILED") && (
+                  <button
+                    className="btn-ghost p-1.5 text-red-500"
+                    title="Limpiar historial"
+                    onClick={() => setShowClearBackupJobs(true)}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+                <button
+                  className="btn-ghost p-1.5"
+                  title="Actualizar"
+                  onClick={() => refetchBackupJobs()}
+                >
+                  <RefreshCw size={14} />
+                </button>
+              </div>
             </div>
             {backupJobs.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-6">No hay trabajos de backup aún.</p>
@@ -2124,6 +2108,33 @@ export default function SuperAdminPage() {
               </div>
             )}
           </div>
+
+          {/* ── Modal limpiar historial ── */}
+          {showClearBackupJobs && (
+            <Modal onClose={() => setShowClearBackupJobs(false)} title="Limpiar historial de backups">
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Se eliminarán todos los trabajos <strong>completados</strong> y <strong>fallidos</strong> del historial.
+                  Los trabajos en curso no se verán afectados.
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button className="btn-secondary" onClick={() => setShowClearBackupJobs(false)}>
+                    Cancelar
+                  </button>
+                  <button
+                    className="btn-danger flex items-center gap-2"
+                    disabled={clearBackupJobsMutation.isPending}
+                    onClick={() => clearBackupJobsMutation.mutate()}
+                  >
+                    {clearBackupJobsMutation.isPending
+                      ? <><Loader2 size={14} className="animate-spin" /> Limpiando...</>
+                      : <><Trash2 size={14} /> Limpiar historial</>
+                    }
+                  </button>
+                </div>
+              </div>
+            </Modal>
+          )}
         </>
       )}
 

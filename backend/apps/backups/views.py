@@ -159,3 +159,14 @@ class BackupJobDownloadView(APIView):
         url = get_presigned_download_url(job.file_key)
         filename = f"backup_{job.tenant_slug_snapshot}_{job.created_at.strftime('%Y%m%d_%H%M%S')}.zip"
         return Response({"url": url, "filename": filename})
+
+
+class BackupJobClearView(APIView):
+    """DELETE /api/v1/backups/jobs/clear/  → elimina trabajos completados y fallidos."""
+    permission_classes = [IsSuperAdmin]
+
+    def delete(self, request):
+        deleted, _ = BackupJob.objects.filter(
+            status__in=[BackupJob.Status.COMPLETED, BackupJob.Status.FAILED]
+        ).delete()
+        return Response({"detail": f"Historial limpiado.", "count": deleted})
