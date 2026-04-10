@@ -219,6 +219,9 @@ export default function SuperAdminPage() {
   // ── Audit config modal state ───────────────────────────────────────────────
   const [auditConfigTenant, setAuditConfigTenant] = useState<Tenant | null>(null);
 
+  // ── Gestiones avanzadas — selector de asociación por acción ───────────────
+  const [advancedTenant, setAdvancedTenant] = useState<Record<string, string>>({});
+
   // ── SuperAdmin modal state ─────────────────────────────────────────────────
   const [saModalOpen, setSaModalOpen] = useState(false);
   const [editingSa, setEditingSa] = useState<GestionUser | null>(null);
@@ -1531,7 +1534,7 @@ export default function SuperAdminPage() {
             <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <Wrench size={22} className="text-orange-600" /> Gestiones Avanzadas
             </h1>
-            <p className="text-sm text-gray-500">Operaciones destructivas por asociación</p>
+            <p className="text-sm text-gray-500">Operaciones por asociación — selecciona la asociación y ejecuta la acción</p>
           </div>
 
           <div className="flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-xl p-3">
@@ -1539,114 +1542,116 @@ export default function SuperAdminPage() {
             <p className="text-sm text-orange-800">Las acciones destructivas son <strong>irreversibles</strong>. Úsalas únicamente cuando sea estrictamente necesario.</p>
           </div>
 
-          {/* ── Plantillas de Auditoría ── */}
-          <div>
-            <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2 mb-3">
-              <ClipboardCheck size={17} className="text-blue-600" /> Plantillas de Auditoría
-            </h2>
-            <div className="card overflow-x-auto p-0">
-              {loadingTenants ? (
-                <div className="p-4 space-y-2">{[1,2,3].map(i => <div key={i} className="h-10 bg-gray-100 animate-pulse rounded-lg" />)}</div>
-              ) : !tenants.length ? (
-                <p className="text-center text-gray-400 py-6">No hay asociaciones.</p>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Asociación</th>
-                      <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Configurar</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {tenants.map((t) => (
-                      <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-6 h-6 rounded shrink-0 flex items-center justify-center overflow-hidden" style={{ background: t.primary_color }}>
-                              {t.logo_url ? <img src={t.logo_url} alt="" className="w-full h-full object-cover" /> : <Building size={11} className="text-white" />}
-                            </div>
-                            <span className="font-medium text-gray-900">{t.name}</span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <button
-                            onClick={() => setAuditConfigTenant(t)}
-                            className="flex items-center gap-1.5 text-xs border border-blue-200 text-blue-700 hover:bg-blue-50 rounded-lg px-2.5 py-1.5 transition-colors font-medium ml-auto"
-                          >
-                            <ClipboardCheck size={12} /> Criterios
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+          {loadingTenants ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1,2,3].map(i => <div key={i} className="card h-44 animate-pulse bg-gray-50" />)}
             </div>
-          </div>
+          ) : !tenants.length ? (
+            <p className="text-center text-gray-400 py-10">No hay asociaciones registradas.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
-          {/* ── Operaciones destructivas ── */}
-          <div>
-            <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2 mb-3">
-              <Trash2 size={17} className="text-red-500" /> Operaciones Destructivas
-            </h2>
-          <div className="card overflow-x-auto p-0">
-            {loadingTenants ? (
-              <div className="p-4 space-y-2">{[1,2,3].map(i => <div key={i} className="h-12 bg-gray-100 animate-pulse rounded-lg" />)}</div>
-            ) : !tenants.length ? (
-              <p className="text-center text-gray-400 py-8">No hay asociaciones.</p>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Asociación</th>
-                    <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Socios</th>
-                    <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Estado</th>
-                    <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Operaciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {tenants.map((t) => (
-                    <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center overflow-hidden" style={{ background: t.primary_color }}>
-                            {t.logo_url ? <img src={t.logo_url} alt="" className="w-full h-full object-cover" /> : <Building size={12} className="text-white" />}
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900 leading-tight">{t.name}</p>
-                            <p className="text-xs text-gray-400 font-mono">{t.slug}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-3 text-gray-600 font-medium">{t.socios_count ?? 0}</td>
-                      <td className="py-3 px-3">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${t.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                          {t.is_active ? "Activa" : "Suspendida"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => { setDeleteSociosTarget({ id: t.id, name: t.name }); setDeleteSociosConfirm(""); }}
-                            className="flex items-center gap-1.5 text-xs border border-red-200 text-red-600 hover:bg-red-50 rounded-lg px-2.5 py-1.5 transition-colors font-medium"
-                          >
-                            <Users size={12} /> Eliminar Socios
-                          </button>
-                          <button
-                            onClick={() => { setDeleteAnillasTarget({ id: t.id, name: t.name }); setDeleteAnillasConfirm(""); }}
-                            className="flex items-center gap-1.5 text-xs border border-orange-200 text-orange-600 hover:bg-orange-50 rounded-lg px-2.5 py-1.5 transition-colors font-medium"
-                          >
-                            <Tag size={12} /> Eliminar Anillas
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+              {/* ── Plantillas de Auditoría ─────────────────────────────────── */}
+              <div className="card flex flex-col gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                    <ClipboardCheck size={18} className="text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm text-gray-900">Plantillas de Auditoría</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Configura criterios de evaluación y preguntas de instalación.</p>
+                  </div>
+                </div>
+                <select
+                  className="input-field text-sm"
+                  value={advancedTenant["auditoria"] ?? ""}
+                  onChange={(e) => setAdvancedTenant(p => ({ ...p, auditoria: e.target.value }))}
+                >
+                  <option value="">— Seleccionar asociación —</option>
+                  {tenants.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-          </div>
+                </select>
+                <button
+                  className="btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+                  disabled={!advancedTenant["auditoria"]}
+                  onClick={() => {
+                    const t = tenants.find(t => t.id === advancedTenant["auditoria"]);
+                    if (t) setAuditConfigTenant(t);
+                  }}
+                >
+                  <ClipboardCheck size={14} /> Configurar plantilla
+                </button>
+              </div>
+
+              {/* ── Eliminar Socios ──────────────────────────────────────────── */}
+              <div className="card flex flex-col gap-3 border-red-100">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
+                    <Users size={18} className="text-red-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm text-gray-900">Eliminar Socios</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Elimina <strong>todos</strong> los socios, animales y datos de la asociación.</p>
+                  </div>
+                </div>
+                <select
+                  className="input-field text-sm"
+                  value={advancedTenant["socios"] ?? ""}
+                  onChange={(e) => setAdvancedTenant(p => ({ ...p, socios: e.target.value }))}
+                >
+                  <option value="">— Seleccionar asociación —</option>
+                  {tenants.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}{t.socios_count != null ? ` (${t.socios_count} socios)` : ""}</option>
+                  ))}
+                </select>
+                <button
+                  className="btn-danger text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+                  disabled={!advancedTenant["socios"]}
+                  onClick={() => {
+                    const t = tenants.find(t => t.id === advancedTenant["socios"]);
+                    if (t) { setDeleteSociosTarget({ id: t.id, name: t.name }); setDeleteSociosConfirm(""); }
+                  }}
+                >
+                  <Trash2 size={14} /> Eliminar todos los socios
+                </button>
+              </div>
+
+              {/* ── Eliminar Anillas ─────────────────────────────────────────── */}
+              <div className="card flex flex-col gap-3 border-orange-100">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
+                    <Tag size={18} className="text-orange-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm text-gray-900">Eliminar Anillas</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Elimina todas las entregas de anillas. Los animales no se ven afectados.</p>
+                  </div>
+                </div>
+                <select
+                  className="input-field text-sm"
+                  value={advancedTenant["anillas"] ?? ""}
+                  onChange={(e) => setAdvancedTenant(p => ({ ...p, anillas: e.target.value }))}
+                >
+                  <option value="">— Seleccionar asociación —</option>
+                  {tenants.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                <button
+                  className="btn-danger text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+                  disabled={!advancedTenant["anillas"]}
+                  onClick={() => {
+                    const t = tenants.find(t => t.id === advancedTenant["anillas"]);
+                    if (t) { setDeleteAnillasTarget({ id: t.id, name: t.name }); setDeleteAnillasConfirm(""); }
+                  }}
+                >
+                  <Trash2 size={14} /> Eliminar todas las anillas
+                </button>
+              </div>
+
+            </div>
+          )}
         </>
       )}
 
