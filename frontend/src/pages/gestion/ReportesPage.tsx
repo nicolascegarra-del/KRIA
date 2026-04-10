@@ -186,19 +186,6 @@ export default function ReportesPage() {
         return reportsApi.individual(id);
       },
     },
-    {
-      label: "Certificado Genealógico",
-      description: "PDF con árbol genealógico de 3 generaciones",
-      icon: <FileText size={24} />,
-      color: "bg-teal-700",
-      requiresAnimal: true,
-      hasFormatSelector: false,
-      action: () => {
-        const id = animalState["Certificado Genealógico"]?.selectedId;
-        if (!id) throw new Error("Selecciona un animal.");
-        return reportsApi.genealogyCert(id);
-      },
-    },
   ];
 
   return (

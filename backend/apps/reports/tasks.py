@@ -105,10 +105,25 @@ def _gen_individual_pdf(job) -> str:
 
     animal_id = job.params.get("animal_id")
     animal = Animal.all_objects.select_related(
-        "socio", "padre", "madre_animal", "madre_lote", "evaluacion"
+        "socio",
+        "padre", "padre__padre", "padre__madre_animal",
+        "madre_animal", "madre_animal__padre", "madre_animal__madre_animal",
+        "madre_lote", "evaluacion",
     ).get(pk=animal_id, tenant=job.tenant)
 
-    context = {"tenant": job.tenant, "animal": animal}
+    padre = animal.padre
+    madre = animal.madre_animal
+    gen = {
+        "padre": padre,
+        "madre": madre,
+        "abuelo_paterno": getattr(padre, "padre", None) if padre else None,
+        "abuela_paterna": getattr(padre, "madre_animal", None) if padre else None,
+        "abuelo_materno": getattr(madre, "padre", None) if madre else None,
+        "abuela_materna": getattr(madre, "madre_animal", None) if madre else None,
+    }
+    has_genealogy = bool(padre or madre or animal.madre_lote_id or animal.madre_lote_externo)
+
+    context = {"tenant": job.tenant, "animal": animal, "gen": gen, "has_genealogy": has_genealogy}
     pdf_bytes = _render_pdf("reports/individual.html", context)
     key = f"reports/{job.tenant.slug}/individual/{animal_id}.pdf"
     from .storage import upload_bytes
@@ -131,55 +146,81 @@ def _gen_genealogy_cert(job) -> str:
 
 
 def _gen_inventory_excel(job) -> str:
-    """Generate Inventario de Animales as XLSX."""
+    """Generate Inventario de Animales as XLSX — optimized for working in Excel."""
     import openpyxl
     from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
     import io
     from apps.animals.models import Animal
 
     socio_id = job.params.get("socio_id")
     if socio_id:
-        animals = Animal.all_objects.filter(tenant=job.tenant, socio_id=socio_id).select_related("socio", "padre", "madre_animal").prefetch_related("evaluacion")
+        animals_qs = Animal.all_objects.filter(
+            tenant=job.tenant, socio_id=socio_id
+        ).select_related("socio", "padre", "madre_animal").prefetch_related("evaluacion")
     else:
-        animals = Animal.all_objects.filter(tenant=job.tenant).select_related("socio", "padre", "madre_animal").prefetch_related("evaluacion").order_by("variedad", "numero_anilla")
+        animals_qs = Animal.all_objects.filter(
+            tenant=job.tenant
+        ).select_related("socio", "padre", "madre_animal").prefetch_related("evaluacion").order_by("variedad", "numero_anilla")
+
+    animals_list = list(animals_qs)
 
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Inventario de Animales"
+    ws.title = "Inventario"
 
-    primary = job.tenant.primary_color.lstrip("#") if job.tenant.primary_color else "1565C0"
-    header_fill = PatternFill(start_color=primary, end_color=primary, fill_type="solid")
-    header_font = Font(bold=True, color="FFFFFF", size=10)
-    thin = Border(
-        left=Side(style="thin", color="DDDDDD"),
-        right=Side(style="thin", color="DDDDDD"),
-        bottom=Side(style="thin", color="DDDDDD"),
+    primary_hex = (job.tenant.primary_color or "#1565C0").lstrip("#")
+    if len(primary_hex) == 3:
+        primary_hex = "".join(c * 2 for c in primary_hex)
+
+    hdr_fill  = PatternFill(start_color=primary_hex, end_color=primary_hex, fill_type="solid")
+    hdr_font  = Font(bold=True, color="FFFFFF", size=10)
+    alt_fill  = PatternFill(start_color="EFF3F8", end_color="EFF3F8", fill_type="solid")
+    foot_fill = PatternFill(start_color="E2EAF4", end_color="E2EAF4", fill_type="solid")
+    brd = Border(
+        left=Side(style="thin", color="C8D0DA"),
+        right=Side(style="thin", color="C8D0DA"),
+        top=Side(style="thin", color="C8D0DA"),
+        bottom=Side(style="thin", color="C8D0DA"),
     )
 
-    # Title row
-    ws.merge_cells("A1:K1")
-    title_cell = ws["A1"]
-    title_cell.value = f"Inventario de Animales — {job.tenant.name}"
-    title_cell.font = Font(bold=True, size=14, color=primary)
-    title_cell.alignment = Alignment(horizontal="center")
-    ws.row_dimensions[1].height = 24
+    HEADERS = [
+        "Nº Anilla", "Año Nac.", "Sexo", "Variedad", "Estado",
+        "Padre (Anilla)", "Madre (Anilla)",
+        "Socio / Titular", "DNI / NIF", "Cód. REGA",
+        "Punt. Media",
+    ]
+    N = len(HEADERS)
+    last_col = get_column_letter(N)
 
-    HEADERS = ["Nº Anilla", "Año Nac.", "Sexo", "Variedad", "Estado",
-               "Padre", "Madre", "Socio", "DNI/NIF", "REGA", "Puntuación Media"]
+    # ── Fila 1: Título ──────────────────────────────────────────────────────────
+    ws.merge_cells(f"A1:{last_col}1")
+    c = ws["A1"]
+    c.value = f"Inventario de Animales  ·  {job.tenant.name}"
+    c.font = Font(bold=True, size=14, color=primary_hex)
+    c.alignment = Alignment(horizontal="center", vertical="center")
+    c.fill = PatternFill(start_color="F5F8FC", end_color="F5F8FC", fill_type="solid")
+    ws.row_dimensions[1].height = 32
+
+    # ── Fila 2: Cabeceras ───────────────────────────────────────────────────────
     for col, h in enumerate(HEADERS, 1):
-        cell = ws.cell(row=2, column=col, value=h)
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal="center")
+        c = ws.cell(row=2, column=col, value=h)
+        c.fill = hdr_fill
+        c.font = hdr_font
+        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        c.border = brd
+    ws.row_dimensions[2].height = 24
 
-    for row_num, animal in enumerate(animals, 3):
+    # ── Filas de datos ──────────────────────────────────────────────────────────
+    for i, animal in enumerate(animals_list):
+        r = i + 3
         try:
             media = float(animal.evaluacion.puntuacion_media)
         except Exception:
-            media = ""
-        row_data = [
+            media = None
+        row = [
             animal.numero_anilla,
-            _anio(animal),
+            animal.fecha_nacimiento.year if animal.fecha_nacimiento else None,
             animal.get_sexo_display(),
             animal.get_variedad_display(),
             animal.get_estado_display(),
@@ -190,15 +231,38 @@ def _gen_inventory_excel(job) -> str:
             animal.socio.codigo_rega or "",
             media,
         ]
-        for col, val in enumerate(row_data, 1):
-            cell = ws.cell(row=row_num, column=col, value=val)
-            cell.border = thin
-            if row_num % 2 == 0:
-                cell.fill = PatternFill(start_color="F5F5F5", end_color="F5F5F5", fill_type="solid")
+        fill = alt_fill if i % 2 == 0 else None
+        for col, val in enumerate(row, 1):
+            c = ws.cell(row=r, column=col, value=val)
+            c.border = brd
+            if fill:
+                c.fill = fill
+            if col in (1, 6, 7):
+                c.alignment = Alignment(horizontal="center")
+            elif col == 2:
+                c.alignment = Alignment(horizontal="center")
+            elif col == 11:
+                c.alignment = Alignment(horizontal="center")
+                if val is not None:
+                    c.number_format = "0.00"
+            else:
+                c.alignment = Alignment(horizontal="left", vertical="center")
 
-    for col in ws.columns:
-        max_len = max((len(str(c.value or "")) for c in col), default=10)
-        ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
+    # ── Fila de totales ─────────────────────────────────────────────────────────
+    tr = len(animals_list) + 3
+    ws.merge_cells(f"A{tr}:{last_col}{tr}")
+    c = ws[f"A{tr}"]
+    c.value = f"Total: {len(animals_list)} animales"
+    c.font = Font(bold=True, size=9, italic=True, color="445566")
+    c.alignment = Alignment(horizontal="right", vertical="center")
+    c.fill = foot_fill
+    ws.row_dimensions[tr].height = 18
+
+    # ── Auto-filtro, freeze, anchos ─────────────────────────────────────────────
+    ws.auto_filter.ref = f"A2:{last_col}2"
+    ws.freeze_panes = "A3"
+    for i, w in enumerate([16, 9, 9, 13, 15, 16, 16, 30, 14, 14, 11], 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -208,80 +272,123 @@ def _gen_inventory_excel(job) -> str:
 
 
 def _gen_catalogo_reproductores_excel(job) -> str:
-    """Generate Catálogo de Reproductores as XLSX."""
+    """Generate Catálogo de Reproductores as XLSX — optimized for working in Excel."""
     import openpyxl
     from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
     import io
     from apps.animals.models import Animal
 
-    animals = Animal.all_objects.filter(
+    animals_qs = Animal.all_objects.filter(
         tenant=job.tenant, reproductor_aprobado=True, estado=Animal.Estado.EVALUADO,
     ).select_related("socio").prefetch_related("evaluacion").order_by("variedad", "numero_anilla")
+    animals_list = list(animals_qs)
 
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Catálogo de Reproductores"
+    ws.title = "Catálogo Reproductores"
 
-    primary = job.tenant.primary_color.lstrip("#") if job.tenant.primary_color else "1565C0"
-    header_fill = PatternFill(start_color=primary, end_color=primary, fill_type="solid")
-    header_font = Font(bold=True, color="FFFFFF", size=10)
-    thin = Border(
-        left=Side(style="thin", color="DDDDDD"),
-        right=Side(style="thin", color="DDDDDD"),
-        bottom=Side(style="thin", color="DDDDDD"),
+    primary_hex = (job.tenant.primary_color or "#1565C0").lstrip("#")
+    if len(primary_hex) == 3:
+        primary_hex = "".join(c * 2 for c in primary_hex)
+
+    hdr_fill  = PatternFill(start_color=primary_hex, end_color=primary_hex, fill_type="solid")
+    hdr_font  = Font(bold=True, color="FFFFFF", size=10)
+    alt_fill  = PatternFill(start_color="EFF3F8", end_color="EFF3F8", fill_type="solid")
+    foot_fill = PatternFill(start_color="E2EAF4", end_color="E2EAF4", fill_type="solid")
+    brd = Border(
+        left=Side(style="thin", color="C8D0DA"),
+        right=Side(style="thin", color="C8D0DA"),
+        top=Side(style="thin", color="C8D0DA"),
+        bottom=Side(style="thin", color="C8D0DA"),
     )
 
-    ws.merge_cells("A1:P1")
-    tc = ws["A1"]
-    tc.value = f"Catálogo de Reproductores — {job.tenant.name}"
-    tc.font = Font(bold=True, size=14, color=primary)
-    tc.alignment = Alignment(horizontal="center")
-    ws.row_dimensions[1].height = 24
+    HEADERS = [
+        "Nº Anilla", "Año Nac.", "Sexo", "Variedad",
+        "Socio / Titular", "DNI / NIF", "Cód. REGA",
+        "Cabeza", "Cola", "Pecho/Abd.", "Muslos/Tarsos", "Cresta/Babilla", "Color",
+        "Punt. Media",
+        "Ganadería Nac.", "Fecha Nac.",
+    ]
+    N = len(HEADERS)
+    last_col = get_column_letter(N)
 
-    HEADERS = ["Nº Anilla", "Año Nac.", "Sexo", "Variedad",
-               "Socio", "DNI/NIF", "REGA",
-               "Cabeza", "Cola", "Pecho/Abd.", "Muslos/Tarsos", "Cresta/Babilla", "Color",
-               "Puntuación Media", "Ganadería", "Fecha Nac."]
+    # ── Fila 1: Título ──────────────────────────────────────────────────────────
+    ws.merge_cells(f"A1:{last_col}1")
+    c = ws["A1"]
+    c.value = f"Catálogo de Reproductores  ·  {job.tenant.name}"
+    c.font = Font(bold=True, size=14, color=primary_hex)
+    c.alignment = Alignment(horizontal="center", vertical="center")
+    c.fill = PatternFill(start_color="F5F8FC", end_color="F5F8FC", fill_type="solid")
+    ws.row_dimensions[1].height = 32
+
+    # ── Fila 2: Cabeceras ───────────────────────────────────────────────────────
     for col, h in enumerate(HEADERS, 1):
-        cell = ws.cell(row=2, column=col, value=h)
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal="center")
+        c = ws.cell(row=2, column=col, value=h)
+        c.fill = hdr_fill
+        c.font = hdr_font
+        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        c.border = brd
+    ws.row_dimensions[2].height = 24
 
-    for row_num, animal in enumerate(animals, 3):
+    # ── Filas de datos ──────────────────────────────────────────────────────────
+    for i, animal in enumerate(animals_list):
+        r = i + 3
         ev = getattr(animal, "evaluacion", None)
         try:
             ev_real = ev if ev and ev.pk else None
         except Exception:
             ev_real = None
-
-        row_data = [
+        row = [
             animal.numero_anilla,
-            _anio(animal),
+            animal.fecha_nacimiento.year if animal.fecha_nacimiento else None,
             animal.get_sexo_display(),
             animal.get_variedad_display(),
             animal.socio.nombre_razon_social,
             animal.socio.dni_nif,
             animal.socio.codigo_rega or "",
-            ev_real.cabeza if ev_real else "",
-            ev_real.cola if ev_real else "",
-            ev_real.pecho_abdomen if ev_real else "",
-            ev_real.muslos_tarsos if ev_real else "",
-            ev_real.cresta_babilla if ev_real else "",
-            ev_real.color if ev_real else "",
-            float(ev_real.puntuacion_media) if ev_real else "",
+            ev_real.cabeza if ev_real else None,
+            ev_real.cola if ev_real else None,
+            ev_real.pecho_abdomen if ev_real else None,
+            ev_real.muslos_tarsos if ev_real else None,
+            ev_real.cresta_babilla if ev_real else None,
+            ev_real.color if ev_real else None,
+            float(ev_real.puntuacion_media) if ev_real else None,
             animal.ganaderia_nacimiento or "",
-            str(animal.fecha_nacimiento) if animal.fecha_nacimiento else "",
+            animal.fecha_nacimiento.strftime("%d/%m/%Y") if animal.fecha_nacimiento else "",
         ]
-        for col, val in enumerate(row_data, 1):
-            cell = ws.cell(row=row_num, column=col, value=val)
-            cell.border = thin
-            if row_num % 2 == 0:
-                cell.fill = PatternFill(start_color="F5F5F5", end_color="F5F5F5", fill_type="solid")
+        fill = alt_fill if i % 2 == 0 else None
+        for col, val in enumerate(row, 1):
+            c = ws.cell(row=r, column=col, value=val)
+            c.border = brd
+            if fill:
+                c.fill = fill
+            if col == 1:
+                c.alignment = Alignment(horizontal="center")
+            elif col in (2, 8, 9, 10, 11, 12, 13):
+                c.alignment = Alignment(horizontal="center")
+            elif col == 14:
+                c.alignment = Alignment(horizontal="center")
+                if val is not None:
+                    c.number_format = "0.00"
+            else:
+                c.alignment = Alignment(horizontal="left", vertical="center")
 
-    for col in ws.columns:
-        max_len = max((len(str(c.value or "")) for c in col), default=10)
-        ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 35)
+    # ── Fila de totales ─────────────────────────────────────────────────────────
+    tr = len(animals_list) + 3
+    ws.merge_cells(f"A{tr}:{last_col}{tr}")
+    c = ws[f"A{tr}"]
+    c.value = f"Total reproductores aprobados: {len(animals_list)}"
+    c.font = Font(bold=True, size=9, italic=True, color="445566")
+    c.alignment = Alignment(horizontal="right", vertical="center")
+    c.fill = foot_fill
+    ws.row_dimensions[tr].height = 18
+
+    # ── Auto-filtro, freeze, anchos ─────────────────────────────────────────────
+    ws.auto_filter.ref = f"A2:{last_col}2"
+    ws.freeze_panes = "A3"
+    for i, w in enumerate([16, 9, 9, 13, 28, 14, 14, 8, 8, 10, 12, 12, 8, 10, 22, 12], 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -292,44 +399,80 @@ def _gen_catalogo_reproductores_excel(job) -> str:
 
 def _gen_libro_genealogico(job) -> str:
     """
-    Generate ARCA/Ministerio format Excel Libro Genealógico using openpyxl.
-    Fixed column schema: Anilla | Año | Sexo | Variedad | Padre | Madre | Socio | NIF | REGA | Estado | Puntuación
+    Generate ARCA/Ministerio format Excel Libro Genealógico — optimized for working in Excel.
     """
     import openpyxl
-    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
     import io
     from apps.animals.models import Animal
+    from django.utils import timezone
 
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Libro Genealógico"
 
+    PRIMARY = "1565C0"
+    hdr_fill  = PatternFill(start_color=PRIMARY, end_color=PRIMARY, fill_type="solid")
+    hdr_font  = Font(bold=True, color="FFFFFF", size=10)
+    alt_fill  = PatternFill(start_color="EBF3FB", end_color="EBF3FB", fill_type="solid")
+    foot_fill = PatternFill(start_color="D6E8F7", end_color="D6E8F7", fill_type="solid")
+    brd = Border(
+        left=Side(style="thin", color="B8C8D8"),
+        right=Side(style="thin", color="B8C8D8"),
+        top=Side(style="thin", color="B8C8D8"),
+        bottom=Side(style="thin", color="B8C8D8"),
+    )
+
     HEADERS = [
-        "Nº Anilla", "Año Nac.", "Sexo", "Variedad",
+        "Nº Anilla", "Año Nac.", "Fecha Nac.", "Sexo", "Variedad",
         "Padre (Anilla)", "Madre (Anilla)", "Lote Madre",
         "Fecha Incubación", "Ganadería Nacimiento",
-        "Socio", "DNI/NIF", "Cód. REGA",
-        "Estado", "Puntuación Media",
+        "Socio / Titular", "DNI / NIF", "Cód. REGA",
+        "Estado", "Punt. Media",
     ]
+    N = len(HEADERS)
+    last_col = get_column_letter(N)
 
-    header_fill = PatternFill(start_color="1565C0", end_color="1565C0", fill_type="solid")
-    header_font = Font(bold=True, color="FFFFFF")
+    # ── Fila 1: Título ──────────────────────────────────────────────────────────
+    ws.merge_cells(f"A1:{last_col}1")
+    c = ws["A1"]
+    c.value = f"Libro Genealógico  ·  {job.tenant.name}"
+    c.font = Font(bold=True, size=14, color=PRIMARY)
+    c.alignment = Alignment(horizontal="center", vertical="center")
+    c.fill = PatternFill(start_color="EBF3FB", end_color="EBF3FB", fill_type="solid")
+    ws.row_dimensions[1].height = 32
 
-    for col, header in enumerate(HEADERS, 1):
-        cell = ws.cell(row=1, column=col, value=header)
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal="center")
+    # ── Fila 2: Subtítulo ───────────────────────────────────────────────────────
+    ws.merge_cells(f"A2:{last_col}2")
+    c = ws["A2"]
+    c.value = f"Formato ARCA / Ministerio  ·  Generado el {timezone.now().strftime('%d/%m/%Y a las %H:%M')}h"
+    c.font = Font(italic=True, size=8, color="7090A8")
+    c.alignment = Alignment(horizontal="center", vertical="center")
+    c.fill = PatternFill(start_color="EBF3FB", end_color="EBF3FB", fill_type="solid")
+    ws.row_dimensions[2].height = 16
 
+    # ── Fila 3: Cabeceras ───────────────────────────────────────────────────────
+    for col, h in enumerate(HEADERS, 1):
+        c = ws.cell(row=3, column=col, value=h)
+        c.fill = hdr_fill
+        c.font = hdr_font
+        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        c.border = brd
+    ws.row_dimensions[3].height = 24
+
+    # ── Datos ───────────────────────────────────────────────────────────────────
     animals = Animal.all_objects.filter(tenant=job.tenant).select_related(
-        "socio", "padre", "madre_animal"
+        "socio", "padre", "madre_animal", "madre_lote"
     ).prefetch_related("evaluacion").order_by("variedad", "numero_anilla")
 
-    for row_num, animal in enumerate(animals, 2):
+    animals_list = list(animals)
+    for i, animal in enumerate(animals_list):
+        r = i + 4
         try:
             media = float(animal.evaluacion.puntuacion_media)
         except Exception:
-            media = ""
+            media = None
 
         lote_madre = ""
         if animal.madre_lote_id:
@@ -337,36 +480,64 @@ def _gen_libro_genealogico(job) -> str:
                 lote_madre = animal.madre_lote.nombre
             except Exception:
                 pass
+        if not lote_madre and animal.madre_lote_externo:
+            lote_madre = f"[Ext.] {animal.madre_lote_externo}"
 
-        ws.append([
+        row = [
             animal.numero_anilla,
-            _anio(animal),
+            animal.fecha_nacimiento.year if animal.fecha_nacimiento else None,
+            animal.fecha_nacimiento.strftime("%d/%m/%Y") if animal.fecha_nacimiento else "",
             animal.get_sexo_display(),
             animal.get_variedad_display(),
             animal.padre.numero_anilla if animal.padre else "",
             animal.madre_animal.numero_anilla if animal.madre_animal else "",
             lote_madre,
-            str(animal.fecha_incubacion) if animal.fecha_incubacion else "",
+            animal.fecha_incubacion.strftime("%d/%m/%Y") if animal.fecha_incubacion else "",
             animal.ganaderia_nacimiento or "",
             animal.socio.nombre_razon_social,
             animal.socio.dni_nif,
-            animal.socio.codigo_rega,
+            animal.socio.codigo_rega or "",
             animal.get_estado_display(),
             media,
-        ])
+        ]
+        fill = alt_fill if i % 2 == 0 else None
+        for col, val in enumerate(row, 1):
+            c = ws.cell(row=r, column=col, value=val)
+            c.border = brd
+            if fill:
+                c.fill = fill
+            if col in (1, 6, 7):
+                c.alignment = Alignment(horizontal="center")
+            elif col == 2:
+                c.alignment = Alignment(horizontal="center")
+            elif col == 15:
+                c.alignment = Alignment(horizontal="center")
+                if val is not None:
+                    c.number_format = "0.00"
+            else:
+                c.alignment = Alignment(horizontal="left", vertical="center")
 
-    # Auto-fit columns
-    for col in ws.columns:
-        max_len = max((len(str(c.value or "")) for c in col), default=10)
-        ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
+    # ── Fila de totales ─────────────────────────────────────────────────────────
+    tr = len(animals_list) + 4
+    ws.merge_cells(f"A{tr}:{last_col}{tr}")
+    c = ws[f"A{tr}"]
+    c.value = f"Total registros: {len(animals_list)}"
+    c.font = Font(bold=True, size=9, italic=True, color="336688")
+    c.alignment = Alignment(horizontal="right", vertical="center")
+    c.fill = foot_fill
+    ws.row_dimensions[tr].height = 18
+
+    # ── Auto-filtro, freeze, anchos ─────────────────────────────────────────────
+    ws.auto_filter.ref = f"A3:{last_col}3"
+    ws.freeze_panes = "A4"
+    for i, w in enumerate([16, 9, 13, 9, 13, 16, 16, 22, 14, 26, 30, 14, 14, 14, 11], 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
 
     buf = io.BytesIO()
     wb.save(buf)
-    excel_bytes = buf.getvalue()
-
     key = f"reports/{job.tenant.slug}/libro-genealogico/{uuid.uuid4()}.xlsx"
     from .storage import upload_bytes
-    return upload_bytes(key, excel_bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    return upload_bytes(key, buf.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 def _gen_catalogo_reproductores(job) -> str:

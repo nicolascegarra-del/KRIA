@@ -12,11 +12,6 @@ export const reportsApi = {
     return data;
   },
 
-  genealogyCert: async (animal_id: string): Promise<{ job_id: string }> => {
-    const { data } = await apiClient.post(`/reports/genealogical-certificate/${animal_id}/`);
-    return data;
-  },
-
   libroGenealogico: async (): Promise<{ job_id: string }> => {
     const { data } = await apiClient.post("/reports/libro-genealogico/");
     return data;
