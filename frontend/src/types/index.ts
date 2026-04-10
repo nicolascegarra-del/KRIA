@@ -461,6 +461,26 @@ export interface AuditoriaSessionDetail extends AuditoriaSession {
   respuestas_instalacion: AuditoriaRespuesta[];
 }
 
+// ─── Backups ──────────────────────────────────────────────────────────────────
+export type BackupJobType = "EXPORT" | "IMPORT";
+export type BackupJobStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
+
+export interface BackupJob {
+  id: string;
+  tenant_id_snapshot: string;
+  tenant_slug_snapshot: string;
+  tenant_name_snapshot: string;
+  job_type: BackupJobType;
+  status: BackupJobStatus;
+  created_by_email: string | null;
+  created_at: string;
+  completed_at: string | null;
+  file_key: string;
+  file_size_bytes: number | null;
+  error_message: string;
+  result_summary: Record<string, number>;
+}
+
 // ─── Pagination ───────────────────────────────────────────────────────────────
 export interface PaginatedResponse<T> {
   count: number;

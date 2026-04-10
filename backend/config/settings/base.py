@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "apps.documentos",
     "apps.audits",
     "apps.health",
+    "apps.backups",
 ]
 
 MIDDLEWARE = [

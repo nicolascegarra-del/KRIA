@@ -157,6 +157,34 @@ export const superadminApi = {
     return data;
   },
 
+  // ── Backups ────────────────────────────────────────────────────────────────
+  backups: {
+    exportTenant: async (tenantId: string): Promise<import("../types").BackupJob> => {
+      const { data } = await apiClient.post<import("../types").BackupJob>("/backups/export/", { tenant_id: tenantId });
+      return data;
+    },
+    importBackup: async (file: File): Promise<import("../types").BackupJob> => {
+      const form = new FormData();
+      form.append("file", file);
+      const { data } = await apiClient.post<import("../types").BackupJob>("/backups/import/", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return data;
+    },
+    listJobs: async (): Promise<import("../types").BackupJob[]> => {
+      const { data } = await apiClient.get<import("../types").BackupJob[]>("/backups/jobs/");
+      return data;
+    },
+    getJob: async (id: string): Promise<import("../types").BackupJob> => {
+      const { data } = await apiClient.get<import("../types").BackupJob>(`/backups/jobs/${id}/`);
+      return data;
+    },
+    getDownloadUrl: async (id: string): Promise<{ url: string; filename: string }> => {
+      const { data } = await apiClient.get<{ url: string; filename: string }>(`/backups/jobs/${id}/download/`);
+      return data;
+    },
+  },
+
   // ── Audit config (por tenant) ──────────────────────────────────────────────
   auditConfig: {
     listCriterios: async (tenantId: string) => {

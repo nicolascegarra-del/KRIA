@@ -223,6 +223,7 @@ export default function App() {
         <Route path="/superadmin/gestiones-avanzadas" element={<LayoutRoute superadminOnly><SuperAdminPage /></LayoutRoute>} />
         <Route path="/superadmin/log" element={<LayoutRoute superadminOnly><SuperAdminPage /></LayoutRoute>} />
         <Route path="/superadmin/mail-log" element={<LayoutRoute superadminOnly><SuperAdminPage /></LayoutRoute>} />
+        <Route path="/superadmin/backups" element={<LayoutRoute superadminOnly><SuperAdminPage /></LayoutRoute>} />
 
         {/* Default redirects */}
         <Route

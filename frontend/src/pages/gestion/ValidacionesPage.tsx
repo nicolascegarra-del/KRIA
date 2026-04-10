@@ -43,14 +43,14 @@ export default function ValidacionesPage() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: (id: string) => {
+    mutationFn: (id: string) => animalsApi.approve(id),
+    onMutate: (id: string) => {
       setApprovingId(id);
       setApproveErrors((prev) => {
         const next = { ...prev };
         delete next[id];
         return next;
       });
-      return animalsApi.approve(id);
     },
     onSuccess: () => {
       setApprovingId(null);
@@ -82,6 +82,11 @@ export default function ValidacionesPage() {
       qc.invalidateQueries({ queryKey: ["animals"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
       setRejectNotas((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      setApproveErrors((prev) => {
         const next = { ...prev };
         delete next[id];
         return next;

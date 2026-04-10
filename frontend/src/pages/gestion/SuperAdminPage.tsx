@@ -14,8 +14,9 @@ import {
   UserPlus, Pencil, ChevronRight, Mail, CheckCircle2, XCircle,
   Settings, AlertTriangle, Wrench, ScrollText, Clock, Tag,
   MapPin, Phone, AtSign, Settings2, GripVertical, X, Eye,
-  ClipboardCheck,
+  ClipboardCheck, Archive, Download, FileArchive, RefreshCw,
 } from "lucide-react";
+import type { BackupJob } from "../../types";
 import type { Tenant, GestionUserCreate, GestionUser, AnillaSize, PlatformSettings, PreguntaInstalacion } from "../../types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -29,7 +30,7 @@ interface SuperAdminStats {
   por_asociacion: { id: string; name: string; slug: string; is_active: boolean; max_socios: number; socios_count: number }[];
 }
 
-type Section = "dashboard" | "asociaciones" | "configuracion" | "gestiones_avanzadas" | "log" | "mail_log";
+type Section = "dashboard" | "asociaciones" | "configuracion" | "gestiones_avanzadas" | "log" | "mail_log" | "backups";
 
 interface TenantForm {
   name: string; slug: string; primary_color: string; secondary_color: string;
@@ -191,6 +192,8 @@ export default function SuperAdminPage() {
     ? "mail_log"
     : location.pathname.includes("/log")
     ? "log"
+    : location.pathname.includes("backups")
+    ? "backups"
     : "dashboard";
 
   // ── Tenant modal state ─────────────────────────────────────────────────────
@@ -269,6 +272,54 @@ export default function SuperAdminPage() {
   const [platformSmtpTesting, setPlatformSmtpTesting] = useState(false);
   const [tenantSmtpTestResult, setTenantSmtpTestResult] = useState<string | null>(null);
   const [tenantSmtpTesting, setTenantSmtpTesting] = useState(false);
+
+  // ── Backup state ──────────────────────────────────────────────────────────
+  const [backupImportFile, setBackupImportFile] = useState<File | null>(null);
+  const [backupImportError, setBackupImportError] = useState("");
+  const backupImportRef = useRef<HTMLInputElement>(null);
+
+  const { data: backupJobs = [], refetch: refetchBackupJobs } = useQuery<BackupJob[]>({
+    queryKey: ["backup-jobs"],
+    queryFn: () => superadminApi.backups.listJobs(),
+    enabled: section === "backups",
+    refetchInterval: (query) => {
+      const jobs = query.state.data ?? [];
+      const hasPending = jobs.some((j) => j.status === "PENDING" || j.status === "RUNNING");
+      return hasPending ? 3000 : false;
+    },
+  });
+
+  const exportMutation = useMutation({
+    mutationFn: (tenantId: string) => superadminApi.backups.exportTenant(tenantId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["backup-jobs"] });
+      setSuccessMsg("Exportación iniciada. Consulta el historial en Copias de Seguridad.");
+    },
+    onError: (e: any) => setError(e?.response?.data?.detail ?? "Error al iniciar la exportación."),
+  });
+
+  const importMutation = useMutation({
+    mutationFn: (file: File) => superadminApi.backups.importBackup(file),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["backup-jobs"] });
+      setBackupImportFile(null);
+      setBackupImportError("");
+      setSuccessMsg("Importación iniciada. Consulta el historial para ver el progreso.");
+    },
+    onError: (e: any) => setBackupImportError(e?.response?.data?.detail ?? "Error al iniciar la importación."),
+  });
+
+  const handleBackupDownload = async (job: BackupJob) => {
+    try {
+      const { url, filename } = await superadminApi.backups.getDownloadUrl(job.id);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+    } catch {
+      setError("Error al obtener la URL de descarga.");
+    }
+  };
 
   // ── Queries ────────────────────────────────────────────────────────────────
   const { data: stats } = useQuery<SuperAdminStats>({
@@ -717,6 +768,10 @@ export default function SuperAdminPage() {
                               </button>
                               <button title="Acceder como admin" className="btn-ghost p-1.5" onClick={() => impersonateMutation.mutate(t.id)} disabled={!t.is_active}>
                                 <Eye size={14} className="text-violet-600" />
+                              </button>
+                              <button title="Exportar copia de seguridad" className="btn-ghost p-1.5" onClick={() => exportMutation.mutate(t.id)}
+                                disabled={exportMutation.isPending}>
+                                <Archive size={14} className="text-emerald-600" />
                               </button>
                               <button title="Eliminar" className="btn-ghost p-1.5" onClick={() => setDeleteModalTenant(t)}><Trash2 size={14} className="text-red-500" /></button>
                             </div>
@@ -1856,6 +1911,217 @@ export default function SuperAdminPage() {
                   </div>
                 )}
               </>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ════════════════ COPIAS DE SEGURIDAD ═══════════════════════════════ */}
+      {section === "backups" && (
+        <>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Archive size={22} className="text-violet-600" /> Copias de Seguridad
+            </h1>
+            <p className="text-sm text-gray-500">Exporta e importa asociaciones completas (datos + archivos)</p>
+          </div>
+
+          {/* ── Importar ── */}
+          <div className="card space-y-4">
+            <div className="flex items-center gap-2 pb-1.5 border-b border-gray-100">
+              <div className="w-1 h-4 bg-violet-400 rounded-full shrink-0" />
+              <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <Upload size={14} /> Importar asociación
+              </h2>
+            </div>
+            <p className="text-sm text-gray-500">
+              Sube un archivo <span className="font-mono bg-gray-100 px-1 rounded">.zip</span> generado por KRIA.
+              La asociación <strong>no debe existir</strong> en el sistema (ni por UUID ni por slug).
+            </p>
+            <div className="flex items-center gap-3 flex-wrap">
+              <input
+                ref={backupImportRef}
+                type="file"
+                accept=".zip"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null;
+                  setBackupImportFile(f);
+                  setBackupImportError("");
+                  if (backupImportRef.current) backupImportRef.current.value = "";
+                }}
+              />
+              <button
+                type="button"
+                className="btn-secondary flex items-center gap-2"
+                onClick={() => backupImportRef.current?.click()}
+              >
+                <FileArchive size={15} />
+                {backupImportFile ? backupImportFile.name : "Seleccionar archivo .zip"}
+              </button>
+              {backupImportFile && (
+                <button
+                  type="button"
+                  className="btn-primary flex items-center gap-2"
+                  disabled={importMutation.isPending}
+                  onClick={() => importMutation.mutate(backupImportFile)}
+                >
+                  {importMutation.isPending
+                    ? <><Loader2 size={14} className="animate-spin" /> Procesando...</>
+                    : <><Upload size={14} /> Importar</>
+                  }
+                </button>
+              )}
+            </div>
+            {backupImportError && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {backupImportError}
+              </p>
+            )}
+          </div>
+
+          {/* ── Exportar — acceso rápido ── */}
+          <div className="card space-y-4">
+            <div className="flex items-center justify-between pb-1.5 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-4 bg-violet-400 rounded-full shrink-0" />
+                <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Archive size={14} /> Exportar asociación
+                </h2>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500">
+              También puedes exportar directamente desde el icono <Archive size={12} className="inline" /> en la tabla de Asociaciones.
+            </p>
+            {(tenantsData?.results ?? tenantsData as any ?? []).length === 0 ? (
+              <p className="text-sm text-gray-400">No hay asociaciones.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {(tenantsData?.results ?? tenantsData as any ?? []).map((t: any) => (
+                  <button
+                    key={t.id}
+                    className="flex items-center gap-3 border border-gray-200 rounded-lg px-3 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                    onClick={() => exportMutation.mutate(t.id)}
+                    disabled={exportMutation.isPending}
+                  >
+                    <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center overflow-hidden" style={{ background: t.primary_color }}>
+                      {t.logo_url ? <img src={t.logo_url} alt="" className="w-full h-full object-cover" /> : <Building size={14} className="text-white" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 truncate">{t.name}</p>
+                      <p className="text-xs text-gray-400 font-mono">{t.slug}</p>
+                    </div>
+                    <Archive size={14} className="text-emerald-600 shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── Historial de trabajos ── */}
+          <div className="card">
+            <div className="flex items-center justify-between pb-1.5 border-b border-gray-100 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-4 bg-violet-400 rounded-full shrink-0" />
+                <h2 className="text-sm font-semibold text-gray-700">Historial de trabajos</h2>
+              </div>
+              <button
+                className="btn-ghost p-1.5"
+                title="Actualizar"
+                onClick={() => refetchBackupJobs()}
+              >
+                <RefreshCw size={14} />
+              </button>
+            </div>
+            {backupJobs.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-6">No hay trabajos de backup aún.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs text-gray-500 uppercase border-b border-gray-100">
+                      <th scope="col" className="text-left pb-2 pr-4">Asociación</th>
+                      <th scope="col" className="text-left pb-2 pr-4">Tipo</th>
+                      <th scope="col" className="text-left pb-2 pr-4">Estado</th>
+                      <th scope="col" className="text-left pb-2 pr-4">Fecha</th>
+                      <th scope="col" className="text-left pb-2 pr-4">Tamaño</th>
+                      <th scope="col" className="text-right pb-2">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {backupJobs.map((job) => (
+                      <tr key={job.id} className="hover:bg-gray-50/60">
+                        <td className="py-2.5 pr-4">
+                          <p className="font-medium text-gray-900">{job.tenant_name_snapshot}</p>
+                          <p className="text-xs text-gray-400 font-mono">{job.tenant_slug_snapshot}</p>
+                        </td>
+                        <td className="py-2.5 pr-4">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            job.job_type === "EXPORT"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-purple-100 text-purple-700"
+                          }`}>
+                            {job.job_type === "EXPORT" ? "Exportación" : "Importación"}
+                          </span>
+                        </td>
+                        <td className="py-2.5 pr-4">
+                          {job.status === "PENDING" && (
+                            <span className="flex items-center gap-1 text-xs text-amber-600">
+                              <Loader2 size={12} className="animate-spin" /> Pendiente
+                            </span>
+                          )}
+                          {job.status === "RUNNING" && (
+                            <span className="flex items-center gap-1 text-xs text-blue-600">
+                              <Loader2 size={12} className="animate-spin" /> En proceso
+                            </span>
+                          )}
+                          {job.status === "COMPLETED" && (
+                            <span className="flex items-center gap-1 text-xs text-green-600">
+                              <CheckCircle2 size={12} /> Completado
+                            </span>
+                          )}
+                          {job.status === "FAILED" && (
+                            <span className="flex items-center gap-1 text-xs text-red-600" title={job.error_message}>
+                              <XCircle size={12} /> Error
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2.5 pr-4 text-xs text-gray-500 whitespace-nowrap">
+                          {new Date(job.created_at).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" })}
+                        </td>
+                        <td className="py-2.5 pr-4 text-xs text-gray-500">
+                          {job.file_size_bytes
+                            ? job.file_size_bytes > 1_048_576
+                              ? `${(job.file_size_bytes / 1_048_576).toFixed(1)} MB`
+                              : `${(job.file_size_bytes / 1024).toFixed(0)} KB`
+                            : "—"}
+                        </td>
+                        <td className="py-2.5 text-right">
+                          {job.status === "COMPLETED" && job.job_type === "EXPORT" && (
+                            <button
+                              className="btn-ghost p-1.5 text-blue-600"
+                              title="Descargar backup"
+                              onClick={() => handleBackupDownload(job)}
+                            >
+                              <Download size={14} />
+                            </button>
+                          )}
+                          {job.status === "COMPLETED" && job.job_type === "IMPORT" && (
+                            <span className="text-xs text-gray-400">
+                              {Object.values(job.result_summary).reduce((a, b) => a + b, 0)} objetos
+                            </span>
+                          )}
+                          {job.status === "FAILED" && (
+                            <span className="text-xs text-red-500 truncate max-w-[150px] block text-right" title={job.error_message}>
+                              {job.error_message.slice(0, 60)}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </>

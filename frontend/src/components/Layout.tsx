@@ -35,6 +35,7 @@ import {
   AlertCircle,
   Mail,
   Lightbulb,
+  Archive,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -70,6 +71,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/superadmin/gestiones-avanzadas", label: "Gestiones Avanzadas",    icon: <Wrench size={18} />,    superadminOnly: true },
   { to: "/superadmin/log",               label: "Log de Accesos",          icon: <ScrollText size={18} />, superadminOnly: true },
   { to: "/superadmin/mail-log",          label: "Log de Mail",             icon: <Mail size={18} />,       superadminOnly: true },
+  { to: "/superadmin/backups",           label: "Copias de Seguridad",     icon: <Archive size={18} />,    superadminOnly: true },
   // Socio
   { to: "/mis-animales",             label: "Mis Animales",          icon: <Bird size={18} />,            socioOnly: true },
   { to: "/mis-granjas",              label: "Mis Granjas",           icon: <Building size={18} />,        socioOnly: true, requiresGranjas: true },
