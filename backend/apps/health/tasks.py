@@ -50,17 +50,20 @@ def _check_minio():
 
 
 def _check_smtp():
-    """Verify SMTP connection using smtplib (same path as real email sending)."""
+    """Verify SMTP using PlatformSettings — same config as real email sending."""
     import smtplib
     import ssl as ssl_module
     try:
-        from django.conf import settings
-        host = settings.EMAIL_HOST
-        port = int(settings.EMAIL_PORT)
-        user = settings.EMAIL_HOST_USER
-        password = settings.EMAIL_HOST_PASSWORD
-        use_tls = getattr(settings, "EMAIL_USE_TLS", False)
-        use_ssl = getattr(settings, "EMAIL_USE_SSL", False)
+        from apps.tenants.models import PlatformSettings
+        ps = PlatformSettings.get()
+        host = ps.smtp_host
+        port = int(ps.smtp_port or 587)
+        user = ps.smtp_user
+        password = ps.smtp_password
+        use_tls = ps.smtp_use_tls
+        use_ssl = ps.smtp_use_ssl
+        if not host:
+            return False, "Sin configuración SMTP (PlatformSettings vacío)"
         if use_ssl:
             context = ssl_module.create_default_context()
             with smtplib.SMTP_SSL(host, port, context=context, timeout=10) as server:
@@ -145,9 +148,8 @@ def run_checks() -> list[tuple[str, bool, str]]:
 
 def _send_health_email(results: list[tuple[str, bool, str]]):
     """Send health check email to opted-in superadmins. Always logs to MailLog."""
-    from django.core.mail import send_mail
-    from django.conf import settings
-    from apps.accounts.models import User, MailLog
+    from apps.accounts.models import User
+    from core.mail import send_platform_mail
 
     recipients = list(
         User.objects.filter(is_superadmin=True, notif_health_check=True, is_active=True)
@@ -165,37 +167,26 @@ def _send_health_email(results: list[tuple[str, bool, str]]):
         lines.append("\nRevisa el sistema o contacta con el equipo técnico.")
     body = "\n".join(lines)
 
-    success = False
-    error_msg = ""
-
     if not recipients:
-        error_msg = "Sin destinatarios (ningún superadmin tiene notif_health_check=True)"
-        logger.warning(f"Health check: {error_msg}")
-    else:
+        logger.warning("Health check: sin destinatarios (ningún superadmin tiene notif_health_check=True)")
         try:
-            send_mail(
-                subject=subject,
-                message=body,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=recipients,
-                fail_silently=False,
+            from apps.accounts.models import MailLog
+            MailLog.objects.create(
+                tipo="HEALTH_CHECK",
+                destinatarios="(ninguno)",
+                asunto=subject,
+                cuerpo=body,
+                success=False,
+                error="Sin destinatarios (ningún superadmin tiene notif_health_check=True)",
             )
-            success = True
         except Exception as e:
-            error_msg = str(e)
-            logger.error(f"Health check: error enviando email: {e}")
+            logger.error(f"Health check: error guardando MailLog: {e}")
+        return
 
     try:
-        MailLog.objects.create(
-            tipo="HEALTH_CHECK",
-            destinatarios=", ".join(recipients) if recipients else "(ninguno)",
-            asunto=subject,
-            cuerpo=body,
-            success=success,
-            error=error_msg,
-        )
+        send_platform_mail(subject=subject, body=body, recipient_list=recipients, tipo="HEALTH_CHECK", fail_silently=False)
     except Exception as e:
-        logger.error(f"Health check: error guardando MailLog: {e}")
+        logger.error(f"Health check: error enviando email: {e}")
 
 
 @shared_task(name="apps.health.tasks.run_health_check", bind=True, max_retries=0)
