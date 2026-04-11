@@ -120,8 +120,8 @@ export const superadminApi = {
   },
 
   // Dispara el health check manualmente
-  runHealthCheck: async (): Promise<{ detail: string }> => {
-    const { data } = await apiClient.post<{ detail: string }>("/superadmin/run-health-check/");
+  runHealthCheck: async (): Promise<{ detail: string; results: string[] }> => {
+    const { data } = await apiClient.post<{ detail: string; results: string[] }>("/superadmin/run-health-check/");
     return data;
   },
 

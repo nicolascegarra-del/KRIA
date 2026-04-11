@@ -686,15 +686,21 @@ class SuperAdminTenantDeleteAnimalesView(APIView):
 
 class SuperAdminRunHealthCheckView(APIView):
     """POST /api/v1/superadmin/run-health-check/
-    Dispara manualmente el informe de estado y lo envía por email
-    a los superadmins con notif_health_check=True.
+    Ejecuta el health check sincrónicamente y devuelve el resultado.
     """
     permission_classes = [IsSuperAdmin]
 
     def post(self, request):
-        from apps.health.tasks import run_health_check
-        run_health_check.delay()
-        return Response({"detail": "Informe de estado enviado."})
+        from apps.health.tasks import run_checks, _send_health_email
+        results = run_checks()
+        _send_health_email(results)
+        all_ok = all(ok for _, ok, _ in results)
+        lines = [f"{'✅' if ok else '❌'} {name}: {detail}" for name, ok, detail in results]
+        status = "OK" if all_ok else "con fallos"
+        return Response({
+            "detail": f"Informe enviado ({status}).",
+            "results": lines,
+        })
 
 
 class SuperAdminLogsView(APIView):

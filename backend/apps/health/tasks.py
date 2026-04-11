@@ -113,58 +113,66 @@ CHECKS = [
 ]
 
 
+def run_checks() -> list[tuple[str, bool, str]]:
+    """Execute all checks and return results list."""
+    results = []
+    for name, fn in CHECKS:
+        try:
+            ok, detail = fn()
+        except Exception:
+            ok, detail = False, traceback.format_exc(limit=3)
+        results.append((name, ok, detail))
+        status = "OK" if ok else "FAIL"
+        logger.info(f"Health check [{name}]: {status} — {detail}")
+    return results
+
+
 def _send_health_email(results: list[tuple[str, bool, str]]):
-    """Send health check email to opted-in superadmins."""
+    """Send health check email to opted-in superadmins. Always logs to MailLog."""
     from django.core.mail import send_mail
     from django.conf import settings
-    from apps.accounts.models import User
+    from apps.accounts.models import User, MailLog
 
     recipients = list(
         User.objects.filter(is_superadmin=True, notif_health_check=True, is_active=True)
         .values_list("email", flat=True)
     )
-    if not recipients:
-        return
 
     all_ok = all(ok for _, ok, _ in results)
     now_str = timezone.now().strftime("%d/%m/%Y %H:%M")
-
-    if all_ok:
-        subject = f"✅ KRIA — Sistema OK ({now_str})"
-    else:
-        subject = f"⚠️ KRIA — Fallos detectados ({now_str})"
+    subject = f"✅ KRIA — Sistema OK ({now_str})" if all_ok else f"⚠️ KRIA — Fallos detectados ({now_str})"
 
     lines = [f"Informe de estado — {now_str}\n"]
     for name, ok, detail in results:
-        icon = "✅" if ok else "❌"
-        lines.append(f"{icon}  {name}: {detail}")
-
+        lines.append(f"{'✅' if ok else '❌'}  {name}: {detail}")
     if not all_ok:
         lines.append("\nRevisa el sistema o contacta con el equipo técnico.")
-
     body = "\n".join(lines)
 
     success = False
     error_msg = ""
-    try:
-        send_mail(
-            subject=subject,
-            message=body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=recipients,
-            fail_silently=False,
-        )
-        success = True
-    except Exception as e:
-        error_msg = str(e)
-        logger.error(f"Health check: error enviando email: {e}")
 
-    # Persist to MailLog
+    if not recipients:
+        error_msg = "Sin destinatarios (ningún superadmin tiene notif_health_check=True)"
+        logger.warning(f"Health check: {error_msg}")
+    else:
+        try:
+            send_mail(
+                subject=subject,
+                message=body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipients,
+                fail_silently=False,
+            )
+            success = True
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"Health check: error enviando email: {e}")
+
     try:
-        from apps.accounts.models import MailLog
         MailLog.objects.create(
             tipo="HEALTH_CHECK",
-            destinatarios=", ".join(recipients),
+            destinatarios=", ".join(recipients) if recipients else "(ninguno)",
             asunto=subject,
             cuerpo=body,
             success=success,
@@ -176,14 +184,4 @@ def _send_health_email(results: list[tuple[str, bool, str]]):
 
 @shared_task(name="apps.health.tasks.run_health_check", bind=True, max_retries=0)
 def run_health_check(self):
-    results = []
-    for name, fn in CHECKS:
-        try:
-            ok, detail = fn()
-        except Exception:
-            ok, detail = False, traceback.format_exc(limit=3)
-        results.append((name, ok, detail))
-        status = "OK" if ok else "FAIL"
-        logger.info(f"Health check [{name}]: {status} — {detail}")
-
-    _send_health_email(results)
+    _send_health_email(run_checks())
