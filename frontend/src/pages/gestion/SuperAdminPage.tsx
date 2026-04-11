@@ -495,9 +495,10 @@ export default function SuperAdminPage() {
     onError: (e: any) => setSaError(e?.response?.data?.detail ?? "Error al eliminar."),
   });
 
+  const [healthCheckResults, setHealthCheckResults] = useState<string[] | null>(null);
   const runHealthCheckMutation = useMutation({
     mutationFn: superadminApi.runHealthCheck,
-    onSuccess: (data) => setSuccessMsg(data.detail),
+    onSuccess: (data) => setHealthCheckResults(data.results),
     onError: (e: any) => setSaError(e?.response?.data?.detail ?? "Error al enviar el informe."),
   });
 
@@ -648,7 +649,7 @@ export default function SuperAdminPage() {
   };
 
   // ── SA helpers ─────────────────────────────────────────────────────────────
-  const closeSaModal = () => { setSaModalOpen(false); setEditingSa(null); setSaForm({ email: "", first_name: "", last_name: "", password: "", notif_nueva_asociacion: false, notif_asociacion_suspendida: false, notif_asociacion_activada: false, notif_asociacion_eliminada: false, notif_propuesta_mejora: false, notif_health_check: false }); clearSaError(); };
+  const closeSaModal = () => { setSaModalOpen(false); setEditingSa(null); setSaForm({ email: "", first_name: "", last_name: "", password: "", notif_nueva_asociacion: false, notif_asociacion_suspendida: false, notif_asociacion_activada: false, notif_asociacion_eliminada: false, notif_propuesta_mejora: false, notif_health_check: false }); setHealthCheckResults(null); clearSaError(); };
   const openCreateSa = () => { setEditingSa(null); setSaForm({ email: "", first_name: "", last_name: "", password: "", notif_nueva_asociacion: false, notif_asociacion_suspendida: false, notif_asociacion_activada: false, notif_asociacion_eliminada: false, notif_propuesta_mejora: false, notif_health_check: false }); clearSaError(); setSaModalOpen(true); };
   const openEditSa = (u: GestionUser) => { setEditingSa(u); setSaForm({ email: u.email, first_name: u.first_name, last_name: u.last_name, password: "", notif_nueva_asociacion: u.notif_nueva_asociacion ?? false, notif_asociacion_suspendida: u.notif_asociacion_suspendida ?? false, notif_asociacion_activada: u.notif_asociacion_activada ?? false, notif_asociacion_eliminada: u.notif_asociacion_eliminada ?? false, notif_propuesta_mejora: u.notif_propuesta_mejora ?? false, notif_health_check: u.notif_health_check ?? false }); clearSaError(); setSaModalOpen(true); };
   const handleSaSubmit = (e: React.FormEvent) => {
@@ -1540,7 +1541,7 @@ export default function SuperAdminPage() {
                   className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded px-2 py-1 transition-colors shrink-0"
                   title="Enviar informe ahora"
                   disabled={runHealthCheckMutation.isPending}
-                  onClick={() => runHealthCheckMutation.mutate()}
+                  onClick={() => { setHealthCheckResults(null); runHealthCheckMutation.mutate(); }}
                 >
                   {runHealthCheckMutation.isPending
                     ? <Loader2 size={12} className="animate-spin" />
@@ -1548,6 +1549,13 @@ export default function SuperAdminPage() {
                   Enviar ahora
                 </button>
               </div>
+              {healthCheckResults && (
+                <div className="mt-1 rounded-lg border border-gray-200 bg-white p-2 space-y-0.5">
+                  {healthCheckResults.map((line, i) => (
+                    <p key={i} className="text-xs font-mono text-gray-700">{line}</p>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-1">
