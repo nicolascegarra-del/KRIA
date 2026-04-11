@@ -157,7 +157,7 @@ def _send_health_email(results: list[tuple[str, bool, str]]):
     )
 
     all_ok = all(ok for _, ok, _ in results)
-    now_str = timezone.now().strftime("%d/%m/%Y %H:%M")
+    now_str = timezone.localtime().strftime("%d/%m/%Y %H:%M")
     subject = f"✅ KRIA — Sistema OK ({now_str})" if all_ok else f"⚠️ KRIA — Fallos detectados ({now_str})"
 
     lines = [f"Informe de estado — {now_str}\n"]
