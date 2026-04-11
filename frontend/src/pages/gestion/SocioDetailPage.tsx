@@ -120,7 +120,7 @@ export default function SocioDetailPage() {
   const animalesNoActivos = animales.filter((a: Animal) => NO_ACTIVO_STATES.includes(a.estado));
 
   return (
-    <div className="space-y-4 max-w-3xl">
+    <div className="space-y-4">
       <SuccessToast message={successMsg} onDismiss={() => setSuccessMsg("")} />
 
       {/* Header */}

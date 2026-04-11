@@ -139,7 +139,7 @@ export default function EvaluacionPage() {
   });
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl mx-auto">
       <SuccessToast message={successMsg} onDismiss={() => setSuccessMsg("")} />
 
       <h1 className="text-xl font-bold text-gray-900 mb-4">Evaluación Morfológica</h1>

@@ -125,7 +125,7 @@ export default function PerfilPage() {
   );
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6">
       <SuccessToast message={successMsg} onDismiss={() => setSuccessMsg("")} />
 
       <h1 className="text-xl font-bold text-gray-900">Mi Perfil</h1>

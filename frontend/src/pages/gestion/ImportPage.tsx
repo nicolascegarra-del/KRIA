@@ -373,7 +373,7 @@ export default function ImportPage() {
 
   if (selected) {
     return (
-      <div className="max-w-3xl">
+      <div>
         <div className="mb-4">
           <h1 className="text-xl font-bold text-gray-900">Importaciones</h1>
           <p className="text-sm text-gray-500">
@@ -386,7 +386,7 @@ export default function ImportPage() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold text-gray-900">Importaciones</h1>
         <p className="text-sm text-gray-500">Importación masiva desde archivo Excel en 2 fases: previsualización y confirmación</p>

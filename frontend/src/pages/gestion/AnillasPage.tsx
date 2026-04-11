@@ -90,7 +90,7 @@ export default function AnillasPage() {
   const socioResults = sociosData?.results ?? [];
 
   return (
-    <div className="space-y-4 max-w-4xl">
+    <div className="space-y-4">
       <SuccessToast message={successMsg} onDismiss={() => setSuccessMsg("")} />
 
       <div className="flex items-center justify-between gap-3">

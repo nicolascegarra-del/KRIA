@@ -25,7 +25,7 @@ export default function PropuestaMejoraPage() {
   };
 
   return (
-    <div className="max-w-xl">
+    <div className="max-w-xl mx-auto">
       <div className="flex items-center gap-2 mb-1">
         <Lightbulb size={20} className="text-amber-400" />
         <h1 className="text-lg font-semibold text-gray-700">Propuestas de Mejora</h1>

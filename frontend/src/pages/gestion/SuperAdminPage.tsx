@@ -677,7 +677,7 @@ export default function SuperAdminPage() {
       .replace(/^-+|-+$/g, "");
 
   return (
-    <div className={`space-y-6 ${section !== "dashboard" ? "max-w-4xl" : ""}`}>
+    <div className="space-y-6">
       <SuccessToast message={successMsg} onDismiss={() => setSuccessMsg("")} />
 
         {/* ════════════════ DASHBOARD ════════════════════════════════════════ */}
