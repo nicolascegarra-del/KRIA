@@ -487,14 +487,14 @@
       <thead>
         <tr>
           <th>Fecha</th>
-          <th>Peso (g)</th>
+          <th>Peso (kg)</th>
         </tr>
       </thead>
       <tbody>
         {% for p in animal.historico_pesos %}
         <tr>
           <td>{{ p.fecha }}</td>
-          <td><strong>{{ p.peso }} g</strong></td>
+          <td><strong>{{ p.peso }} kg</strong></td>
         </tr>
         {% endfor %}
       </tbody>

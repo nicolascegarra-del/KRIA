@@ -56,6 +56,14 @@ export const animalsApi = {
     return data;
   },
 
+  // Búsqueda de animales dentro del tenant actual (para el picker de reportes)
+  searchByAnilla: async (search: string, anio?: number): Promise<Animal[]> => {
+    const params: Record<string, any> = { search };
+    if (anio && !isNaN(anio)) params.anio = anio;
+    const { data } = await apiClient.get<PaginatedResponse<Animal>>("/animals/", { params });
+    return data.results ?? [];
+  },
+
   uploadFoto: async (id: string, file: File, tipo: string): Promise<Animal> => {
     const form = new FormData();
     form.append("foto", file);

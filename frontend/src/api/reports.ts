@@ -36,13 +36,13 @@ export const reportsApi = {
     const response = await apiClient.get(`/reports/job/${job_id}/download/`, {
       responseType: "blob",
     });
-    const blob = new Blob([response.data], {
-      type: response.headers["content-type"] || "application/octet-stream",
-    });
+    const contentType = response.headers["content-type"] || "application/octet-stream";
+    const ext = contentType.includes("spreadsheetml") ? ".xlsx" : ".pdf";
+    const blob = new Blob([response.data], { type: contentType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = filename || `informe_${job_id}.pdf`;
+    a.download = filename || `informe_${job_id}${ext}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

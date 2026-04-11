@@ -19,8 +19,8 @@ function AnimalPicker({
 
   const { data: results, isFetching } = useQuery({
     queryKey: ["animals-search-report", anilla, anio],
-    queryFn: () => animalsApi.searchGlobal(anilla, parseInt(anio, 10)),
-    enabled: anilla.length >= 2 && !!anio,
+    queryFn: () => animalsApi.searchByAnilla(anilla, anio ? parseInt(anio, 10) : undefined),
+    enabled: anilla.length >= 2,
   });
 
   return (

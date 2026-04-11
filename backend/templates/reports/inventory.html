@@ -1,5 +1,17 @@
 {% extends "reports/base_report.html" %}
 
+{% block page_style %}
+@page {
+  size: A4 landscape;
+  margin: 1.5cm;
+  @bottom-center {
+    content: "Página " counter(page) " de " counter(pages);
+    font-size: 9pt;
+    color: #666;
+  }
+}
+{% endblock %}
+
 {% block content %}
 <h1>Inventario de Animales</h1>
 <p style="color:#666; margin-top:-0.3em; margin-bottom:1em; font-size:9pt;">

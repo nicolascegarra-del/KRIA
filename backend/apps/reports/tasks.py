@@ -280,7 +280,7 @@ def _gen_catalogo_reproductores_excel(job) -> str:
     from apps.animals.models import Animal
 
     animals_qs = Animal.all_objects.filter(
-        tenant=job.tenant, reproductor_aprobado=True, estado=Animal.Estado.EVALUADO,
+        tenant=job.tenant, reproductor_aprobado=True,
     ).select_related("socio").prefetch_related("evaluacion").order_by("variedad", "numero_anilla")
     animals_list = list(animals_qs)
 
@@ -550,7 +550,6 @@ def _gen_catalogo_reproductores(job) -> str:
     animals = Animal.all_objects.filter(
         tenant=job.tenant,
         reproductor_aprobado=True,
-        estado=Animal.Estado.EVALUADO,
     ).select_related("socio").prefetch_related("evaluacion").order_by("variedad", "numero_anilla")
 
     pages = []
