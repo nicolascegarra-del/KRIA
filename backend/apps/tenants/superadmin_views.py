@@ -125,6 +125,13 @@ class SuperAdminTenantDetailView(generics.RetrieveUpdateDestroyAPIView):
             return Response({"detail": "Contraseña incorrecta."}, status=400)
         tenant = self.get_object()
         name, slug = tenant.name, tenant.slug
+
+        # AuditoriaSession.socio y AuditoriaAnimal.animal usan on_delete=PROTECT,
+        # lo que bloquea el cascade al borrar Socios/Animales. Borramos las sesiones
+        # primero (cascadea a AuditoriaAnimal y AuditoriaRespuesta) para liberar los PROTECT.
+        from apps.audits.models import AuditoriaSession
+        AuditoriaSession.all_objects.filter(tenant=tenant).delete()
+
         response = super().destroy(request, *args, **kwargs)
         from django.utils import timezone
         _notify_superadmins(
