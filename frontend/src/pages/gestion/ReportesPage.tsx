@@ -110,7 +110,14 @@ function ReportJobStatus({ jobId }: { jobId: string }) {
         </button>
       )}
       {data.status === "FAILED" && (
-        <p className="text-red-600">Error al generar</p>
+        <div className="text-red-600 space-y-0.5">
+          <p className="font-medium">Error al generar</p>
+          {data.error_log && (
+            <pre className="text-xs text-red-500 whitespace-pre-wrap break-all bg-red-50 rounded p-1 max-h-32 overflow-y-auto">
+              {data.error_log}
+            </pre>
+          )}
+        </div>
       )}
     </div>
   );
