@@ -248,6 +248,8 @@ class AnimalDetailView(generics.RetrieveUpdateAPIView):
         if not get_effective_is_gestion(self.request):
             if serializer.instance.estado == Animal.Estado.RECHAZADO:
                 raise PermissionDenied("No puedes editar un animal rechazado. Contacta con la gestión.")
+            if serializer.instance.estado in (Animal.Estado.REGISTRADO, Animal.Estado.MODIFICADO):
+                raise PermissionDenied("El animal está pendiente de revisión. Solo puedes añadir pesajes y fotos.")
         serializer.instance._editing_user = self.request.user
         animal = serializer.save()
         _update_alerta_anilla(animal)

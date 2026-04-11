@@ -76,6 +76,8 @@ export default function AnimalFormPage() {
   // RECHAZADO animals are read-only for socios until admin reactivates
   const isRechazado = !isGestionCreate && animal?.estado === "RECHAZADO";
   const effectiveReadonly = readonly || isRechazado;
+  // REGISTRADO/MODIFICADO animals: socios can only edit pesajes and fotos, not main fields
+  const isPendingReview = !isGestionCreate && isEdit && (animal?.estado === "REGISTRADO" || animal?.estado === "MODIFICADO");
   // Solo se puede proponer como candidato si el animal está APROBADO (y no es gestión)
   const canProponerCandidato = isGestionCreate || !isEdit || animal?.estado === "APROBADO";
 
@@ -263,9 +265,7 @@ export default function AnimalFormPage() {
         <div>
           <h1 className="text-xl font-bold text-gray-900">
             {isEdit
-              ? isRechazado
-                ? `Animal ${animal?.numero_anilla}`
-                : effectiveReadonly
+              ? (isRechazado || isPendingReview || effectiveReadonly)
                 ? `Animal ${animal?.numero_anilla}`
                 : `Editar Animal ${animal?.numero_anilla}`
               : "Registrar Animal"}
@@ -273,7 +273,7 @@ export default function AnimalFormPage() {
           {animal && (
             <div className="flex items-center gap-2 mt-1">
               <AnimalStateChip estado={animal.estado} />
-              {(animal.estado === "APROBADO" || animal.estado === "EVALUADO") && (
+              {!isPendingReview && (animal.estado === "APROBADO" || animal.estado === "EVALUADO") && (
                 <span className="text-xs text-amber-600 flex items-center gap-1">
                   <Info size={12} />
                   Al guardar, el estado volverá a Añadido
@@ -283,6 +283,20 @@ export default function AnimalFormPage() {
           )}
         </div>
       </div>
+
+      {/* Pending review banner */}
+      {isPendingReview && (
+        <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 space-y-1">
+          <div className="flex items-center gap-2 text-amber-700 font-semibold text-sm">
+            <AlertCircle size={16} />
+            Animal pendiente de revisión
+          </div>
+          <p className="text-sm text-amber-700">
+            Los datos principales no se pueden modificar mientras el animal está pendiente de aprobación.
+            Puedes seguir añadiendo pesajes y fotos.
+          </p>
+        </div>
+      )}
 
       {/* Rejection reason banner */}
       {isRechazado && (
@@ -313,7 +327,7 @@ export default function AnimalFormPage() {
                 type="text"
                 className="input-field font-mono"
                 placeholder="ES-2024-XXXX"
-                disabled={effectiveReadonly}
+                disabled={effectiveReadonly || isPendingReview}
                 {...register("numero_anilla", { required: true })}
               />
             </div>
@@ -325,7 +339,7 @@ export default function AnimalFormPage() {
                 type="date"
                 className="input-field"
                 max={new Date().toISOString().slice(0, 10)}
-                disabled={effectiveReadonly}
+                disabled={effectiveReadonly || isPendingReview}
                 {...register("fecha_nacimiento", { required: true })}
               />
             </div>
@@ -335,7 +349,7 @@ export default function AnimalFormPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Sexo *</label>
-              <select className="input-field" disabled={effectiveReadonly} {...register("sexo", { required: true })}>
+              <select className="input-field" disabled={effectiveReadonly || isPendingReview} {...register("sexo", { required: true })}>
                 <option value="">Seleccionar...</option>
                 <option value="M">♂ Macho</option>
                 <option value="H">♀ Hembra</option>
@@ -343,7 +357,7 @@ export default function AnimalFormPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Variedad</label>
-              <select className="input-field" disabled={effectiveReadonly} {...register("variedad")}>
+              <select className="input-field" disabled={effectiveReadonly || isPendingReview} {...register("variedad")}>
                 <option value="SALMON">Salmón</option>
                 <option value="PLATA">Plata</option>
                 <option value="SIN_DEFINIR">Sin Definir</option>
@@ -360,7 +374,7 @@ export default function AnimalFormPage() {
                 <input
                   type="date"
                   className="input-field"
-                  disabled={effectiveReadonly}
+                  disabled={effectiveReadonly || isPendingReview}
                   {...register("fecha_incubacion")}
                 />
               </div>
@@ -370,7 +384,7 @@ export default function AnimalFormPage() {
                   type="text"
                   className="input-field"
                   placeholder="Nombre de la ganadería de origen"
-                  disabled={effectiveReadonly}
+                  disabled={effectiveReadonly || isPendingReview}
                   {...register("ganaderia_nacimiento")}
                 />
               </div>
@@ -401,7 +415,7 @@ export default function AnimalFormPage() {
                         checked={madreMode === "individual"}
                         onChange={() => { setMadreMode("individual"); setMadreLoteId(""); setMadreLoteExterno(""); }}
                         className="accent-blue-700"
-                        disabled={effectiveReadonly}
+                        disabled={effectiveReadonly || isPendingReview}
                       />
                       Individual
                     </label>
@@ -412,7 +426,7 @@ export default function AnimalFormPage() {
                         checked={madreMode === "lote"}
                         onChange={() => { setMadreMode("lote"); setMadreLoteExterno(""); }}
                         className="accent-blue-700"
-                        disabled={effectiveReadonly}
+                        disabled={effectiveReadonly || isPendingReview}
                       />
                       Lote de Cría
                     </label>
@@ -423,7 +437,7 @@ export default function AnimalFormPage() {
                         checked={madreMode === "externo"}
                         onChange={() => { setMadreMode("externo"); setMadreLoteId(""); }}
                         className="accent-blue-700"
-                        disabled={effectiveReadonly}
+                        disabled={effectiveReadonly || isPendingReview}
                       />
                       Lote de Cría de otro Criador
                     </label>
@@ -435,14 +449,14 @@ export default function AnimalFormPage() {
                     type="text"
                     className="input-field font-mono"
                     placeholder="Nº anilla de la madre"
-                    disabled={effectiveReadonly}
+                    disabled={effectiveReadonly || isPendingReview}
                     {...register("madre_anilla")}
                   />
                 ) : madreMode === "lote" ? (
                   <select
                     className="input-field"
                     value={madreLoteId}
-                    disabled={effectiveReadonly}
+                    disabled={effectiveReadonly || isPendingReview}
                     onChange={(e) => setMadreLoteId(e.target.value)}
                   >
                     <option value="">Sin lote asignado</option>
@@ -460,7 +474,7 @@ export default function AnimalFormPage() {
                     className="input-field"
                     placeholder="Descripción del lote externo (ej: Ganadería García 2023)"
                     value={madreLoteExterno}
-                    disabled={effectiveReadonly}
+                    disabled={effectiveReadonly || isPendingReview}
                     onChange={(e) => setMadreLoteExterno(e.target.value)}
                   />
                 )}
@@ -473,7 +487,7 @@ export default function AnimalFormPage() {
             <div className="border-t pt-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Granja</label>
-                <select className="input-field" disabled={effectiveReadonly} {...register("granja")}>
+                <select className="input-field" disabled={effectiveReadonly || isPendingReview} {...register("granja")}>
                   <option value="">Sin asignar</option>
                   {granjasData?.results.map((g) => (
                     <option key={g.id} value={g.id}>{g.nombre}</option>
@@ -500,12 +514,10 @@ export default function AnimalFormPage() {
           {(isEdit || !isGestionCreate) && (
             <div className="border-t pt-4 space-y-3">
               <div>
-                <h3 className="text-sm font-semibold text-gray-700">
-                  {isEdit ? "Fotos obligatorias" : "Fotos (opcional)"}
-                </h3>
+                <h3 className="text-sm font-semibold text-gray-700">Fotos</h3>
                 <p className="text-xs text-gray-500 mt-0.5">
                   {isEdit
-                    ? "Se requieren las 3 fotos para poder aprobar el animal."
+                    ? "Fotos del animal (perfil, cabeza, anilla)."
                     : "Puedes añadir las fotos ahora — se subirán al registrar el animal."}
                 </p>
               </div>
@@ -586,9 +598,9 @@ export default function AnimalFormPage() {
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => navigate(-1)} className="btn-secondary flex-1">
-              {effectiveReadonly ? "Volver" : "Cancelar"}
+              {(effectiveReadonly || isPendingReview) ? "Volver" : "Cancelar"}
             </button>
-            {!effectiveReadonly && (
+            {!effectiveReadonly && !isPendingReview && (
               <button
                 type="submit"
                 disabled={isSubmitting || mutation.isPending}
