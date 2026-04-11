@@ -36,6 +36,20 @@ class LoginView(TokenObtainPairView):
                 from .models import UserAccessLog
                 email = request.data.get("email", "")
                 tenant = getattr(request, "tenant", None)
+
+                # The login endpoint is public — the middleware may not resolve the
+                # tenant when the request comes from the main domain (no subdomain,
+                # no X-Tenant-Slug, no JWT yet). Fall back to the tenant_id that
+                # the serializer embedded in the response payload, which is always
+                # present for every authenticated user (including superadmins via
+                # the system tenant).
+                if tenant is None:
+                    user_data = response.data.get("user", {})
+                    tenant_id = user_data.get("tenant_id")
+                    if tenant_id:
+                        from apps.tenants.models import Tenant as TenantModel
+                        tenant = TenantModel.objects.filter(id=tenant_id).first()
+
                 user = User.objects.filter(email=email, tenant=tenant).first()
                 role = "socio"
                 if user:

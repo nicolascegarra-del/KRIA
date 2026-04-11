@@ -22,6 +22,7 @@ from .superadmin_views import (
     SuperAdminTenantDeleteAnillasView,
     SuperAdminTenantDeleteAnimalesView,
     SuperAdminRunHealthCheckView,
+    SuperAdminFixAccessLogTenantsView,
     SuperAdminLogsView,
     SuperAdminMailLogView,
     SuperAdminClearAccessLogView,
@@ -54,6 +55,8 @@ urlpatterns = [
     path("stats/", SuperAdminStatsView.as_view(), name="superadmin-stats"),
     # Health check manual
     path("run-health-check/", SuperAdminRunHealthCheckView.as_view(), name="superadmin-run-health-check"),
+    # Fix histórico de logs sin tenant
+    path("fix-access-log-tenants/", SuperAdminFixAccessLogTenantsView.as_view(), name="superadmin-fix-access-log-tenants"),
     # Platform settings (SMTP global)
     path("settings/", PlatformSettingsView.as_view(), name="superadmin-platform-settings"),
     path("settings/test-smtp/", PlatformSmtpTestView.as_view(), name="superadmin-platform-test-smtp"),

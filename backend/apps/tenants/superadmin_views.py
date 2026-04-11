@@ -810,6 +810,45 @@ class SuperAdminRunHealthCheckView(APIView):
         })
 
 
+class SuperAdminFixAccessLogTenantsView(APIView):
+    """POST /api/v1/superadmin/fix-access-log-tenants/
+    Retroactively assigns the correct tenant to UserAccessLog entries
+    that were saved with tenant=None due to a login-endpoint bug.
+    """
+    permission_classes = [IsSuperAdmin]
+
+    def post(self, request):
+        from apps.accounts.models import User, UserAccessLog
+
+        orphan_logs = UserAccessLog.objects.filter(tenant=None).exclude(user_role="superadmin")
+        total = orphan_logs.count()
+
+        if total == 0:
+            return Response({"detail": "No hay logs sin tenant que corregir.", "updated": 0, "total": 0})
+
+        emails = orphan_logs.values_list("user_email", flat=True).distinct()
+        user_map = {
+            u.email: u
+            for u in User.objects.filter(email__in=emails).select_related("tenant")
+            if u.tenant
+        }
+
+        updated = 0
+        for log in orphan_logs.iterator(chunk_size=500):
+            user = user_map.get(log.user_email)
+            if user and user.tenant:
+                log.tenant = user.tenant
+                log.tenant_name = user.tenant.name
+                log.save(update_fields=["tenant", "tenant_name"])
+                updated += 1
+
+        return Response({
+            "detail": f"Corregidos {updated} de {total} registros.",
+            "updated": updated,
+            "total": total,
+        })
+
+
 class SuperAdminLogsView(APIView):
     """
     GET /api/v1/superadmin/logs/

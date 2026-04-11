@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { superadminApi } from "../../api/superadmin";
+import { apiClient } from "../../api/client";
 import { useAuthStore } from "../../store/authStore";
 import { useTenantStore } from "../../store/tenantStore";
 import Modal from "../../components/Modal";
@@ -508,6 +509,13 @@ export default function SuperAdminPage() {
     mutationFn: superadminApi.runHealthCheck,
     onSuccess: (data) => setHealthCheckResults(data.results),
     onError: (e: any) => setSaError(e?.response?.data?.detail ?? "Error al enviar el informe."),
+  });
+
+  const [fixLogResult, setFixLogResult] = useState<string | null>(null);
+  const fixAccessLogMutation = useMutation({
+    mutationFn: () => apiClient.post<{ detail: string; updated: number; total: number }>("/superadmin/fix-access-log-tenants/").then(r => r.data),
+    onSuccess: (data) => { setFixLogResult(data.detail); qc.invalidateQueries({ queryKey: ["superadmin-stats"] }); },
+    onError: (e: any) => setFixLogResult(`Error: ${e?.response?.data?.detail ?? "Error desconocido"}`),
   });
 
   // ── Platform settings mutations ────────────────────────────────────────────
@@ -1955,6 +1963,31 @@ export default function SuperAdminPage() {
                   }}
                 >
                   <Trash2 size={14} /> Eliminar todas las anillas
+                </button>
+              </div>
+
+              {/* ── Reparar log de accesos ──────────────────────────────────── */}
+              <div className="card flex flex-col gap-3 border-indigo-100">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+                    <ScrollText size={18} className="text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm text-gray-900">Reparar Log de Accesos</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Asigna el tenant correcto a los registros de login que quedaron sin asociación (datos históricos).</p>
+                  </div>
+                </div>
+                {fixLogResult && (
+                  <p className="text-xs text-indigo-700 bg-indigo-50 rounded-lg px-3 py-2">{fixLogResult}</p>
+                )}
+                <button
+                  className="btn-secondary text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+                  disabled={fixAccessLogMutation.isPending}
+                  onClick={() => { setFixLogResult(null); fixAccessLogMutation.mutate(); }}
+                >
+                  {fixAccessLogMutation.isPending
+                    ? <><Loader2 size={14} className="animate-spin" /> Reparando...</>
+                    : <><RefreshCw size={14} /> Reparar registros</>}
                 </button>
               </div>
 
