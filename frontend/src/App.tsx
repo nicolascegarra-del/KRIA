@@ -86,6 +86,7 @@ function InactivityManager({ timeoutMinutes }: { timeoutMinutes: number }) {
   const [showWarning, setShowWarning] = useState(false);
 
   const handleLogout = useCallback(() => {
+    localStorage.removeItem("kria_last_activity");
     clearAuth();
     navigate("/login");
   }, [clearAuth, navigate]);

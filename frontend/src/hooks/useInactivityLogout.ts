@@ -4,6 +4,8 @@ const ACTIVITY_EVENTS = [
   "mousemove", "mousedown", "keypress", "scroll", "touchstart", "click",
 ] as const;
 
+const LS_KEY = "kria_last_activity";
+
 export function useInactivityLogout({
   timeoutMinutes,
   enabled,
@@ -31,6 +33,8 @@ export function useInactivityLogout({
     if (warnTimer.current) clearTimeout(warnTimer.current);
     onResetWarnRef.current();
 
+    localStorage.setItem(LS_KEY, String(Date.now()));
+
     const timeoutMs = timeoutMinutes * 60 * 1000;
     // Warn 1 minute before logout (or at 80% for timeouts < 2 min)
     const warnMs = timeoutMs > 120_000 ? timeoutMs - 60_000 : timeoutMs * 0.8;
@@ -41,6 +45,14 @@ export function useInactivityLogout({
 
   useEffect(() => {
     if (!enabled || !timeoutMinutes) return;
+
+    // Check if the user was already inactive before the page was opened
+    const timeoutMs = timeoutMinutes * 60 * 1000;
+    const lastActivity = parseInt(localStorage.getItem(LS_KEY) ?? "0", 10);
+    if (lastActivity && Date.now() - lastActivity >= timeoutMs) {
+      onLogoutRef.current();
+      return;
+    }
 
     reset();
     ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, reset, { passive: true }));
