@@ -32,3 +32,11 @@ export function applyBranding(branding: TenantBranding) {
   document.documentElement.style.setProperty("--color-secondary", branding.secondary_color);
   document.title = `${branding.name} — KRIA`;
 }
+
+/**
+ * Reset CSS custom properties to defaults (superadmin / no-tenant context).
+ */
+export function resetBranding() {
+  document.documentElement.style.removeProperty("--color-primary");
+  document.documentElement.style.removeProperty("--color-secondary");
+}

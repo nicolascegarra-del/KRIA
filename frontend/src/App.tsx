@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { useAuthStore } from "./store/authStore";
-import { useTenantStore, applyBranding } from "./store/tenantStore";
+import { useTenantStore, applyBranding, resetBranding } from "./store/tenantStore";
 import { apiClient } from "./api/client";
 import { useInactivityLogout } from "./hooks/useInactivityLogout";
 import type { TenantBranding } from "./types";
@@ -150,7 +150,7 @@ export default function App() {
 
   // Fetch branding when superadmin is impersonating a tenant; clear it when impersonation ends
   useEffect(() => {
-    if (!impersonatingTenant) { clearBranding(); return; }
+    if (!impersonatingTenant) { clearBranding(); resetBranding(); return; }
     apiClient
       .get<TenantBranding>("/tenants/current/branding/")
       .then(({ data }) => { setBranding(data); applyBranding(data); })
