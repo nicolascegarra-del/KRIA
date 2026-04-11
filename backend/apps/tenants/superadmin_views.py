@@ -510,35 +510,142 @@ class SuperAdminSuperAdminDetailView(APIView):
 
 
 class SuperAdminStatsView(APIView):
-    """GET /api/v1/superadmin/stats/ — estadísticas globales + por asociación."""
+    """GET /api/v1/superadmin/stats/ — cuadro de mandos completo."""
     permission_classes = [IsSuperAdmin]
 
     def get(self, request):
-        from apps.accounts.models import User, Socio
+        from datetime import timedelta
+        from django.db.models import Max
+        from django.utils import timezone
+        from apps.accounts.models import User, Socio, UserAccessLog
         from apps.animals.models import Animal
 
-        # Estadísticas globales
+        now = timezone.now()
+        since_24h = now - timedelta(hours=24)
+        since_7d  = now - timedelta(days=7)
+        since_30d = now - timedelta(days=30)
+        BAJA_ESTADOS = ["BAJA", "SOCIO_EN_BAJA"]
+
+        # ── Globales ─────────────────────────────────────────────────────────
+        socios_alta  = Socio.all_objects.filter(estado="ALTA").count()
+        socios_total = Socio.all_objects.count()
+        animales_total = Animal.all_objects.count()
+        animales_baja  = Animal.all_objects.filter(estado__in=BAJA_ESTADOS).count()
+
         global_stats = {
-            "tenants": Tenant.objects.exclude(slug="system").count(),
-            "usuarios": User.objects.filter(is_gestion=True, is_superadmin=False).count(),
-            "socios_activos": Socio.all_objects.filter(estado="ALTA").count(),
-            "socios_total": Socio.all_objects.count(),
-            "animales": Animal.all_objects.count(),
+            "tenants":         Tenant.objects.exclude(slug="system").count(),
+            "tenants_activos": Tenant.objects.exclude(slug="system").filter(is_active=True).count(),
+            "usuarios":        User.objects.filter(is_gestion=True, is_superadmin=False).count(),
+            "socios_alta":     socios_alta,
+            "socios_baja":     socios_total - socios_alta,
+            "socios_total":    socios_total,
+            "animales_activos": animales_total - animales_baja,
+            "animales_baja":    animales_baja,
+            "animales_total":   animales_total,
+            "logins_24h": UserAccessLog.objects.filter(timestamp__gte=since_24h).count(),
+            "logins_7d":  UserAccessLog.objects.filter(timestamp__gte=since_7d).count(),
+            "logins_30d": UserAccessLog.objects.filter(timestamp__gte=since_30d).count(),
         }
 
-        # Estadísticas por asociación (excluye tenant de sistema)
-        tenants_stats = (
-            Tenant.objects
-            .exclude(slug="system")
-            .annotate(socios_count=Count("socios", filter=Q(socios__estado="ALTA")))
-            .order_by("name")
-            .values("id", "name", "slug", "is_active", "max_socios", "socios_count")
+        try:
+            from apps.reports.models import ReportJob
+            global_stats["informes_30d"] = ReportJob.all_objects.filter(created_at__gte=since_30d).count()
+        except Exception:
+            global_stats["informes_30d"] = 0
+
+        try:
+            from apps.imports.models import ImportJob
+            global_stats["importaciones_30d"] = ImportJob.all_objects.filter(created_at__gte=since_30d).count()
+        except Exception:
+            global_stats["importaciones_30d"] = 0
+
+        try:
+            from apps.evaluaciones.models import Evaluacion
+            global_stats["evaluaciones_30d"] = Evaluacion.all_objects.filter(created_at__gte=since_30d).count()
+        except Exception:
+            global_stats["evaluaciones_30d"] = 0
+
+        try:
+            from apps.audits.models import AuditoriaSession
+            global_stats["auditorias_30d"] = AuditoriaSession.all_objects.filter(created_at__gte=since_30d).count()
+        except Exception:
+            global_stats["auditorias_30d"] = 0
+
+        # ── Por asociación ───────────────────────────────────────────────────
+        tenants_qs = Tenant.objects.exclude(slug="system").order_by("name")
+        tenant_ids = list(tenants_qs.values_list("id", flat=True))
+
+        def _map(qs, key="tenant"):
+            return dict(qs.values(key).annotate(c=Count("id")).values_list(key, "c"))
+
+        socios_alta_map  = _map(Socio.all_objects.filter(estado="ALTA"))
+        socios_total_map = _map(Socio.all_objects.all())
+        animales_total_map = _map(Animal.all_objects.all())
+        animales_baja_map  = _map(Animal.all_objects.filter(estado__in=BAJA_ESTADOS))
+
+        logins_7d_map = _map(UserAccessLog.objects.filter(timestamp__gte=since_7d, tenant__in=tenant_ids))
+        logins_7d_socios_map = _map(
+            UserAccessLog.objects.filter(timestamp__gte=since_7d, tenant__in=tenant_ids, user_role="socio")
+        )
+        ultimo_acceso_map = dict(
+            UserAccessLog.objects.filter(tenant__in=tenant_ids)
+            .values("tenant").annotate(last=Max("timestamp")).values_list("tenant", "last")
         )
 
-        return Response({
-            **global_stats,
-            "por_asociacion": list(tenants_stats),
-        })
+        try:
+            from apps.reports.models import ReportJob
+            informes_map = _map(ReportJob.all_objects.filter(created_at__gte=since_30d))
+        except Exception:
+            informes_map = {}
+
+        try:
+            from apps.imports.models import ImportJob
+            importaciones_map = _map(ImportJob.all_objects.filter(created_at__gte=since_30d))
+        except Exception:
+            importaciones_map = {}
+
+        try:
+            from apps.evaluaciones.models import Evaluacion
+            evaluaciones_map = _map(Evaluacion.all_objects.filter(created_at__gte=since_30d))
+        except Exception:
+            evaluaciones_map = {}
+
+        try:
+            from apps.audits.models import AuditoriaSession
+            auditorias_map = _map(AuditoriaSession.all_objects.filter(created_at__gte=since_30d))
+        except Exception:
+            auditorias_map = {}
+
+        por_asociacion = []
+        for t in tenants_qs.values("id", "name", "slug", "is_active", "max_socios"):
+            tid = t["id"]
+            sa = socios_alta_map.get(tid, 0)
+            st = socios_total_map.get(tid, 0)
+            at = animales_total_map.get(tid, 0)
+            ab = animales_baja_map.get(tid, 0)
+            ultimo = ultimo_acceso_map.get(tid)
+            por_asociacion.append({
+                "id":   str(tid),
+                "name": t["name"],
+                "slug": t["slug"],
+                "is_active":   t["is_active"],
+                "max_socios":  t["max_socios"],
+                "socios_alta":  sa,
+                "socios_baja":  st - sa,
+                "socios_total": st,
+                "animales_activos": at - ab,
+                "animales_baja":    ab,
+                "animales_total":   at,
+                "logins_7d":        logins_7d_map.get(tid, 0),
+                "logins_7d_socios": logins_7d_socios_map.get(tid, 0),
+                "ultimo_acceso":    ultimo.isoformat() if ultimo else None,
+                "informes_30d":     informes_map.get(tid, 0),
+                "importaciones_30d": importaciones_map.get(tid, 0),
+                "evaluaciones_30d": evaluaciones_map.get(tid, 0),
+                "auditorias_30d":   auditorias_map.get(tid, 0),
+            })
+
+        return Response({**global_stats, "por_asociacion": por_asociacion})
 
 
 # ── Helpers SMTP ──────────────────────────────────────────────────────────────

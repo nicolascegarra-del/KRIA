@@ -17,7 +17,21 @@
       "Bash(grep -rn \"demo\\\\|seed_demo\\\\|AGAMUR\" 'C:\\\\Users\\\\Adrián Nicolás\\\\Desktop\\\\KRIA-Version-0.2\\\\frontend\\\\src' --include=*.ts --include=*.tsx -l)",
       "Bash(docker cp:*)",
       "Bash(xargs grep:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(grep -E \"\\\\.\\(tsx?|py\\)$\")",
+      "Bash(grep -rn anio_nacimiento /c/Users/Adrián Nicolás/Desktop/KRIA-Version-0.2/backend --include=*.py)",
+      "Bash(grep -n \"get_display\\\\|show\" /c/Users/Adrián Nicolás/Desktop/KRIA-Version-0.2/backend/templates/reports/*.html)",
+      "Bash(python:*)",
+      "Bash(npx tsc:*)",
+      "Bash(find 'C:\\\\Users\\\\Adrián Nicolás\\\\Desktop\\\\KRIA-Version-0.2\\\\backend' -path */templates/* -name *.html)",
+      "Bash(node -e \":*)",
+      "Read(//usr/**)",
+      "Read(//c//**)",
+      "Bash(find /c -name python.exe -not -path */WindowsApps/*)",
+      "Bash(unzip -p '/c/Users/Adrián Nicolás/Downloads/Klyp_Brand_Guide.docx' word/document.xml)",
+      "Bash(cp \"G:/Mi unidad/KLYP/KRIA/Logo/kria.jpg\" \"C:/Users/Adrián Nicolás/Desktop/KRIA-Version-0.2/frontend/public/kria-logo.jpg\")",
+      "Bash(cp \"G:/Mi unidad/KLYP/KRIA/Logo/logo_blanco.png\" \"C:/Users/Adrián Nicolás/Desktop/KRIA-Version-0.2/frontend/public/kria-logo-dark.png\")",
+      "Bash(grep -r \"celery\\\\|beat\\\\|worker\" docker-compose*.yml)"
     ]
   }
 }

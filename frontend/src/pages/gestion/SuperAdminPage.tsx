@@ -15,6 +15,7 @@ import {
   Settings, AlertTriangle, Wrench, ScrollText, Clock, Tag,
   MapPin, Phone, AtSign, Settings2, GripVertical, X, Eye,
   ClipboardCheck, Archive, Download, FileArchive, RefreshCw, PawPrint,
+  TrendingUp, Activity, LogIn, FileText, UploadCloud, ClipboardList,
 } from "lucide-react";
 import type { BackupJob } from "../../types";
 import type { Tenant, GestionUserCreate, GestionUser, AnillaSize, PlatformSettings, PreguntaInstalacion } from "../../types";
@@ -676,58 +677,151 @@ export default function SuperAdminPage() {
         {/* ════════════════ DASHBOARD ════════════════════════════════════════ */}
         {section === "dashboard" && (
           <>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <BarChart2 size={22} className="text-violet-600" /> Dashboard
-              </h1>
-              <p className="text-sm text-gray-500">Estadísticas globales de la plataforma</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <BarChart2 size={22} className="text-violet-600" /> Cuadro de mandos
+                </h1>
+                <p className="text-sm text-gray-500">Visión global del uso de la plataforma</p>
+              </div>
+              <button onClick={() => qc.invalidateQueries({ queryKey: ["superadmin-stats"] })} className="btn-ghost p-2" title="Actualizar">
+                <RefreshCw size={15} />
+              </button>
             </div>
 
-            {stats && (
-              <>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                  {[
-                    { label: "Asociaciones",  value: stats.tenants,        icon: <Building size={18} />,  color: "text-violet-600" },
-                    { label: "Admins gestión",value: stats.usuarios,       icon: <Users size={18} />,     color: "text-blue-600" },
-                    { label: "Socios activos",value: stats.socios_activos ?? stats.socios, icon: <UserCheck size={18} />, color: "text-green-600" },
-                    { label: "Socios totales",value: stats.socios_total ?? stats.socios,   icon: <Users size={18} />,     color: "text-gray-600" },
-                    { label: "Animales",      value: stats.animales,       icon: <Shield size={18} />,    color: "text-amber-600" },
-                  ].map((s) => (
-                    <div key={s.label} className="card text-center">
-                      <div className={`${s.color} flex justify-center mb-1`}>{s.icon}</div>
-                      <div className="text-2xl font-bold text-gray-900">{s.value}</div>
-                      <div className="text-xs text-gray-500">{s.label}</div>
-                    </div>
-                  ))}
-                </div>
+            {stats && (() => {
+              const kpisPlataforma = [
+                { label: "Asociaciones activas", value: `${stats.tenants_activos} / ${stats.tenants}`, icon: <Building size={18} />, color: "text-violet-600", bg: "bg-violet-50" },
+                { label: "Admins de gestión",    value: stats.usuarios,      icon: <Users size={18} />,     color: "text-blue-600",   bg: "bg-blue-50" },
+                { label: "Socios en alta",        value: stats.socios_alta,   icon: <UserCheck size={18} />, color: "text-green-600",  bg: "bg-green-50" },
+                { label: "Socios en baja",        value: stats.socios_baja,   icon: <Users size={18} />,     color: "text-red-500",    bg: "bg-red-50" },
+                { label: "Animales activos",      value: stats.animales_activos, icon: <PawPrint size={18} />, color: "text-amber-600", bg: "bg-amber-50" },
+                { label: "Animales en baja",      value: stats.animales_baja,    icon: <PawPrint size={18} />, color: "text-gray-400",  bg: "bg-gray-50" },
+              ];
+              const kpisActividad = [
+                { label: "Accesos hoy",          value: stats.logins_24h,        icon: <LogIn size={16} />,       color: "text-indigo-600", bg: "bg-indigo-50" },
+                { label: "Accesos últimos 7d",   value: stats.logins_7d,         icon: <Activity size={16} />,    color: "text-blue-600",   bg: "bg-blue-50" },
+                { label: "Accesos últimos 30d",  value: stats.logins_30d,        icon: <TrendingUp size={16} />,  color: "text-violet-600", bg: "bg-violet-50" },
+                { label: "Informes (30d)",        value: stats.informes_30d,      icon: <FileText size={16} />,    color: "text-emerald-600",bg: "bg-emerald-50" },
+                { label: "Importaciones (30d)",   value: stats.importaciones_30d, icon: <UploadCloud size={16} />, color: "text-cyan-600",   bg: "bg-cyan-50" },
+                { label: "Evaluaciones (30d)",    value: stats.evaluaciones_30d,  icon: <ClipboardList size={16} />,color:"text-orange-600", bg: "bg-orange-50" },
+                { label: "Auditorías (30d)",      value: stats.auditorias_30d,    icon: <ClipboardCheck size={16} />,color:"text-pink-600", bg: "bg-pink-50" },
+              ];
 
-                <div className="card">
-                  <h2 className="text-sm font-semibold text-gray-700 mb-3">Socios por asociación</h2>
-                  <div className="space-y-2">
-                    {stats.por_asociacion.map((a) => {
-                      const pct = a.max_socios > 0 ? Math.min((a.socios_count / a.max_socios) * 100, 100) : 0;
-                      const barColor = pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-400" : "bg-green-500";
-                      return (
-                        <div key={a.id} className="flex items-center gap-3 text-sm">
-                          <span className="w-40 truncate text-gray-700 font-medium">{a.name}</span>
-                          <div className="flex-1 bg-gray-100 rounded-full h-2">
-                            {a.max_socios > 0 && (
-                              <div className={`h-2 rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
-                            )}
+              return (
+                <>
+                  {/* KPIs plataforma */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Plataforma</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                      {kpisPlataforma.map((k) => (
+                        <div key={k.label} className="card p-3 flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-xl ${k.bg} flex items-center justify-center shrink-0`}>
+                            <span className={k.color}>{k.icon}</span>
                           </div>
-                          <span className="text-xs text-gray-500 w-20 text-right">
-                            {a.socios_count}{a.max_socios > 0 ? ` / ${a.max_socios}` : " (sin límite)"}
-                          </span>
-                          <span className={`text-xs px-1.5 py-0.5 rounded ${a.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
-                            {a.is_active ? "Activa" : "Suspendida"}
-                          </span>
+                          <div className="min-w-0">
+                            <div className="text-xl font-bold text-gray-900 leading-tight">{k.value}</div>
+                            <div className="text-xs text-gray-500 leading-tight">{k.label}</div>
+                          </div>
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
+
+                  {/* KPIs actividad */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Actividad</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                      {kpisActividad.map((k) => (
+                        <div key={k.label} className="card p-3 flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-xl ${k.bg} flex items-center justify-center shrink-0`}>
+                            <span className={k.color}>{k.icon}</span>
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xl font-bold text-gray-900 leading-tight">{k.value}</div>
+                            <div className="text-xs text-gray-500 leading-tight">{k.label}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Tabla de actividad por asociación */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Actividad por asociación</p>
+                    <div className="card p-0 overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-100 text-xs text-gray-500 uppercase tracking-wide">
+                            <th className="text-left py-2.5 px-4 w-full">Asociación</th>
+                            <th className="text-left py-2.5 px-3 whitespace-nowrap w-px">Estado</th>
+                            <th className="text-right py-2.5 px-3 whitespace-nowrap w-px">Socios alta</th>
+                            <th className="text-right py-2.5 px-3 whitespace-nowrap w-px">Socios baja</th>
+                            <th className="text-right py-2.5 px-3 whitespace-nowrap w-px">Animales</th>
+                            <th className="text-right py-2.5 px-3 whitespace-nowrap w-px">Accesos 7d</th>
+                            <th className="text-right py-2.5 px-3 whitespace-nowrap w-px title" title="Accesos de socios en los últimos 7 días">Socios 7d</th>
+                            <th className="text-right py-2.5 px-3 whitespace-nowrap w-px" title="Informes generados en los últimos 30 días">Informes 30d</th>
+                            <th className="text-right py-2.5 px-3 whitespace-nowrap w-px" title="Importaciones en los últimos 30 días">Import. 30d</th>
+                            <th className="text-right py-2.5 px-3 whitespace-nowrap w-px" title="Evaluaciones en los últimos 30 días">Eval. 30d</th>
+                            <th className="text-right py-2.5 px-3 whitespace-nowrap w-px" title="Auditorías en los últimos 30 días">Audit. 30d</th>
+                            <th className="text-right py-2.5 px-4 whitespace-nowrap w-px">Último acceso</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {stats.por_asociacion.map((a) => {
+                            const pct = a.max_socios > 0 ? Math.min((a.socios_alta / a.max_socios) * 100, 100) : 0;
+                            const barColor = pct >= 90 ? "bg-red-400" : pct >= 70 ? "bg-amber-400" : "bg-green-400";
+                            const sinActividad = a.logins_7d === 0;
+                            const ultimoAcceso = a.ultimo_acceso
+                              ? new Date(a.ultimo_acceso).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Madrid" })
+                              : "—";
+                            return (
+                              <tr key={a.id} className={`hover:bg-gray-50/60 transition-colors ${!a.is_active ? "opacity-60" : ""}`}>
+                                <td className="py-3 px-4">
+                                  <span className="font-medium text-gray-900">{a.name}</span>
+                                  {a.max_socios > 0 && (
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                      <div className="flex-1 max-w-[80px] bg-gray-100 rounded-full h-1.5">
+                                        <div className={`h-1.5 rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+                                      </div>
+                                      <span className="text-xs text-gray-400">{a.socios_alta}/{a.max_socios}</span>
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="py-3 px-3 whitespace-nowrap">
+                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${a.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
+                                    {a.is_active ? "Activa" : "Suspendida"}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-3 text-right whitespace-nowrap text-gray-700">{a.socios_alta}</td>
+                                <td className="py-3 px-3 text-right whitespace-nowrap">
+                                  <span className={a.socios_baja > 0 ? "text-red-500 font-medium" : "text-gray-400"}>{a.socios_baja}</span>
+                                </td>
+                                <td className="py-3 px-3 text-right whitespace-nowrap text-gray-700">
+                                  <span title={`${a.animales_activos} activos / ${a.animales_baja} en baja`}>
+                                    {a.animales_activos}
+                                    {a.animales_baja > 0 && <span className="text-gray-400 text-xs"> +{a.animales_baja}↓</span>}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-3 text-right whitespace-nowrap">
+                                  <span className={sinActividad ? "text-red-400 font-medium" : "text-gray-700 font-medium"}>{a.logins_7d}</span>
+                                </td>
+                                <td className="py-3 px-3 text-right whitespace-nowrap text-gray-500">{a.logins_7d_socios}</td>
+                                <td className="py-3 px-3 text-right whitespace-nowrap text-gray-500">{a.informes_30d || <span className="text-gray-300">—</span>}</td>
+                                <td className="py-3 px-3 text-right whitespace-nowrap text-gray-500">{a.importaciones_30d || <span className="text-gray-300">—</span>}</td>
+                                <td className="py-3 px-3 text-right whitespace-nowrap text-gray-500">{a.evaluaciones_30d || <span className="text-gray-300">—</span>}</td>
+                                <td className="py-3 px-3 text-right whitespace-nowrap text-gray-500">{a.auditorias_30d || <span className="text-gray-300">—</span>}</td>
+                                <td className="py-3 px-4 text-right whitespace-nowrap text-xs text-gray-400">{ultimoAcceso}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </>
         )}
 
@@ -749,7 +843,7 @@ export default function SuperAdminPage() {
                   <Settings2 size={15} /> Columnas
                 </button>
                 <button onClick={openCreateTenant} className="btn-primary gap-2 flex items-center">
-                  <Plus size={16} /> Nueva asociación
+                  <Plus size={16} /> Nueva Asociación
                 </button>
               </div>
             </div>
@@ -770,11 +864,11 @@ export default function SuperAdminPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-100">
-                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Asociación</th>
+                        <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide w-full">Asociación</th>
                         {visibleCols.map((col) => (
-                          <th key={col.id} className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{col.label}</th>
+                          <th key={col.id} className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap w-px">{col.label}</th>
                         ))}
-                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>
+                        <th className="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap w-px">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -792,9 +886,9 @@ export default function SuperAdminPage() {
                             </div>
                           </td>
                           {visibleCols.map((col) => (
-                            <td key={col.id} className="py-3 px-3">{col.render(t)}</td>
+                            <td key={col.id} className="py-3 px-3 whitespace-nowrap">{col.render(t)}</td>
                           ))}
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 whitespace-nowrap">
                             <div className="flex items-center justify-end gap-0.5">
                               <button title="Gestionar usuarios admin" className="btn-ghost p-1.5" onClick={() => setUsersModalTenant(t)}><Users size={14} /></button>
                               <button title="Editar" className="btn-ghost p-1.5" onClick={() => openEditTenant(t)}><Edit2 size={14} /></button>
