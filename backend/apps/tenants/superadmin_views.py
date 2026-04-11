@@ -808,6 +808,7 @@ class SuperAdminMailLogView(APIView):
                 "tipo": entry.tipo,
                 "destinatarios": entry.destinatarios,
                 "asunto": entry.asunto,
+                "cuerpo": entry.cuerpo,
                 "success": entry.success,
                 "error": entry.error,
             }

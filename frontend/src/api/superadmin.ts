@@ -145,7 +145,7 @@ export const superadminApi = {
   getMailLog: async (params?: { tipo?: string; success?: string; search?: string; date_from?: string; date_to?: string; page?: number }) => {
     const { data } = await apiClient.get<{
       count: number; next: string | null; previous: string | null;
-      results: { id: number; sent_at: string; tipo: string; destinatarios: string; asunto: string; success: boolean; error: string }[];
+      results: { id: number; sent_at: string; tipo: string; destinatarios: string; asunto: string; cuerpo: string; success: boolean; error: string }[];
     }>("/superadmin/mail-log/", { params });
     return data;
   },

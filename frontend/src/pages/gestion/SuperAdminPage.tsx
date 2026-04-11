@@ -252,6 +252,7 @@ export default function SuperAdminPage() {
   const [mailLogDateFrom, setMailLogDateFrom] = useState("");
   const [mailLogDateTo, setMailLogDateTo] = useState("");
   const [mailLogPage, setMailLogPage] = useState(1);
+  const [mailLogDetail, setMailLogDetail] = useState<{ asunto: string; cuerpo: string; error: string; destinatarios: string } | null>(null);
 
   // ── Clear log modals ──────────────────────────────────────────────────────
   const [clearLogModal, setClearLogModal] = useState<"access" | "mail" | null>(null);
@@ -1974,13 +1975,21 @@ export default function SuperAdminPage() {
                         <td className="py-2 pr-4 text-gray-700 text-xs max-w-[200px] truncate">{entry.asunto}</td>
                         <td className="py-2">
                           {entry.success ? (
-                            <span className="flex items-center gap-1 text-green-600 text-xs">
+                            <button
+                              type="button"
+                              className="flex items-center gap-1 text-green-600 text-xs hover:underline"
+                              onClick={() => setMailLogDetail({ asunto: entry.asunto, cuerpo: entry.cuerpo, error: entry.error, destinatarios: entry.destinatarios })}
+                            >
                               <CheckCircle2 size={13} /> Enviado
-                            </span>
+                            </button>
                           ) : (
-                            <span className="flex items-center gap-1 text-red-500 text-xs" title={entry.error}>
+                            <button
+                              type="button"
+                              className="flex items-center gap-1 text-red-500 text-xs hover:underline"
+                              onClick={() => setMailLogDetail({ asunto: entry.asunto, cuerpo: entry.cuerpo, error: entry.error, destinatarios: entry.destinatarios })}
+                            >
                               <XCircle size={13} /> Error
-                            </span>
+                            </button>
                           )}
                         </td>
                       </tr>
@@ -2336,6 +2345,33 @@ export default function SuperAdminPage() {
         </Modal>
       )}
       {/* ── Modal: limpiar log con contraseña ─────────────────────────── */}
+      {mailLogDetail && (
+        <Modal onClose={() => setMailLogDetail(null)} title="Detalle del correo">
+          <div className="space-y-3 text-sm">
+            <div>
+              <p className="text-xs text-gray-500 mb-0.5">Asunto</p>
+              <p className="font-medium text-gray-800">{mailLogDetail.asunto}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-0.5">Destinatarios</p>
+              <p className="text-gray-700">{mailLogDetail.destinatarios}</p>
+            </div>
+            {mailLogDetail.error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-xs font-medium text-red-700 mb-1">Error de envío</p>
+                <p className="text-xs font-mono text-red-800 whitespace-pre-wrap">{mailLogDetail.error}</p>
+              </div>
+            )}
+            {mailLogDetail.cuerpo && (
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Contenido</p>
+                <pre className="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 whitespace-pre-wrap font-mono text-gray-700 max-h-72 overflow-y-auto">{mailLogDetail.cuerpo}</pre>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
+
       {clearLogModal && (
         <Modal
           onClose={() => { setClearLogModal(null); setClearLogPassword(""); setClearLogError(""); }}
