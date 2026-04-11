@@ -856,6 +856,41 @@ class SuperAdminFixAccessLogTenantsView(APIView):
         })
 
 
+class SuperAdminFixEstadoEvaluadoView(APIView):
+    """POST /api/v1/superadmin/fix-estado-evaluado/
+    Retroactively sets estado=EVALUADO for animals that have a completed
+    audit but are still in APROBADO state (data migrated before the
+    automatic state-change logic was implemented).
+    """
+    permission_classes = [IsSuperAdmin]
+
+    def post(self, request):
+        from apps.audits.models import AuditoriaAnimal
+        from apps.animals.models import Animal
+        from django.db import transaction
+
+        animal_ids = (
+            AuditoriaAnimal.objects
+            .filter(auditoria__estado="COMPLETADA", animal__isnull=False)
+            .values_list("animal_id", flat=True)
+            .distinct()
+        )
+
+        qs = Animal.all_objects.filter(pk__in=animal_ids, estado=Animal.Estado.APROBADO)
+        count = qs.count()
+
+        if count == 0:
+            return Response({"detail": "No hay animales que corregir.", "updated": 0})
+
+        with transaction.atomic():
+            updated = qs.update(estado=Animal.Estado.EVALUADO)
+
+        return Response({
+            "detail": f"Actualizados {updated} animales → EVALUADO.",
+            "updated": updated,
+        })
+
+
 class SuperAdminLogsView(APIView):
     """
     GET /api/v1/superadmin/logs/

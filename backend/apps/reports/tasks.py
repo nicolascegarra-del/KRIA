@@ -113,7 +113,7 @@ def _gen_inventory_pdf(job) -> str:
                 score_map[av.animal_id] = str(av.puntuacion_total)
 
     for animal in animals:
-        animal._audit_score = score_map.get(animal.id, "")
+        animal.audit_score = score_map.get(animal.id, "")
 
     context = {
         "tenant": job.tenant,

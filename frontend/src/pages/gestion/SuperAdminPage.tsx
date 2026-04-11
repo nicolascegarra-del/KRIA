@@ -518,6 +518,13 @@ export default function SuperAdminPage() {
     onError: (e: any) => setFixLogResult(`Error: ${e?.response?.data?.detail ?? "Error desconocido"}`),
   });
 
+  const [fixEvaluadoResult, setFixEvaluadoResult] = useState<string | null>(null);
+  const fixEstadoEvaluadoMutation = useMutation({
+    mutationFn: () => apiClient.post<{ detail: string; updated: number }>("/superadmin/fix-estado-evaluado/").then(r => r.data),
+    onSuccess: (data) => { setFixEvaluadoResult(data.detail); },
+    onError: (e: any) => setFixEvaluadoResult(`Error: ${e?.response?.data?.detail ?? "Error desconocido"}`),
+  });
+
   // ── Platform settings mutations ────────────────────────────────────────────
   const deleteAnimalesMutation = useMutation({
     mutationFn: (id: string) => superadminApi.deleteTenantAnimales(id),
@@ -1988,6 +1995,31 @@ export default function SuperAdminPage() {
                   {fixAccessLogMutation.isPending
                     ? <><Loader2 size={14} className="animate-spin" /> Reparando...</>
                     : <><RefreshCw size={14} /> Reparar registros</>}
+                </button>
+              </div>
+
+              {/* Fix estado EVALUADO retroactivo */}
+              <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="bg-amber-100 text-amber-700 p-2 rounded-lg shrink-0">
+                    <RefreshCw size={18} />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm text-gray-900">Reparar Estado Evaluado</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Actualiza a <strong>EVALUADO</strong> los animales que tienen auditoría completada pero siguen apareciendo como <strong>APROBADO</strong> (datos históricos).</p>
+                  </div>
+                </div>
+                {fixEvaluadoResult && (
+                  <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">{fixEvaluadoResult}</p>
+                )}
+                <button
+                  className="btn-secondary text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+                  disabled={fixEstadoEvaluadoMutation.isPending}
+                  onClick={() => { setFixEvaluadoResult(null); fixEstadoEvaluadoMutation.mutate(); }}
+                >
+                  {fixEstadoEvaluadoMutation.isPending
+                    ? <><Loader2 size={14} className="animate-spin" /> Actualizando...</>
+                    : <><RefreshCw size={14} /> Reparar estados</>}
                 </button>
               </div>
 

@@ -47,7 +47,7 @@
       <td>{{ animal.socio.codigo_rega|default:"—" }}</td>
       <td><span class="chip chip-{{ animal.estado }}">{{ animal.get_estado_display }}</span></td>
       <td style="text-align:center;">
-        {% if animal._audit_score %}{{ animal._audit_score }}{% else %}—{% endif %}
+        {% if animal.audit_score %}{{ animal.audit_score }}{% else %}—{% endif %}
       </td>
     </tr>
     {% empty %}

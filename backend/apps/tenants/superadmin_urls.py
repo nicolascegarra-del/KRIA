@@ -23,6 +23,7 @@ from .superadmin_views import (
     SuperAdminTenantDeleteAnimalesView,
     SuperAdminRunHealthCheckView,
     SuperAdminFixAccessLogTenantsView,
+    SuperAdminFixEstadoEvaluadoView,
     SuperAdminLogsView,
     SuperAdminMailLogView,
     SuperAdminClearAccessLogView,
@@ -57,6 +58,8 @@ urlpatterns = [
     path("run-health-check/", SuperAdminRunHealthCheckView.as_view(), name="superadmin-run-health-check"),
     # Fix histórico de logs sin tenant
     path("fix-access-log-tenants/", SuperAdminFixAccessLogTenantsView.as_view(), name="superadmin-fix-access-log-tenants"),
+    # Fix retroactivo: animales con auditoría completada que siguen en APROBADO
+    path("fix-estado-evaluado/", SuperAdminFixEstadoEvaluadoView.as_view(), name="superadmin-fix-estado-evaluado"),
     # Platform settings (SMTP global)
     path("settings/", PlatformSettingsView.as_view(), name="superadmin-platform-settings"),
     path("settings/test-smtp/", PlatformSmtpTestView.as_view(), name="superadmin-platform-test-smtp"),
