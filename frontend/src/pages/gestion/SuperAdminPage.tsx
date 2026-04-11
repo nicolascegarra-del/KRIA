@@ -890,8 +890,8 @@ export default function SuperAdminPage() {
                     <input className="input-field" type="email" value={platformSmtpForm.smtp_from_email} onChange={(e) => setPlatformSmtpForm({ ...platformSmtpForm, smtp_from_email: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Nombre remitente</label>
-                    <input className="input-field" value={platformSmtpForm.smtp_from_name} onChange={(e) => setPlatformSmtpForm({ ...platformSmtpForm, smtp_from_name: e.target.value })} />
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Nombre remitente <span className="text-gray-400 font-normal">(opcional, ej: KRIA Notificaciones)</span></label>
+                    <input className="input-field" placeholder="KRIA Notificaciones" value={platformSmtpForm.smtp_from_name} onChange={(e) => setPlatformSmtpForm({ ...platformSmtpForm, smtp_from_name: e.target.value })} />
                   </div>
                 </div>
                 <div className="flex items-center gap-4 flex-wrap pt-1">
@@ -1199,7 +1199,7 @@ export default function SuperAdminPage() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Nombre remitente</label>
-                <input className="input-field" placeholder="Asociación APACA" value={tenantForm.smtp_from_name} onChange={(e) => setTenantForm({ ...tenantForm, smtp_from_name: e.target.value })} />
+                <input className="input-field" placeholder="Asociación APACA (opcional, nombre visible)" value={tenantForm.smtp_from_name} onChange={(e) => setTenantForm({ ...tenantForm, smtp_from_name: e.target.value })} />
               </div>
             </div>
             <div className="flex items-center gap-4 flex-wrap">

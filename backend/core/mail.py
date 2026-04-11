@@ -49,8 +49,10 @@ def send_platform_mail(
         from_name = ps.smtp_from_name or ""
         from_addr = ps.smtp_from_email or django_settings.DEFAULT_FROM_EMAIL
 
-    # If from_name contains '@' it's an email address, not a display name — skip it
-    from_email = f"{from_name} <{from_addr}>" if (from_name and "@" not in from_name) else from_addr
+    # from_name must be a display name, not an email address.
+    # If it contains '@' or matches from_addr, skip it to avoid malformed headers.
+    valid_name = from_name and "@" not in from_name and from_name.strip() != from_addr.strip()
+    from_email = f"{from_name} <{from_addr}>" if valid_name else from_addr
 
     # ── Send ───────────────────────────────────────────────────────────────────
     error_msg = ""
