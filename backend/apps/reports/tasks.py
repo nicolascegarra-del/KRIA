@@ -73,20 +73,47 @@ def _anio(animal) -> str:
 
 def _gen_inventory_pdf(job) -> str:
     from apps.animals.models import Animal
+    from apps.audits.models import AuditoriaAnimal
 
     socio_id = job.params.get("socio_id")
     socio_nombre = None
     if socio_id:
-        animals = Animal.all_objects.filter(
+        animals_qs = Animal.all_objects.filter(
             tenant=job.tenant, socio_id=socio_id
-        ).select_related("socio", "padre", "madre_animal").prefetch_related("evaluacion").order_by("variedad", "numero_anilla")
-        first = animals.first()
+        ).select_related("socio", "padre", "madre_animal").order_by("variedad", "numero_anilla")
+        first = animals_qs.first()
         if first:
             socio_nombre = first.socio.nombre_razon_social
     else:
-        animals = Animal.all_objects.filter(
+        animals_qs = Animal.all_objects.filter(
             tenant=job.tenant
-        ).select_related("socio", "padre", "madre_animal").prefetch_related("evaluacion").order_by("variedad", "numero_anilla")
+        ).select_related("socio", "padre", "madre_animal").order_by("variedad", "numero_anilla")
+
+    animals = list(animals_qs)
+
+    # Puntuación: último audit completado para cada animal (puntuacion_total/maxima × 100)
+    animal_ids = [a.id for a in animals]
+    audit_rows = (
+        AuditoriaAnimal.objects
+        .filter(
+            animal_id__in=animal_ids,
+            auditoria__estado="COMPLETADA",
+            auditoria__tenant=job.tenant,
+        )
+        .select_related("auditoria")
+        .order_by("animal_id", "-auditoria__fecha_realizacion", "-auditoria__created_at")
+    )
+    score_map = {}
+    for av in audit_rows:
+        if av.animal_id not in score_map:
+            if av.puntuacion_maxima and av.puntuacion_maxima > 0:
+                pct = round(float(av.puntuacion_total / av.puntuacion_maxima * 100), 1)
+                score_map[av.animal_id] = f"{pct:.1f}"
+            else:
+                score_map[av.animal_id] = str(av.puntuacion_total)
+
+    for animal in animals:
+        animal._audit_score = score_map.get(animal.id, "")
 
     context = {
         "tenant": job.tenant,

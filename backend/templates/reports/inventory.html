@@ -31,7 +31,7 @@
       <th>Socio</th>
       <th>REGA</th>
       <th>Estado</th>
-      <th style="text-align:center;">Punt.</th>
+      <th style="text-align:center;">Punt. (/100)</th>
     </tr>
   </thead>
   <tbody>
@@ -47,7 +47,7 @@
       <td>{{ animal.socio.codigo_rega|default:"—" }}</td>
       <td><span class="chip chip-{{ animal.estado }}">{{ animal.get_estado_display }}</span></td>
       <td style="text-align:center;">
-        {% if animal.evaluacion %}{{ animal.evaluacion.puntuacion_media }}{% else %}—{% endif %}
+        {% if animal._audit_score %}{{ animal._audit_score }}{% else %}—{% endif %}
       </td>
     </tr>
     {% empty %}
