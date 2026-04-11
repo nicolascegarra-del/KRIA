@@ -1827,7 +1827,7 @@ export default function SuperAdminPage() {
                     {logsData.results.map((log) => (
                       <tr key={log.id} className="hover:bg-gray-50">
                         <td className="py-2 pr-4 text-gray-600 whitespace-nowrap">
-                          {new Date(log.timestamp).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "medium" })}
+                          {new Date(log.timestamp).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "medium", timeZone: "Europe/Madrid" })}
                         </td>
                         <td className="py-2 pr-4 font-mono text-gray-800">{log.user_email}</td>
                         <td className="py-2 pr-4">
@@ -1964,7 +1964,7 @@ export default function SuperAdminPage() {
                     {mailLogData.results.map((entry) => (
                       <tr key={entry.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                         <td className="py-2 pr-4 text-gray-500 whitespace-nowrap text-xs">
-                          {new Date(entry.sent_at).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" })}
+                          {new Date(entry.sent_at).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Madrid" })}
                         </td>
                         <td className="py-2 pr-4">
                           <span className="text-xs bg-indigo-50 text-indigo-700 font-mono px-1.5 py-0.5 rounded">
@@ -2164,7 +2164,7 @@ export default function SuperAdminPage() {
                           )}
                         </td>
                         <td className="py-2.5 pr-4 text-xs text-gray-500 whitespace-nowrap">
-                          {new Date(job.created_at).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" })}
+                          {new Date(job.created_at).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Madrid" })}
                         </td>
                         <td className="py-2.5 pr-4 text-xs text-gray-500">
                           {job.file_size_bytes
