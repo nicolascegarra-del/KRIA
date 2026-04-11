@@ -22,13 +22,19 @@ import type { Tenant, GestionUserCreate, GestionUser, AnillaSize, PlatformSettin
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface SuperAdminStats {
-  tenants: number;
+  tenants: number; tenants_activos: number;
   usuarios: number;
-  socios?: number;         // legacy field, keep for backwards compat
-  socios_activos?: number;
-  socios_total?: number;
-  animales: number;
-  por_asociacion: { id: string; name: string; slug: string; is_active: boolean; max_socios: number; socios_count: number }[];
+  socios_alta: number; socios_baja: number; socios_total: number;
+  animales_activos: number; animales_baja: number; animales_total: number;
+  logins_24h: number; logins_7d: number; logins_30d: number;
+  informes_30d: number; importaciones_30d: number; evaluaciones_30d: number; auditorias_30d: number;
+  por_asociacion: {
+    id: string; name: string; slug: string; is_active: boolean; max_socios: number;
+    socios_alta: number; socios_baja: number; socios_total: number;
+    animales_activos: number; animales_baja: number; animales_total: number;
+    logins_7d: number; logins_7d_socios: number; ultimo_acceso: string | null;
+    informes_30d: number; importaciones_30d: number; evaluaciones_30d: number; auditorias_30d: number;
+  }[];
 }
 
 type Section = "dashboard" | "asociaciones" | "configuracion" | "gestiones_avanzadas" | "log" | "mail_log" | "backups";
