@@ -4,7 +4,6 @@ Checks: database, Redis, MinIO, SMTP, Celery workers, stuck jobs.
 Sends a summary email to superadmins with notif_health_check=True.
 """
 import logging
-import socket
 import traceback
 from datetime import timedelta
 
@@ -51,12 +50,29 @@ def _check_minio():
 
 
 def _check_smtp():
-    """Verify SMTP connection (no email sent)."""
+    """Verify SMTP connection using smtplib (same path as real email sending)."""
+    import smtplib
+    import ssl as ssl_module
     try:
         from django.conf import settings
-        with socket.create_connection((settings.EMAIL_HOST, settings.EMAIL_PORT), timeout=5):
-            pass
-        return True, f"OK ({settings.EMAIL_HOST}:{settings.EMAIL_PORT})"
+        host = settings.EMAIL_HOST
+        port = int(settings.EMAIL_PORT)
+        user = settings.EMAIL_HOST_USER
+        password = settings.EMAIL_HOST_PASSWORD
+        use_tls = getattr(settings, "EMAIL_USE_TLS", False)
+        use_ssl = getattr(settings, "EMAIL_USE_SSL", False)
+        if use_ssl:
+            context = ssl_module.create_default_context()
+            with smtplib.SMTP_SSL(host, port, context=context, timeout=10) as server:
+                if user:
+                    server.login(user, password)
+        else:
+            with smtplib.SMTP(host, port, timeout=10) as server:
+                if use_tls:
+                    server.starttls()
+                if user:
+                    server.login(user, password)
+        return True, f"OK ({host}:{port})"
     except Exception as e:
         return False, str(e)
 
