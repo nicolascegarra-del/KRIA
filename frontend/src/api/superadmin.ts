@@ -119,6 +119,12 @@ export const superadminApi = {
     return data;
   },
 
+  // Dispara el health check manualmente
+  runHealthCheck: async (): Promise<{ detail: string }> => {
+    const { data } = await apiClient.post<{ detail: string }>("/superadmin/run-health-check/");
+    return data;
+  },
+
   // SuperAdmins CRUD
   listSuperAdmins: async (): Promise<GestionUser[]> => {
     const { data } = await apiClient.get<GestionUser[]>("/superadmin/superadmins/");

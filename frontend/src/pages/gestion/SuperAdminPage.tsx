@@ -495,6 +495,12 @@ export default function SuperAdminPage() {
     onError: (e: any) => setSaError(e?.response?.data?.detail ?? "Error al eliminar."),
   });
 
+  const runHealthCheckMutation = useMutation({
+    mutationFn: superadminApi.runHealthCheck,
+    onSuccess: (data) => setSuccessMsg(data.detail),
+    onError: (e: any) => setSaError(e?.response?.data?.detail ?? "Error al enviar el informe."),
+  });
+
   // ── Platform settings mutations ────────────────────────────────────────────
   const deleteAnimalesMutation = useMutation({
     mutationFn: (id: string) => superadminApi.deleteTenantAnimales(id),
@@ -1507,7 +1513,6 @@ export default function SuperAdminPage() {
                 { key: "notif_asociacion_activada",   label: "Asociación reactivada" },
                 { key: "notif_asociacion_eliminada",  label: "Asociación eliminada" },
                 { key: "notif_propuesta_mejora",      label: "Propuestas de mejora" },
-                { key: "notif_health_check",          label: "Informe de estado (7:30 y 19:30)" },
               ] as { key: keyof typeof saForm; label: string }[]).map(({ key, label }) => (
                 <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
                   <input
@@ -1519,6 +1524,30 @@ export default function SuperAdminPage() {
                   <span className="text-sm text-gray-700">{label}</span>
                 </label>
               ))}
+              {/* Informe de estado: checkbox + botón enviar ahora */}
+              <div className="flex items-center justify-between gap-2">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={saForm.notif_health_check}
+                    onChange={(e) => setSaForm({ ...saForm, notif_health_check: e.target.checked })}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">Informe de estado (7:30 y 19:30)</span>
+                </label>
+                <button
+                  type="button"
+                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded px-2 py-1 transition-colors shrink-0"
+                  title="Enviar informe ahora"
+                  disabled={runHealthCheckMutation.isPending}
+                  onClick={() => runHealthCheckMutation.mutate()}
+                >
+                  {runHealthCheckMutation.isPending
+                    ? <Loader2 size={12} className="animate-spin" />
+                    : <RefreshCw size={12} />}
+                  Enviar ahora
+                </button>
+              </div>
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-1">

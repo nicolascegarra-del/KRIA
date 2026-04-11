@@ -21,6 +21,7 @@ from .superadmin_views import (
     SuperAdminTenantDeleteSociosView,
     SuperAdminTenantDeleteAnillasView,
     SuperAdminTenantDeleteAnimalesView,
+    SuperAdminRunHealthCheckView,
     SuperAdminLogsView,
     SuperAdminMailLogView,
     SuperAdminClearAccessLogView,
@@ -51,6 +52,8 @@ urlpatterns = [
     path("superadmins/<uuid:pk>/", SuperAdminSuperAdminDetailView.as_view(), name="superadmin-superadmins-detail"),
     # Stats
     path("stats/", SuperAdminStatsView.as_view(), name="superadmin-stats"),
+    # Health check manual
+    path("run-health-check/", SuperAdminRunHealthCheckView.as_view(), name="superadmin-run-health-check"),
     # Platform settings (SMTP global)
     path("settings/", PlatformSettingsView.as_view(), name="superadmin-platform-settings"),
     path("settings/test-smtp/", PlatformSmtpTestView.as_view(), name="superadmin-platform-test-smtp"),
