@@ -79,14 +79,14 @@ def _gen_inventory_pdf(job) -> str:
     if socio_id:
         animals = Animal.all_objects.filter(
             tenant=job.tenant, socio_id=socio_id
-        ).select_related("socio", "padre", "madre_animal", "evaluacion").order_by("variedad", "numero_anilla")
+        ).select_related("socio", "padre", "madre_animal").prefetch_related("evaluacion").order_by("variedad", "numero_anilla")
         first = animals.first()
         if first:
             socio_nombre = first.socio.nombre_razon_social
     else:
         animals = Animal.all_objects.filter(
             tenant=job.tenant
-        ).select_related("socio", "padre", "madre_animal", "evaluacion").order_by("variedad", "numero_anilla")
+        ).select_related("socio", "padre", "madre_animal").prefetch_related("evaluacion").order_by("variedad", "numero_anilla")
 
     context = {
         "tenant": job.tenant,
