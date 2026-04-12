@@ -151,70 +151,15 @@ class SocioSerializer(serializers.ModelSerializer):
                 user.save(update_fields=["first_name", "last_name"])
             else:
                 if initial_password:
-                    # Explicit password provided by the admin — set it directly.
+                    # Explicit password provided by the admin → GREEN immediately.
                     user.set_password(initial_password)
                     user.save(update_fields=["password"])
-                    send_platform_mail(
-                        subject="Bienvenido a KRIA — tus credenciales de acceso",
-                        body=(
-                            f"Hola {first_name or email},\n\n"
-                            f"Tu cuenta en KRIA ha sido creada.\n\n"
-                            f"Email: {email}\n"
-                            f"Contraseña: {initial_password}\n\n"
-                            f"Accede en: {settings.FRONTEND_URL}\n\n"
-                            f"Te recomendamos cambiar la contraseña tras el primer acceso.\n\n"
-                            f"Un saludo,\nEquipo KRIA"
-                        ),
-                        recipient_list=[email],
-                        tipo="ALTA_SOCIO",
-                        fail_silently=True,
-                    )
                 else:
-                    # No password provided — leave account unusable and send a
-                    # setup link so the socio establishes their own password.
-                    import uuid as _uuid
-                    from django.template.loader import render_to_string
+                    # No password — account created but no access yet (RED).
+                    # Gestion must explicitly click "Enviar acceso" to send the
+                    # invite and move the socio to PENDING (amber).
                     user.set_unusable_password()
-                    token = _uuid.uuid4()
-                    user.reset_token = token
-                    user.reset_token_created = timezone.now()
-                    user.save(update_fields=["password", "reset_token", "reset_token_created"])
-
-                    suffix = getattr(settings, "TENANT_DOMAIN_SUFFIX", "")
-                    if getattr(tenant, "custom_domain", None):
-                        platform_url = f"https://{tenant.custom_domain}"
-                    elif suffix and not settings.FRONTEND_URL.startswith("http://localhost"):
-                        platform_url = f"https://{tenant.slug}{suffix}"
-                    else:
-                        platform_url = settings.FRONTEND_URL
-
-                    reset_url = f"{settings.FRONTEND_URL}/auth/reset-password?token={token}"
-                    tenant_name = tenant.name if tenant else "KRIA"
-                    html_body = render_to_string("email/enviar_acceso.html", {
-                        "tenant_name": tenant_name,
-                        "socio_nombre": first_name or email,
-                        "platform_url": platform_url,
-                        "username": email,
-                        "reset_url": reset_url,
-                    })
-                    plain_body = (
-                        f"Hola {first_name or email},\n\n"
-                        f"Tu cuenta en {tenant_name} (KRIA) ha sido creada.\n\n"
-                        f"Enlace de acceso: {platform_url}\n"
-                        f"Usuario: {email}\n"
-                        f"Establecer contraseña: {reset_url}\n\n"
-                        f"El enlace expira en 24 horas.\n\n"
-                        f"Un saludo,\nEquipo {tenant_name}"
-                    )
-                    send_platform_mail(
-                        subject=f"Tu acceso a {tenant_name} — KRIA",
-                        body=plain_body,
-                        html_body=html_body,
-                        recipient_list=[email],
-                        tenant=tenant,
-                        tipo="ALTA_SOCIO",
-                        fail_silently=True,
-                    )
+                    user.save(update_fields=["password"])
 
         socio = Socio.objects.create(
             tenant=tenant, user=user, **validated_data

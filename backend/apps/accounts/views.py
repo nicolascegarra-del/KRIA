@@ -375,11 +375,19 @@ class SocioEnviarAccesoView(APIView):
         user = socio.user
         tenant = socio.tenant
 
-        # Generate password-reset token (reuses existing mechanism)
+        # If the account has no usable password yet, ensure it stays unusable
+        # so the socio MUST use the setup link (not try to log in without password).
+        # If they already have a usable password this is a "reset link" — keep it.
         token = uuid.uuid4()
-        user.reset_token = token
-        user.reset_token_created = timezone.now()
-        user.save(update_fields=["reset_token", "reset_token_created"])
+        if not user.has_usable_password():
+            user.set_unusable_password()
+            user.reset_token = token
+            user.reset_token_created = timezone.now()
+            user.save(update_fields=["password", "reset_token", "reset_token_created"])
+        else:
+            user.reset_token = token
+            user.reset_token_created = timezone.now()
+            user.save(update_fields=["reset_token", "reset_token_created"])
 
         # Construct the tenant-specific platform URL
         suffix = getattr(settings, "TENANT_DOMAIN_SUFFIX", "")

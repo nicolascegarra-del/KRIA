@@ -21,6 +21,7 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  Mail,
 } from "lucide-react";
 import type { Animal, AnimalEstado } from "../../types";
 import clsx from "clsx";
@@ -68,6 +69,14 @@ export default function SocioDetailPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["socio", id] });
       setSuccessMsg("Socio reactivado correctamente.");
+    },
+  });
+
+  const enviarAccesoMutation = useMutation({
+    mutationFn: () => sociosApi.enviarAcceso(id!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["socio", id] });
+      setSuccessMsg("Correo de acceso enviado correctamente.");
     },
   });
 
@@ -158,6 +167,17 @@ export default function SocioDetailPage() {
             <span className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-red-50 text-red-600 border border-red-200">
               <XCircle size={12} /> Sin acceso al portal
             </span>
+          )}
+          {socio.email && (
+            <button
+              onClick={() => enviarAccesoMutation.mutate()}
+              disabled={enviarAccesoMutation.isPending}
+              className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-40 transition-colors"
+              title={socio.portal_access_status === "active" ? "Enviar enlace para cambiar contraseña" : "Enviar invitación de acceso"}
+            >
+              {enviarAccesoMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <Mail size={11} />}
+              {socio.portal_access_status === "none" ? "Enviar acceso" : "Reenviar acceso"}
+            </button>
           )}
         </div>
         {socio.estado === "BAJA" && (

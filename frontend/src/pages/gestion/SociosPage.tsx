@@ -581,9 +581,9 @@ export default function SociosPage() {
                       </button>
                       <button
                         onClick={() => enviarAccesoMutation.mutate(socio.id)}
-                        disabled={sendingAccessId === socio.id}
-                        className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 disabled:opacity-40 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                        title="Enviar acceso por email"
+                        disabled={sendingAccessId === socio.id || !socio.email}
+                        className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 disabled:opacity-30 disabled:cursor-not-allowed min-h-[44px] min-w-[44px] flex items-center justify-center"
+                        title={socio.email ? "Enviar acceso por email" : "El socio no tiene email configurado"}
                       >
                         {sendingAccessId === socio.id
                           ? <Loader2 size={14} className="animate-spin" />
