@@ -194,6 +194,10 @@ export default function ValidacionesPage() {
       perfilSocioApi.resolver(id, accion),
     onSuccess: (_, { accion }) => {
       qc.invalidateQueries({ queryKey: ["solicitudes-cambio-datos"] });
+      if (accion === "aprobar") {
+        qc.invalidateQueries({ queryKey: ["socios"] });
+        qc.invalidateQueries({ queryKey: ["socios-all"] });
+      }
       setExpandedId(null);
       setSuccessMsg(accion === "aprobar" ? "Datos actualizados correctamente." : "Solicitud denegada.");
     },

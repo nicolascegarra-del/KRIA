@@ -82,10 +82,12 @@ const NAV_ITEMS: NavItem[] = [
 
 // Bottom nav items for socios (mobile)
 const SOCIO_BOTTOM_NAV_BASE = [
-  { to: "/mis-animales",  label: "Animales",   icon: (size: number) => <Bird size={size} />,    requiresGranjas: false },
-  { to: "/mis-granjas",   label: "Granjas",    icon: (size: number) => <Building size={size} />, requiresGranjas: true },
-  { to: "/mis-lotes",     label: "Lotes",      icon: (size: number) => <Layers size={size} />,  requiresGranjas: false },
-  { to: "/perfil",        label: "Perfil",     icon: (size: number) => <User size={size} />,    requiresGranjas: false },
+  { to: "/mis-animales",   label: "Animales",   icon: (size: number) => <Bird size={size} />,           requiresGranjas: false, requiresAuditorias: false },
+  { to: "/mis-granjas",    label: "Granjas",    icon: (size: number) => <Building size={size} />,       requiresGranjas: true,  requiresAuditorias: false },
+  { to: "/mis-lotes",      label: "Lotes",      icon: (size: number) => <Layers size={size} />,         requiresGranjas: false, requiresAuditorias: false },
+  { to: "/mis-anillas",    label: "Anillas",    icon: (size: number) => <Tag size={size} />,            requiresGranjas: false, requiresAuditorias: false },
+  { to: "/mis-auditorias", label: "Auditorías", icon: (size: number) => <ClipboardCheck size={size} />, requiresGranjas: false, requiresAuditorias: true  },
+  { to: "/perfil",         label: "Perfil",     icon: (size: number) => <User size={size} />,           requiresGranjas: false, requiresAuditorias: false },
 ];
 
 function timeAgo(iso: string): string {
@@ -275,7 +277,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   });
 
   const SOCIO_BOTTOM_NAV = SOCIO_BOTTOM_NAV_BASE.filter(
-    (item) => !item.requiresGranjas || granjasEnabled
+    (item) =>
+      (!item.requiresGranjas || granjasEnabled) &&
+      (!item.requiresAuditorias || auditoriasEnabled)
   );
 
   const handleLogout = () => {
