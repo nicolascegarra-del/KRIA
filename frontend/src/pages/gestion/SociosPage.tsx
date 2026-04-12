@@ -161,7 +161,7 @@ function SocioModal({
 
   const createMutation = useMutation({
     mutationFn: (data: Partial<Socio>) => sociosApi.create(data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["socios"] }); onSuccess("Socio creado correctamente."); onClose(); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["socios"] }); qc.invalidateQueries({ queryKey: ["socios-all"] }); qc.invalidateQueries({ queryKey: ["dashboard-stats"] }); onSuccess("Socio creado correctamente."); onClose(); },
     onError: (err: any) => {
       const d = err?.response?.data;
       setError(d?.detail ?? (typeof d === "object" ? Object.entries(d).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join(" | ") : "Error al guardar."));
@@ -169,7 +169,7 @@ function SocioModal({
   });
   const editMutation = useMutation({
     mutationFn: (data: Partial<Socio>) => sociosApi.update(socio!.id, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["socios"] }); onSuccess("Socio actualizado correctamente."); onClose(); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["socios"] }); qc.invalidateQueries({ queryKey: ["socios-all"] }); onSuccess("Socio actualizado correctamente."); onClose(); },
     onError: (err: any) => {
       const d = err?.response?.data;
       setError(d?.detail ?? (typeof d === "object" ? Object.entries(d).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join(" | ") : "Error al guardar."));
@@ -404,12 +404,12 @@ export default function SociosPage() {
   const bajaMutation = useMutation({
     mutationFn: ({ id, razon, fecha }: { id: string; razon: string; fecha: string }) =>
       sociosApi.darBaja(id, razon, fecha),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["socios"] }); setBajaModal(null); setSuccessMsg("Socio dado de baja."); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["socios"] }); qc.invalidateQueries({ queryKey: ["socios-all"] }); qc.invalidateQueries({ queryKey: ["animals"] }); qc.invalidateQueries({ queryKey: ["dashboard-stats"] }); setBajaModal(null); setSuccessMsg("Socio dado de baja."); },
   });
 
   const reactivarMutation = useMutation({
     mutationFn: (id: string) => sociosApi.reactivar(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["socios"] }); setSuccessMsg("Socio reactivado correctamente."); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["socios"] }); qc.invalidateQueries({ queryKey: ["socios-all"] }); qc.invalidateQueries({ queryKey: ["animals"] }); qc.invalidateQueries({ queryKey: ["dashboard-stats"] }); setSuccessMsg("Socio reactivado correctamente."); },
   });
 
   const socios = data?.results ?? [];

@@ -110,6 +110,7 @@ export default function ValidacionesPage() {
       reproductoresApi.aprobar(id, aprobado, candidatoNotas[id]),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["candidatos-reproductor"] });
+      qc.invalidateQueries({ queryKey: ["animals"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
       setActionId(null);
       setExpandedId(null);
@@ -172,6 +173,7 @@ export default function ValidacionesPage() {
       realtaApi.resolver(id, aprobado, realtaNotas[id]),
     onSuccess: (_, { aprobado }) => {
       qc.invalidateQueries({ queryKey: ["solicitudes-realta"] });
+      qc.invalidateQueries({ queryKey: ["animals"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
       setRealtaActionId(null);
       setExpandedId(null);
@@ -219,6 +221,7 @@ export default function ValidacionesPage() {
       animalsApi.saveGanaderiaMap(nombre, socio),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ganaderias-nacimiento"] });
+      qc.invalidateQueries({ queryKey: ["animals"] });
       setSuccessMsg("Redirección guardada.");
     },
   });
@@ -244,6 +247,7 @@ export default function ValidacionesPage() {
     }) => animalsApi.saveLoteExternoMap(descripcion, lote),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lotes-externos"] });
+      qc.invalidateQueries({ queryKey: ["animals"] });
       setSuccessMsg("Redirección guardada.");
     },
   });

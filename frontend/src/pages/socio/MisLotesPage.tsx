@@ -489,7 +489,7 @@ function AddCriaModal({ lote, onClose }: AddCriaModalProps) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lotes"] });
       qc.invalidateQueries({ queryKey: ["lote-crias", lote.id] });
-      qc.invalidateQueries({ queryKey: ["my-animals"] });
+      qc.invalidateQueries({ queryKey: ["animals"] });
       setSuccess(true);
       setAnilla("");
       setFechaNacimiento(new Date().toISOString().slice(0, 10));
