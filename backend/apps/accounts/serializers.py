@@ -64,6 +64,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 "Esta asociación está suspendida. Contacte con el administrador de la plataforma."
             )
 
+        # Block login for socios that have been given a baja.
+        if not user.is_gestion and not user.is_superadmin:
+            socio = getattr(user, "socio", None)
+            if socio and socio.estado == "BAJA":
+                raise serializers.ValidationError(
+                    "Tu cuenta está desactivada. Contacta con tu asociación."
+                )
+
         effective_is_gestion = user.is_gestion or user.is_superadmin
 
         refresh = self.get_token(user)

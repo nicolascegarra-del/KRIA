@@ -120,11 +120,15 @@ class DashboardTareasPendientesView(APIView):
     permission_classes = [IsGestion]
 
     def get(self, request):
+        from django.db.models import Q
         from apps.animals.models import Animal
+        from apps.accounts.models import Socio
         from apps.imports.models import ImportJob
 
         tenant = request.tenant
+        year_now = timezone.now().year
 
+        # ── Tareas pendientes ──────────────────────────────────────────────────
         pendientes_aprobacion = Animal.all_objects.filter(
             tenant=tenant,
             estado__in=[Animal.Estado.REGISTRADO, Animal.Estado.MODIFICADO],
@@ -156,11 +160,71 @@ class DashboardTareasPendientesView(APIView):
             estado=SolicitudRealta.Estado.PENDIENTE,
         ).count()
 
+        # ── Socios ────────────────────────────────────────────────────────────
+        socios_qs = Socio.all_objects.filter(tenant=tenant)
+        socios_alta = socios_qs.filter(estado=Socio.Estado.ALTA).count()
+        socios_baja = socios_qs.filter(estado=Socio.Estado.BAJA).count()
+
+        cuota_corriente = socios_qs.filter(
+            estado=Socio.Estado.ALTA, cuota_anual_pagada=year_now
+        ).count()
+
+        # Portal access counts (socios en alta únicamente)
+        socios_alta_qs = socios_qs.filter(estado=Socio.Estado.ALTA)
+        portal_active = socios_alta_qs.filter(
+            user__isnull=False
+        ).exclude(user__password__startswith="!").count()
+        portal_pending = socios_alta_qs.filter(
+            user__isnull=False,
+            user__password__startswith="!",
+            user__reset_token__isnull=False,
+        ).count()
+        portal_none = socios_alta - portal_active - portal_pending
+
+        # Socios en alta sin cuota del año en curso (máx. 10 para el widget)
+        socios_sin_cuota = list(
+            socios_alta_qs.exclude(cuota_anual_pagada=year_now)
+            .order_by("numero_socio")
+            .values("id", "nombre_razon_social", "numero_socio")[:10]
+        )
+
+        # ── Animales ──────────────────────────────────────────────────────────
+        animals_qs = Animal.all_objects.filter(tenant=tenant)
+        animales_aprobados = animals_qs.filter(
+            estado__in=[Animal.Estado.APROBADO, Animal.Estado.EVALUADO]
+        ).count()
+        animales_pendientes = animals_qs.filter(
+            estado__in=[Animal.Estado.REGISTRADO, Animal.Estado.MODIFICADO]
+        ).count()
+        animales_rechazados = animals_qs.filter(estado=Animal.Estado.RECHAZADO).count()
+        animales_baja = animals_qs.filter(
+            estado__in=[Animal.Estado.BAJA, Animal.Estado.SOCIO_EN_BAJA]
+        ).count()
+        animales_activos = animales_aprobados + animales_pendientes
+        animales_total = animals_qs.count()
+
         return Response({
+            # tareas pendientes (retrocompatibilidad)
             "pendientes_aprobacion": pendientes_aprobacion,
             "conflictos_pendientes": conflictos_pendientes,
             "imports_pendientes": imports_pendientes,
             "candidatos_reproductor": candidatos_reproductor,
             "alertas_anilla": alertas_anilla,
             "solicitudes_realta": solicitudes_realta,
+            # socios
+            "socios_alta": socios_alta,
+            "socios_baja": socios_baja,
+            "cuota_corriente": cuota_corriente,
+            "cuota_year": year_now,
+            "portal_active": portal_active,
+            "portal_pending": portal_pending,
+            "portal_none": portal_none,
+            "socios_sin_cuota": socios_sin_cuota,
+            # animales
+            "animales_activos": animales_activos,
+            "animales_aprobados": animales_aprobados,
+            "animales_pendientes": animales_pendientes,
+            "animales_rechazados": animales_rechazados,
+            "animales_baja": animales_baja,
+            "animales_total": animales_total,
         })

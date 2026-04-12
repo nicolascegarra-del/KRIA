@@ -90,9 +90,36 @@ const ALL_COLS: ColDef[] = [
       ? <span className="text-xs text-red-700 max-w-[200px] truncate block">{s.razon_baja}</span>
       : <span className="text-gray-300 text-sm">—</span>,
   },
+  {
+    id: "portal_access", label: "Acceso portal",
+    render: (s) => {
+      if (s.portal_access_status === "active") {
+        return (
+          <span className="flex items-center gap-1.5 text-xs font-medium text-green-700">
+            <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+            Activo
+          </span>
+        );
+      }
+      if (s.portal_access_status === "pending") {
+        return (
+          <span className="flex items-center gap-1.5 text-xs font-medium text-amber-600">
+            <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+            Pendiente
+          </span>
+        );
+      }
+      return (
+        <span className="flex items-center gap-1.5 text-xs font-medium text-red-500">
+          <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
+          Sin acceso
+        </span>
+      );
+    },
+  },
 ];
 
-const DEFAULT_VISIBLE = ["numero_socio", "nombre", "estado", "dni_nif", "email", "cuota"];
+const DEFAULT_VISIBLE = ["numero_socio", "nombre", "estado", "dni_nif", "email", "cuota", "portal_access"];
 const LS_KEY = "socios_table_cols";
 
 interface ColState { id: string; visible: boolean; }

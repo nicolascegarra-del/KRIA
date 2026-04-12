@@ -123,6 +123,20 @@ export default function App() {
   const { branding, setBranding, clearBranding } = useTenantStore();
   const [inactivityTimeout, setInactivityTimeout] = useState(0);
 
+  // Branding readiness guard — prevents rendering the layout before tenant
+  // colors and module flags are known (avoids the F5 flash of wrong colors/sections).
+  // Starts true when branding is already in the store (persisted from prior session).
+  // Starts false only on first-ever load; flips to true once the API responds.
+  const needsBranding = !!user && (!user.is_superadmin || !!impersonatingTenant);
+  const [brandingReady, setBrandingReady] = useState(() => !needsBranding || !!branding);
+  useEffect(() => {
+    if (branding) setBrandingReady(true);
+  }, [branding]);
+  // When user logs out or impersonation ends, reset guard
+  useEffect(() => {
+    if (!needsBranding) setBrandingReady(true);
+  }, [needsBranding]);
+
   // Listen for forced logout
   useEffect(() => {
     const handler = () => clearAuth();
@@ -179,6 +193,9 @@ export default function App() {
       .then(({ data }) => setInactivityTimeout(data.inactivity_timeout_minutes))
       .catch(() => {/* ignore — keep default 0 (disabled) */});
   }, []);
+
+  // Block render until branding is known — white screen instead of color/module flash
+  if (!brandingReady) return <div className="fixed inset-0 bg-white" />;
 
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

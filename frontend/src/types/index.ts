@@ -216,12 +216,29 @@ export interface ReportJob {
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 export interface DashboardStats {
+  // tareas pendientes
   pendientes_aprobacion: number;
   conflictos_pendientes: number;
   imports_pendientes: number;
   candidatos_reproductor: number;
   alertas_anilla: number;
   solicitudes_realta: number;
+  // socios
+  socios_alta: number;
+  socios_baja: number;
+  cuota_corriente: number;
+  cuota_year: number;
+  portal_active: number;
+  portal_pending: number;
+  portal_none: number;
+  socios_sin_cuota: { id: string; nombre_razon_social: string; numero_socio: string }[];
+  // animales
+  animales_activos: number;
+  animales_aprobados: number;
+  animales_pendientes: number;
+  animales_rechazados: number;
+  animales_baja: number;
+  animales_total: number;
 }
 
 // ─── Reproductores ────────────────────────────────────────────────────────────

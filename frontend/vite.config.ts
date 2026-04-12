@@ -29,19 +29,14 @@ export default defineConfig({
         globIgnores: ["**/kria-logo*.{jpg,png}"],
         runtimeCaching: [
           {
-            urlPattern: /^https?:\/\/.*\/api\/v1\/animals/,
-            handler: "StaleWhileRevalidate",
+            // API responses must always be fresh — NetworkFirst so the SW
+            // fetches from the network and only falls back to cache offline.
+            urlPattern: /^https?:\/\/.*\/api\//,
+            handler: "NetworkFirst",
             options: {
-              cacheName: "animals-cache",
-              expiration: { maxEntries: 200, maxAgeSeconds: 86400 },
-            },
-          },
-          {
-            urlPattern: /^https?:\/\/.*\/api\/v1\/socios/,
-            handler: "StaleWhileRevalidate",
-            options: {
-              cacheName: "socios-cache",
-              expiration: { maxEntries: 100, maxAgeSeconds: 3600 },
+              cacheName: "api-cache",
+              networkTimeoutSeconds: 10,
+              expiration: { maxEntries: 500, maxAgeSeconds: 300 },
             },
           },
           {

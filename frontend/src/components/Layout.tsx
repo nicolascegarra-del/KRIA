@@ -259,9 +259,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     navigate("/superadmin");
   };
 
-  const granjasEnabled = branding?.granjas_enabled !== false;
-  const importacionesEnabled = branding?.importaciones_enabled !== false;
-  const auditoriasEnabled = branding?.auditorias_enabled !== false;
+  // Default to false when branding hasn't loaded yet — prevents a flash of
+  // modules that this association has disabled on hard refresh (F5).
+  const granjasEnabled       = branding ? branding.granjas_enabled       !== false : false;
+  const importacionesEnabled = branding ? branding.importaciones_enabled !== false : false;
+  const auditoriasEnabled    = branding ? branding.auditorias_enabled    !== false : false;
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (isSuperadmin && !impersonatingTenant) {

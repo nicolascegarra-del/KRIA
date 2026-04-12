@@ -26,10 +26,18 @@ function readPersistedBranding(): TenantBranding | null {
   }
 }
 
+// Apply branding synchronously on module load if already persisted — prevents
+// the 1-frame color/module flash before React's first useEffect runs.
+const _persistedBranding = readPersistedBranding();
+if (_persistedBranding) {
+  document.documentElement.style.setProperty("--color-primary", _persistedBranding.primary_color);
+  document.documentElement.style.setProperty("--color-secondary", _persistedBranding.secondary_color);
+}
+
 export const useTenantStore = create<TenantState>()(
   persist(
     (set) => ({
-      branding: readPersistedBranding(),
+      branding: _persistedBranding,
       slug: null,
       setBranding: (branding) => set({ branding, slug: branding.slug }),
       clearBranding: () => set({ branding: null }),
