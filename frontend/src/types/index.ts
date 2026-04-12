@@ -54,6 +54,7 @@ export interface Socio {
   email: string;
   full_name: string;
   has_portal_access: boolean;
+  portal_access_status: "active" | "pending" | "none";
   cuota_anual_pagada?: number | null;
 }
 

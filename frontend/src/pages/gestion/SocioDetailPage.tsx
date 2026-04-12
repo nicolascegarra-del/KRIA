@@ -20,6 +20,7 @@ import {
   RefreshCw,
   CheckCircle,
   XCircle,
+  Clock,
 } from "lucide-react";
 import type { Animal, AnimalEstado } from "../../types";
 import clsx from "clsx";
@@ -145,9 +146,13 @@ export default function SocioDetailPage() {
           >
             {socio.estado}
           </span>
-          {socio.has_portal_access ? (
+          {socio.portal_access_status === "active" ? (
             <span className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">
               <CheckCircle size={12} /> Acceso al portal
+            </span>
+          ) : socio.portal_access_status === "pending" ? (
+            <span className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+              <Clock size={12} /> Pendiente de activar
             </span>
           ) : (
             <span className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-red-50 text-red-600 border border-red-200">
