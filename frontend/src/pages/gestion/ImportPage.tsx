@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useRef, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { importsApi } from "../../api/imports";
 import {
   Upload,
@@ -38,6 +38,7 @@ function ImportFlow({ tipo, onBack }: ImportFlowProps) {
   const [confirming, setConfirming] = useState(false);
 
   const isSocios = tipo === "socios";
+  const qc = useQueryClient();
 
   const { data: job } = useQuery<ImportJob>({
     queryKey: ["import-job", jobId],
@@ -95,6 +96,14 @@ function ImportFlow({ tipo, onBack }: ImportFlowProps) {
       setConfirming(false);
     }
   };
+
+  // When an animal import completes, invalidate the animals cache so Validaciones
+  // and MisAnimales show the newly imported records without requiring a page refresh.
+  useEffect(() => {
+    if (!isSocios && job?.status === "DONE") {
+      qc.invalidateQueries({ queryKey: ["animals"] });
+    }
+  }, [job?.status, isSocios, qc]);
 
   const handleReset = () => {
     setPhase("upload");
@@ -322,7 +331,11 @@ function ImportFlow({ tipo, onBack }: ImportFlowProps) {
           </div>
 
           {job.status === "DONE" && job.result_summary && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className={`border rounded-lg p-4 ${
+              (job.result_summary.created ?? 0) === 0 && (job.result_summary.errors?.length ?? 0) > 0
+                ? "bg-amber-50 border-amber-200"
+                : "bg-green-50 border-green-200"
+            }`}>
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div>
                   <div className="text-2xl font-bold text-gray-900">{job.result_summary.total_rows ?? 0}</div>

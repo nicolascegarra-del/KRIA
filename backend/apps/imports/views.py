@@ -381,6 +381,9 @@ class AnimalImportValidateView(APIView):
 
         headers = [str(cell.value or "").strip().lower() for cell in ws[1]]
 
+        tenant = request.tenant
+        from apps.accounts.models import Socio as SocioModel
+
         rows_preview = []
         advertencias = []
 
@@ -412,6 +415,14 @@ class AnimalImportValidateView(APIView):
                 avisos.append(f"sexo inválido ('{sexo}'), debe ser M o H")
             if not socio_dni and not socio_num:
                 avisos.append("se necesita socio_dni o socio_numero_socio")
+            else:
+                # Validate socio exists in DB to prevent silent failures during actual import
+                if socio_dni:
+                    if not SocioModel.all_objects.filter(tenant=tenant, dni_nif=socio_dni).exists():
+                        avisos.append(f"socio con DNI '{socio_dni}' no encontrado en el sistema")
+                else:
+                    if not SocioModel.all_objects.filter(tenant=tenant, numero_socio=socio_num).exists():
+                        avisos.append(f"socio con número '{socio_num}' no encontrado en el sistema")
 
             rows_preview.append({
                 "fila": idx + 2,
@@ -424,7 +435,6 @@ class AnimalImportValidateView(APIView):
             if avisos:
                 advertencias.append({"fila": idx + 2, "errores": avisos})
 
-        tenant = request.tenant
         temp_key = f"imports/{tenant.slug}/animales/validate/{uuid.uuid4()}/{file.name}"
         try:
             upload_bytes(temp_key, file_bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
