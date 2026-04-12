@@ -1,7 +1,8 @@
 from django.urls import path
 from .views import (
-    SocioDarBajaView, SocioDetailView, SocioListCreateView, SocioMeView, SocioReactivarView,
-    SocioSolicitarCambioView, SolicitudesCambioListView, SolicitudCambioResolverView,
+    SocioDarBajaView, SocioDetailView, SocioEnviarAccesoView, SocioListCreateView, SocioMeView,
+    SocioReactivarView, SocioSolicitarCambioView, SolicitudesCambioListView,
+    SolicitudCambioResolverView,
 )
 from apps.imports.views import SocioImportView
 
@@ -14,5 +15,6 @@ urlpatterns = [
     path("<uuid:pk>/", SocioDetailView.as_view(), name="socios-detail"),
     path("<uuid:pk>/dar-baja/", SocioDarBajaView.as_view(), name="socios-dar-baja"),
     path("<uuid:pk>/reactivar/", SocioReactivarView.as_view(), name="socios-reactivar"),
+    path("<uuid:pk>/enviar-acceso/", SocioEnviarAccesoView.as_view(), name="socios-enviar-acceso"),
     path("import/", SocioImportView.as_view(), name="socios-import"),
 ]

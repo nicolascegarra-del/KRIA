@@ -349,6 +349,86 @@ class SocioReactivarView(APIView):
         return Response({"detail": "Socio reactivado correctamente."})
 
 
+# ── Enviar acceso al socio ────────────────────────────────────────────────────
+
+class SocioEnviarAccesoView(APIView):
+    """POST /api/v1/socios/:pk/enviar-acceso/
+    Gestión envía al socio un correo con la URL de la plataforma, su usuario
+    y un enlace para establecer/restablecer su contraseña (válido 24 h).
+    """
+    permission_classes = [IsGestion]
+
+    def post(self, request, pk):
+        from django.template.loader import render_to_string
+
+        try:
+            socio = Socio.objects.select_related("user", "tenant").get(pk=pk)
+        except Socio.DoesNotExist:
+            return Response({"detail": "Not found."}, status=404)
+
+        if not socio.user_id or not socio.user.email:
+            return Response(
+                {"detail": "El socio no tiene usuario ni correo electrónico asociado."},
+                status=400,
+            )
+
+        user = socio.user
+        tenant = socio.tenant
+
+        # Generate password-reset token (reuses existing mechanism)
+        token = uuid.uuid4()
+        user.reset_token = token
+        user.reset_token_created = timezone.now()
+        user.save(update_fields=["reset_token", "reset_token_created"])
+
+        # Construct the tenant-specific platform URL
+        suffix = getattr(settings, "TENANT_DOMAIN_SUFFIX", "")
+        if getattr(tenant, "custom_domain", None):
+            platform_url = f"https://{tenant.custom_domain}"
+        elif suffix and not settings.FRONTEND_URL.startswith("http://localhost"):
+            platform_url = f"https://{tenant.slug}{suffix}"
+        else:
+            platform_url = settings.FRONTEND_URL
+
+        reset_url = f"{settings.FRONTEND_URL}/auth/reset-password?token={token}"
+        tenant_name = tenant.name if tenant else "KRIA"
+
+        html_body = render_to_string("email/enviar_acceso.html", {
+            "tenant_name": tenant_name,
+            "socio_nombre": socio.nombre_razon_social,
+            "platform_url": platform_url,
+            "username": user.email,
+            "reset_url": reset_url,
+        })
+
+        plain_body = (
+            f"Hola {socio.nombre_razon_social},\n\n"
+            f"Aquí tienes tus datos de acceso a {tenant_name} en KRIA:\n\n"
+            f"  Enlace de acceso: {platform_url}\n"
+            f"  Usuario: {user.email}\n"
+            f"  Establecer contraseña: {reset_url}\n\n"
+            f"El enlace para crear tu contraseña expira en 24 horas.\n\n"
+            f"Para un acceso rápido desde el móvil puedes añadir la aplicación\n"
+            f"a tu pantalla de inicio:\n"
+            f"  • iPhone/iPad: abre el enlace en Safari → botón Compartir → "
+            f"'Añadir a pantalla de inicio'\n"
+            f"  • Android: abre el enlace en Chrome → menú (⋮) → "
+            f"'Añadir a pantalla de inicio'\n"
+        )
+
+        send_platform_mail(
+            subject=f"Tu acceso a {tenant_name} — KRIA",
+            body=plain_body,
+            html_body=html_body,
+            recipient_list=[user.email],
+            tipo="ENVIO_ACCESO",
+            tenant=tenant,
+            fail_silently=False,
+        )
+
+        return Response({"detail": "Correo de acceso enviado correctamente."})
+
+
 # ── Notificaciones ────────────────────────────────────────────────────────────
 
 class NotificacionListView(APIView):

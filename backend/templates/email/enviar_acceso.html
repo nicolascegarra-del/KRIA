@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"></head>
+<body style="font-family: Arial, Helvetica Neue, sans-serif; max-width: 600px; margin: 0 auto; color: #1a1a1a;">
+  <div style="background: #051937; padding: 28px 24px; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 1px;">{{ tenant_name }}</h1>
+    <p style="color: rgba(255,255,255,0.55); margin: 4px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">KRIA by Klyp</p>
+  </div>
+  <div style="padding: 36px 32px;">
+    <h2 style="margin-top: 0; color: #051937; font-size: 18px;">¡Bienvenido/a a {{ tenant_name }}!</h2>
+    <p style="color: #374151;">
+      Te damos acceso a la plataforma de gestión del libro genealógico de {{ tenant_name }}.
+      A continuación encontrarás tus datos de acceso:
+    </p>
+
+    <div style="background: #F3F4F6; border-left: 4px solid #051937; padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 24px 0;">
+      <p style="margin: 0 0 8px; font-size: 13px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px;">Plataforma</p>
+      <a href="{{ platform_url }}" style="color: #051937; font-weight: bold; word-break: break-all;">{{ platform_url }}</a>
+      <p style="margin: 16px 0 8px; font-size: 13px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px;">Usuario</p>
+      <p style="margin: 0; font-weight: bold; font-size: 16px;">{{ username }}</p>
+    </div>
+
+    <p style="color: #374151;">Para establecer tu contraseña y acceder por primera vez, haz clic en el botón:</p>
+    <p style="text-align: center; margin: 28px 0;">
+      <a href="{{ reset_url }}"
+         style="background: #051937; color: white; padding: 14px 36px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block;">
+        Establecer mi contraseña
+      </a>
+    </p>
+    <p style="color: #6B7280; font-size: 13px; line-height: 1.6;">
+      Este enlace expira en 24 horas.
+    </p>
+
+    <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 32px 0;">
+
+    <h3 style="color: #051937; font-size: 16px; margin-bottom: 12px;">📱 Acceso rápido desde el móvil</h3>
+    <p style="color: #374151; font-size: 14px; line-height: 1.6;">
+      Puedes añadir un acceso directo a la plataforma en tu pantalla de inicio para abrirla como si fuera una aplicación:
+    </p>
+
+    <div style="background: #F0F4FF; border-radius: 8px; padding: 20px; margin: 16px 0;">
+      <p style="margin: 0 0 10px; font-weight: bold; color: #1D4ED8; font-size: 14px;">🍎 iPhone / iPad (Safari)</p>
+      <ol style="margin: 0; padding-left: 20px; color: #374151; font-size: 13px; line-height: 1.8;">
+        <li>Abre <strong>Safari</strong> y accede a <a href="{{ platform_url }}" style="color: #1D4ED8;">{{ platform_url }}</a></li>
+        <li>Pulsa el botón <strong>Compartir</strong> (el cuadrado con una flecha hacia arriba ↑)</li>
+        <li>Desplázate y selecciona <strong>"Añadir a pantalla de inicio"</strong></li>
+        <li>Pulsa <strong>"Añadir"</strong> — aparecerá el icono en tu pantalla de inicio</li>
+      </ol>
+    </div>
+
+    <div style="background: #F0FFF4; border-radius: 8px; padding: 20px; margin: 16px 0;">
+      <p style="margin: 0 0 10px; font-weight: bold; color: #166534; font-size: 14px;">🤖 Android (Chrome)</p>
+      <ol style="margin: 0; padding-left: 20px; color: #374151; font-size: 13px; line-height: 1.8;">
+        <li>Abre <strong>Chrome</strong> y accede a <a href="{{ platform_url }}" style="color: #166534;">{{ platform_url }}</a></li>
+        <li>Pulsa el menú <strong>⋮</strong> (tres puntos, arriba a la derecha)</li>
+        <li>Selecciona <strong>"Añadir a pantalla de inicio"</strong> o <strong>"Instalar aplicación"</strong></li>
+        <li>Confirma pulsando <strong>"Añadir"</strong> o <strong>"Instalar"</strong></li>
+      </ol>
+    </div>
+
+    <p style="color: #6B7280; font-size: 13px; line-height: 1.6; margin-top: 24px;">
+      Si tienes algún problema para acceder, contacta con tu asociación.
+    </p>
+  </div>
+  <div style="background: #E8EDF5; padding: 16px; text-align: center; font-size: 12px; color: #6B7280;">
+    KRIA by Klyp — Plataforma de Gestión de Libros Genealógicos Avícolas
+  </div>
+</body>
+</html>

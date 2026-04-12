@@ -10,7 +10,7 @@ import { useAutoCloseError } from "../../hooks/useAutoCloseError";
 import {
   Search, UserX, UserCheck, Loader2, Users, Plus, Pencil, ExternalLink,
   ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown,
-  Settings2, GripVertical, X,
+  Settings2, GripVertical, X, Mail,
 } from "lucide-react";
 import type { Socio } from "../../types";
 
@@ -382,6 +382,7 @@ export default function SociosPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [colState, setColState] = useState<ColState[]>(loadColState);
   const [showColPanel, setShowColPanel] = useState(false);
+  const [sendingAccessId, setSendingAccessId] = useState<string | null>(null);
 
   // Persist column config
   useEffect(() => {
@@ -410,6 +411,12 @@ export default function SociosPage() {
   const reactivarMutation = useMutation({
     mutationFn: (id: string) => sociosApi.reactivar(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["socios"] }); qc.invalidateQueries({ queryKey: ["socios-all"] }); qc.invalidateQueries({ queryKey: ["animals"] }); qc.invalidateQueries({ queryKey: ["dashboard-stats"] }); setSuccessMsg("Socio reactivado correctamente."); },
+  });
+
+  const enviarAccesoMutation = useMutation({
+    mutationFn: (id: string) => { setSendingAccessId(id); return sociosApi.enviarAcceso(id); },
+    onSuccess: () => { setSendingAccessId(null); setSuccessMsg("Correo de acceso enviado correctamente."); },
+    onError: () => { setSendingAccessId(null); setSuccessMsg("No se pudo enviar el correo. Comprueba que el socio tiene email."); },
   });
 
   const socios = data?.results ?? [];
@@ -544,6 +551,16 @@ export default function SociosPage() {
                         title="Editar"
                       >
                         <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => enviarAccesoMutation.mutate(socio.id)}
+                        disabled={sendingAccessId === socio.id}
+                        className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 disabled:opacity-40 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                        title="Enviar acceso por email"
+                      >
+                        {sendingAccessId === socio.id
+                          ? <Loader2 size={14} className="animate-spin" />
+                          : <Mail size={14} />}
                       </button>
                       {socio.estado === "ALTA" ? (
                         <button

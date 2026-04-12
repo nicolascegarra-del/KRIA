@@ -36,6 +36,10 @@ export const sociosApi = {
     await apiClient.post(`/socios/${id}/reactivar/`);
   },
 
+  enviarAcceso: async (id: string): Promise<void> => {
+    await apiClient.post(`/socios/${id}/enviar-acceso/`);
+  },
+
   import: async (file: File): Promise<{ job_id: string; status: string }> => {
     const form = new FormData();
     form.append("file", file);
