@@ -12,6 +12,24 @@
     <title>KRIA</title>
   </head>
   <body>
+    <!--
+      Apply tenant branding CSS properties from localStorage before React renders.
+      This prevents a 1-frame flash of default colors/modules on hard refresh (F5).
+    -->
+    <script>
+      try {
+        var raw = localStorage.getItem("kria-tenant");
+        if (raw) {
+          var branding = JSON.parse(raw)?.state?.branding;
+          if (branding) {
+            var r = document.documentElement.style;
+            if (branding.primary_color)   r.setProperty("--color-primary",   branding.primary_color);
+            if (branding.secondary_color) r.setProperty("--color-secondary", branding.secondary_color);
+            if (branding.name)            document.title = branding.name + " \u2014 KRIA";
+          }
+        }
+      } catch(e) {}
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

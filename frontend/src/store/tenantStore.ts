@@ -10,10 +10,26 @@ interface TenantState {
   setSlug: (slug: string) => void;
 }
 
+/**
+ * Read persisted branding synchronously from localStorage so the store's
+ * initial state is already populated on the very first React render.
+ * This eliminates the 1-frame flash of wrong modules/colors that happens
+ * when Zustand's persist middleware rehydrates asynchronously in v5.
+ */
+function readPersistedBranding(): TenantBranding | null {
+  try {
+    const raw = localStorage.getItem("kria-tenant");
+    if (!raw) return null;
+    return (JSON.parse(raw) as { state?: { branding?: TenantBranding } })?.state?.branding ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export const useTenantStore = create<TenantState>()(
   persist(
     (set) => ({
-      branding: null,
+      branding: readPersistedBranding(),
       slug: null,
       setBranding: (branding) => set({ branding, slug: branding.slug }),
       clearBranding: () => set({ branding: null }),
