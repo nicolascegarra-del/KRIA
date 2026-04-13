@@ -81,15 +81,18 @@ export default function AnimalFormPage() {
   // Solo se puede proponer como candidato si el animal está APROBADO (y no es gestión)
   const canProponerCandidato = isGestionCreate || !isEdit || animal?.estado === "APROBADO";
 
-  // Campos protegidos: bloqueados una vez aprobado el animal.
+  // Campos protegidos: bloqueados una vez aprobado el animal si ya tenían valor.
+  // Añadir datos en un campo vacío siempre está permitido.
   // Para socios: siempre. Para gestión: solo si allow_animal_modifications=false.
   const allowModifications = branding?.allow_animal_modifications !== false;
   const isValidated = isEdit && !!animal &&
     ["APROBADO", "EVALUADO", "SOCIO_EN_BAJA", "BAJA"].includes(animal.estado);
   const gestionCanEdit = isGestionCreate && allowModifications;
   const isProtectedLocked = isValidated && !gestionCanEdit;
-  // Ganadería de nacimiento: además se bloquea si ya tiene valor
-  const isGanaderiaLocked = isProtectedLocked && !!(animal?.ganaderia_nacimiento);
+  // Helpers: bloquea un campo solo si isProtectedLocked Y el campo ya tiene valor
+  const lockedIfSet = (value: unknown) => isProtectedLocked && !!value;
+  const padreHasValue = !!(animal?.padre_anilla);
+  const madreHasValue = !!(animal?.madre_anilla || animal?.madre_lote || animal?.madre_lote_externo);
 
   const { data: granjasData } = useQuery({
     queryKey: ["granjas"],
@@ -308,18 +311,6 @@ export default function AnimalFormPage() {
         </div>
       )}
 
-      {/* Protected fields banner (validated animal) */}
-      {isProtectedLocked && !effectiveReadonly && (
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-1">
-          <div className="flex items-center gap-2 text-gray-600 font-semibold text-sm">
-            <Info size={16} />
-            Datos de registro bloqueados
-          </div>
-          <p className="text-sm text-gray-500">
-            Nº de anilla, fechas, sexo, ganadería de nacimiento y genealogía no pueden modificarse una vez aprobado el animal.
-          </p>
-        </div>
-      )}
 
       {/* Rejection reason banner */}
       {isRechazado && (
@@ -350,7 +341,7 @@ export default function AnimalFormPage() {
                 type="text"
                 className="input-field font-mono"
                 placeholder="ES-2024-XXXX"
-                disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
+                disabled={effectiveReadonly || isPendingReview || lockedIfSet(animal?.numero_anilla)}
                 {...register("numero_anilla", { required: true })}
               />
             </div>
@@ -362,7 +353,7 @@ export default function AnimalFormPage() {
                 type="date"
                 className="input-field"
                 max={new Date().toISOString().slice(0, 10)}
-                disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
+                disabled={effectiveReadonly || isPendingReview || lockedIfSet(animal?.fecha_nacimiento)}
                 {...register("fecha_nacimiento", { required: true })}
               />
             </div>
@@ -372,7 +363,7 @@ export default function AnimalFormPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Sexo *</label>
-              <select className="input-field" disabled={effectiveReadonly || isPendingReview || isProtectedLocked} {...register("sexo", { required: true })}>
+              <select className="input-field" disabled={effectiveReadonly || isPendingReview || lockedIfSet(animal?.sexo)} {...register("sexo", { required: true })}>
                 <option value="">Seleccionar...</option>
                 <option value="M">♂ Macho</option>
                 <option value="H">♀ Hembra</option>
@@ -397,7 +388,7 @@ export default function AnimalFormPage() {
                 <input
                   type="date"
                   className="input-field"
-                  disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
+                  disabled={effectiveReadonly || isPendingReview || lockedIfSet(animal?.fecha_incubacion)}
                   {...register("fecha_incubacion")}
                 />
               </div>
@@ -407,7 +398,7 @@ export default function AnimalFormPage() {
                   type="text"
                   className="input-field"
                   placeholder="Nombre de la ganadería de origen"
-                  disabled={effectiveReadonly || isPendingReview || isGanaderiaLocked}
+                  disabled={effectiveReadonly || isPendingReview || lockedIfSet(animal?.ganaderia_nacimiento)}
                   {...register("ganaderia_nacimiento")}
                 />
               </div>
@@ -424,7 +415,7 @@ export default function AnimalFormPage() {
                   type="text"
                   className="input-field font-mono"
                   placeholder="Nº anilla del padre"
-                  disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
+                  disabled={effectiveReadonly || isPendingReview || lockedIfSet(padreHasValue)}
                   {...register("padre_anilla")}
                 />
               </div>
@@ -439,7 +430,7 @@ export default function AnimalFormPage() {
                         checked={madreMode === "individual"}
                         onChange={() => { setMadreMode("individual"); setMadreLoteId(""); setMadreLoteExterno(""); }}
                         className="accent-blue-700"
-                        disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
+                        disabled={effectiveReadonly || isPendingReview || lockedIfSet(madreHasValue)}
                       />
                       Individual
                     </label>
@@ -450,7 +441,7 @@ export default function AnimalFormPage() {
                         checked={madreMode === "lote"}
                         onChange={() => { setMadreMode("lote"); setMadreLoteExterno(""); }}
                         className="accent-blue-700"
-                        disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
+                        disabled={effectiveReadonly || isPendingReview || lockedIfSet(madreHasValue)}
                       />
                       Lote de Cría
                     </label>
@@ -461,7 +452,7 @@ export default function AnimalFormPage() {
                         checked={madreMode === "externo"}
                         onChange={() => { setMadreMode("externo"); setMadreLoteId(""); }}
                         className="accent-blue-700"
-                        disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
+                        disabled={effectiveReadonly || isPendingReview || lockedIfSet(madreHasValue)}
                       />
                       Lote de Cría de otro Criador
                     </label>
@@ -473,14 +464,14 @@ export default function AnimalFormPage() {
                     type="text"
                     className="input-field font-mono"
                     placeholder="Nº anilla de la madre"
-                    disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
+                    disabled={effectiveReadonly || isPendingReview || lockedIfSet(madreHasValue)}
                     {...register("madre_anilla")}
                   />
                 ) : madreMode === "lote" ? (
                   <select
                     className="input-field"
                     value={madreLoteId}
-                    disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
+                    disabled={effectiveReadonly || isPendingReview || lockedIfSet(madreHasValue)}
                     onChange={(e) => setMadreLoteId(e.target.value)}
                   >
                     <option value="">Sin lote asignado</option>
@@ -498,7 +489,7 @@ export default function AnimalFormPage() {
                     className="input-field"
                     placeholder="Descripción del lote externo (ej: Ganadería García 2023)"
                     value={madreLoteExterno}
-                    disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
+                    disabled={effectiveReadonly || isPendingReview || lockedIfSet(madreHasValue)}
                     onChange={(e) => setMadreLoteExterno(e.target.value)}
                   />
                 )}
@@ -665,7 +656,7 @@ export default function AnimalFormPage() {
                 className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1"
               >
                 <Plus size={14} />
-                Añadir pesaje
+                Añadir Pesaje
               </button>
             )}
           </div>

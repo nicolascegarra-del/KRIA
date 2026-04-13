@@ -284,7 +284,8 @@ class AnimalDetailView(generics.RetrieveUpdateAPIView):
                     current = current.pk
                 if hasattr(new, "pk"):
                     new = new.pk
-                if current != new:
+                # Only block if the field already had a value — adding to an empty field is allowed
+                if current and current != new:
                     changed.append(field)
             # ganaderia_nacimiento: locked only when already set
             if (
