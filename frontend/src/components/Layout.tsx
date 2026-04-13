@@ -87,7 +87,6 @@ const SOCIO_BOTTOM_NAV_BASE = [
   { to: "/mis-lotes",      label: "Lotes",      icon: (size: number) => <Layers size={size} />,         requiresGranjas: false, requiresAuditorias: false },
   { to: "/mis-anillas",    label: "Anillas",    icon: (size: number) => <Tag size={size} />,            requiresGranjas: false, requiresAuditorias: false },
   { to: "/mis-auditorias", label: "Auditorías", icon: (size: number) => <ClipboardCheck size={size} />, requiresGranjas: false, requiresAuditorias: true  },
-  { to: "/perfil",         label: "Perfil",     icon: (size: number) => <User size={size} />,           requiresGranjas: false, requiresAuditorias: false },
 ];
 
 function timeAgo(iso: string): string {
