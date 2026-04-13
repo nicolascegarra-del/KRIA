@@ -230,7 +230,7 @@ class SocioListCreateView(generics.ListCreateAPIView):
         cuota = self.request.query_params.get("cuota", "")
         if cuota:
             try:
-                qs = qs.filter(cuota_anual_pagada=int(cuota))
+                qs = qs.filter(cuota_anual_pagada__gte=int(cuota))
             except ValueError:
                 pass
 

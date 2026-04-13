@@ -166,7 +166,7 @@ class DashboardTareasPendientesView(APIView):
         socios_baja = socios_qs.filter(estado=Socio.Estado.BAJA).count()
 
         cuota_corriente = socios_qs.filter(
-            estado=Socio.Estado.ALTA, cuota_anual_pagada=year_now
+            estado=Socio.Estado.ALTA, cuota_anual_pagada__gte=year_now
         ).count()
 
         # Portal access counts (socios en alta únicamente)
@@ -183,8 +183,9 @@ class DashboardTareasPendientesView(APIView):
 
         # Socios en alta sin cuota del año en curso (máx. 10 para el widget)
         socios_sin_cuota = list(
-            socios_alta_qs.exclude(cuota_anual_pagada=year_now)
-            .order_by("numero_socio")
+            socios_alta_qs.filter(
+                cuota_anual_pagada__lt=year_now
+            ).order_by("numero_socio")
             .values("id", "nombre_razon_social", "numero_socio")[:10]
         )
 
