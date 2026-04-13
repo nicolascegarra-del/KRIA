@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { Animal, PaginatedResponse } from "../types";
+import type { Animal, AnimalEstado, PaginatedResponse } from "../types";
 
 export interface AnimalFilters {
   estado?: string;
@@ -102,7 +102,7 @@ export const animalsApi = {
       map_id: string | null;
       socio_real: string | null;
       socio_nombre: string | null;
-      animals: { id: string; numero_anilla: string; estado: string; socio_id: string; socio_nombre: string }[];
+      animals: { id: string; numero_anilla: string; estado: AnimalEstado; socio_id: string; socio_nombre: string }[];
     }[];
   },
 
