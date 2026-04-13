@@ -736,7 +736,7 @@ class GanaderiasNacimientoView(APIView):
 
         result = []
         for row in rows:
-            nombre = row["ganaderia_nombre"]
+            nombre = row["ganaderia_nacimiento"]
             mapping = maps.get(nombre)
             result.append({
                 "ganaderia_nombre": nombre,
