@@ -129,7 +129,7 @@ export default function AnimalFormPage() {
         sexo: animal.sexo,
         variedad: (animal.variedad as any) === "OTRA" ? "SIN_DEFINIR" : animal.variedad,
         fecha_incubacion: animal.fecha_incubacion ?? "",
-        ganaderia_nacimiento: animal.ganaderia_nacimiento ?? "",
+        ganaderia_nacimiento: animal.ganaderia_nacimiento_display || animal.ganaderia_nacimiento || "",
         padre_anilla: animal.padre_anilla ?? "",
         madre_anilla: animal.madre_anilla ?? "",
 
