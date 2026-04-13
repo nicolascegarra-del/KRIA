@@ -226,6 +226,17 @@ export default function ValidacionesPage() {
     },
   });
 
+  const ganaderiaAceptarMutation = useMutation({
+    mutationFn: async (animalIds: string[]) => {
+      await Promise.all(animalIds.map((id) => animalsApi.approve(id)));
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ganaderias-nacimiento"] });
+      qc.invalidateQueries({ queryKey: ["animals"] });
+      setSuccessMsg("Animales aprobados correctamente.");
+    },
+  });
+
   // ── Lotes externos ────────────────────────────────────────────────────────
   const { data: lotesExternosData, isLoading: loadingLotesExternos } = useQuery({
     queryKey: ["lotes-externos"],
@@ -1084,6 +1095,21 @@ export default function ValidacionesPage() {
                         </button>
                       </div>
                     ))}
+                  </div>
+                )}
+                {/* Botón Aceptar: solo disponible cuando hay redirección asignada */}
+                {g.socio_real && g.animals.length > 0 && (
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => ganaderiaAceptarMutation.mutate(g.animals.map((a) => a.id))}
+                      disabled={ganaderiaAceptarMutation.isPending}
+                      className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5"
+                    >
+                      {ganaderiaAceptarMutation.isPending
+                        ? <Loader2 size={13} className="animate-spin" />
+                        : <Check size={13} />}
+                      Aceptar
+                    </button>
                   </div>
                 )}
               </div>

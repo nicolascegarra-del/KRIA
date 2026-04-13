@@ -35,4 +35,24 @@ def revert_state_on_socio_edit(sender, instance, **kwargs):
         return
 
     if old.estado in LOCKED_STATES:
+        # Si el único campo que cambió es ganaderia_nacimiento (estaba vacío),
+        # no requiere revisión: se gestiona desde el panel de Ganaderías.
+        if _only_ganaderia_added(old, instance):
+            return
         instance.estado = Animal.Estado.MODIFICADO
+
+
+def _only_ganaderia_added(old: Animal, new: Animal) -> bool:
+    """Devuelve True si el único cambio respecto al animal guardado es
+    que ganaderia_nacimiento pasó de vacío a tener un valor."""
+    if old.ganaderia_nacimiento:
+        return False  # ya tenía valor → es modificación real
+    if not new.ganaderia_nacimiento:
+        return False  # no se añadió nada
+    SIGNIFICANT = [
+        "numero_anilla", "fecha_nacimiento", "sexo", "variedad",
+        "fecha_incubacion", "padre_id", "madre_animal_id",
+        "madre_lote_id", "madre_lote_externo", "granja_id",
+        "candidato_reproductor",
+    ]
+    return all(getattr(old, f) == getattr(new, f) for f in SIGNIFICANT)
