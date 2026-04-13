@@ -38,6 +38,10 @@ class Tenant(models.Model):
     granjas_enabled = models.BooleanField(default=True, help_text="Habilita granjas múltiples para socios.")
     importaciones_enabled = models.BooleanField(default=True, help_text="Habilita el módulo de importaciones masivas.")
     auditorias_enabled = models.BooleanField(default=True, help_text="Habilita el módulo de auditorías.")
+    allow_animal_modifications = models.BooleanField(
+        default=True,
+        help_text="Si está desactivado, ni socios ni gestores pueden modificar campos principales de animales ya aprobados.",
+    )
 
     # ── Configuración de anillas ─────────────────────────────────────────────
     anilla_sizes = models.JSONField(

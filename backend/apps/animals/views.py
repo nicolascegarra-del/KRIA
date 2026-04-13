@@ -245,11 +245,60 @@ class AnimalDetailView(generics.RetrieveUpdateAPIView):
 
     def perform_update(self, serializer):
         from rest_framework.exceptions import PermissionDenied
-        if not get_effective_is_gestion(self.request):
+        is_gestion = get_effective_is_gestion(self.request)
+
+        if not is_gestion:
             if serializer.instance.estado == Animal.Estado.RECHAZADO:
                 raise PermissionDenied("No puedes editar un animal rechazado. Contacta con la gestión.")
             if serializer.instance.estado in (Animal.Estado.REGISTRADO, Animal.Estado.MODIFICADO):
                 raise PermissionDenied("El animal está pendiente de revisión. Solo puedes añadir pesajes y fotos.")
+
+        # Enforce immutable fields for validated animals.
+        # Applies to socios always, and to gestion when allow_animal_modifications=False.
+        tenant = self.request.tenant
+        allow_modifications = getattr(tenant, "allow_animal_modifications", True)
+        VALIDATED_STATES = {
+            Animal.Estado.APROBADO, Animal.Estado.EVALUADO,
+            Animal.Estado.SOCIO_EN_BAJA, Animal.Estado.BAJA,
+        }
+        should_protect = (
+            serializer.instance.estado in VALIDATED_STATES
+            and (not is_gestion or not allow_modifications)
+        )
+        if should_protect:
+            PROTECTED = {
+                "numero_anilla", "fecha_nacimiento", "sexo", "fecha_incubacion",
+                "padre", "padre_anilla", "madre_animal", "madre_anilla",
+                "madre_lote", "madre_lote_externo",
+            }
+            instance = serializer.instance
+            data = serializer.validated_data
+            changed = []
+            for field in PROTECTED:
+                if field not in data:
+                    continue
+                current = getattr(instance, field, None)
+                new = data[field]
+                # Compare FK objects by pk
+                if hasattr(current, "pk"):
+                    current = current.pk
+                if hasattr(new, "pk"):
+                    new = new.pk
+                if current != new:
+                    changed.append(field)
+            # ganaderia_nacimiento: locked only when already set
+            if (
+                "ganaderia_nacimiento" in data
+                and instance.ganaderia_nacimiento
+                and data["ganaderia_nacimiento"] != instance.ganaderia_nacimiento
+            ):
+                changed.append("ganaderia_nacimiento")
+            if changed:
+                raise PermissionDenied(
+                    "No tienes permiso para modificar estos campos en un animal ya aprobado: "
+                    + ", ".join(changed) + "."
+                )
+
         serializer.instance._editing_user = self.request.user
         animal = serializer.save()
         _update_alerta_anilla(animal)

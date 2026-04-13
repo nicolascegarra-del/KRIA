@@ -1009,8 +1009,13 @@ export default function ValidacionesPage() {
                 <div className="flex items-start gap-3 flex-wrap">
                   <div className="flex-1 min-w-0">
                     <span className="text-sm font-semibold text-gray-900 block">
-                      {g.ganaderia_nombre}
+                      {g.socio_nombre ?? g.ganaderia_nombre}
                     </span>
+                    {g.socio_nombre && (
+                      <span className="text-xs text-gray-400 block">
+                        escrito como: {g.ganaderia_nombre}
+                      </span>
+                    )}
                     <span className="text-xs text-gray-400">
                       {g.animal_count} animal{g.animal_count !== 1 ? "es" : ""} pendiente{g.animal_count !== 1 ? "s" : ""}
                     </span>

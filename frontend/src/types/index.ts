@@ -14,6 +14,7 @@ export interface TenantBranding {
   granjas_enabled: boolean;
   importaciones_enabled: boolean;
   auditorias_enabled: boolean;
+  allow_animal_modifications: boolean;
   anilla_sizes: AnillaSize[];
 }
 
@@ -354,6 +355,7 @@ export interface Tenant {
   granjas_enabled?: boolean;
   importaciones_enabled?: boolean;
   auditorias_enabled?: boolean;
+  allow_animal_modifications?: boolean;
   anilla_sizes?: AnillaSize[];
   email_notificaciones?: string;
   created_at?: string;

@@ -81,6 +81,16 @@ export default function AnimalFormPage() {
   // Solo se puede proponer como candidato si el animal está APROBADO (y no es gestión)
   const canProponerCandidato = isGestionCreate || !isEdit || animal?.estado === "APROBADO";
 
+  // Campos protegidos: bloqueados una vez aprobado el animal.
+  // Para socios: siempre. Para gestión: solo si allow_animal_modifications=false.
+  const allowModifications = branding?.allow_animal_modifications !== false;
+  const isValidated = isEdit && !!animal &&
+    ["APROBADO", "EVALUADO", "SOCIO_EN_BAJA", "BAJA"].includes(animal.estado);
+  const gestionCanEdit = isGestionCreate && allowModifications;
+  const isProtectedLocked = isValidated && !gestionCanEdit;
+  // Ganadería de nacimiento: además se bloquea si ya tiene valor
+  const isGanaderiaLocked = isProtectedLocked && !!(animal?.ganaderia_nacimiento);
+
   const { data: granjasData } = useQuery({
     queryKey: ["granjas"],
     queryFn: () => granjasApi.list(),
@@ -298,6 +308,19 @@ export default function AnimalFormPage() {
         </div>
       )}
 
+      {/* Protected fields banner (validated animal) */}
+      {isProtectedLocked && !effectiveReadonly && (
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-1">
+          <div className="flex items-center gap-2 text-gray-600 font-semibold text-sm">
+            <Info size={16} />
+            Datos de registro bloqueados
+          </div>
+          <p className="text-sm text-gray-500">
+            Nº de anilla, fechas, sexo, ganadería de nacimiento y genealogía no pueden modificarse una vez aprobado el animal.
+          </p>
+        </div>
+      )}
+
       {/* Rejection reason banner */}
       {isRechazado && (
         <div className="bg-red-50 border border-red-300 rounded-xl p-4 space-y-1">
@@ -327,7 +350,7 @@ export default function AnimalFormPage() {
                 type="text"
                 className="input-field font-mono"
                 placeholder="ES-2024-XXXX"
-                disabled={effectiveReadonly || isPendingReview}
+                disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
                 {...register("numero_anilla", { required: true })}
               />
             </div>
@@ -339,7 +362,7 @@ export default function AnimalFormPage() {
                 type="date"
                 className="input-field"
                 max={new Date().toISOString().slice(0, 10)}
-                disabled={effectiveReadonly || isPendingReview}
+                disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
                 {...register("fecha_nacimiento", { required: true })}
               />
             </div>
@@ -349,7 +372,7 @@ export default function AnimalFormPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Sexo *</label>
-              <select className="input-field" disabled={effectiveReadonly || isPendingReview} {...register("sexo", { required: true })}>
+              <select className="input-field" disabled={effectiveReadonly || isPendingReview || isProtectedLocked} {...register("sexo", { required: true })}>
                 <option value="">Seleccionar...</option>
                 <option value="M">♂ Macho</option>
                 <option value="H">♀ Hembra</option>
@@ -374,7 +397,7 @@ export default function AnimalFormPage() {
                 <input
                   type="date"
                   className="input-field"
-                  disabled={effectiveReadonly || isPendingReview}
+                  disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
                   {...register("fecha_incubacion")}
                 />
               </div>
@@ -384,7 +407,7 @@ export default function AnimalFormPage() {
                   type="text"
                   className="input-field"
                   placeholder="Nombre de la ganadería de origen"
-                  disabled={effectiveReadonly || isPendingReview}
+                  disabled={effectiveReadonly || isPendingReview || isGanaderiaLocked}
                   {...register("ganaderia_nacimiento")}
                 />
               </div>
@@ -401,6 +424,7 @@ export default function AnimalFormPage() {
                   type="text"
                   className="input-field font-mono"
                   placeholder="Nº anilla del padre"
+                  disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
                   {...register("padre_anilla")}
                 />
               </div>
@@ -415,7 +439,7 @@ export default function AnimalFormPage() {
                         checked={madreMode === "individual"}
                         onChange={() => { setMadreMode("individual"); setMadreLoteId(""); setMadreLoteExterno(""); }}
                         className="accent-blue-700"
-                        disabled={effectiveReadonly || isPendingReview}
+                        disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
                       />
                       Individual
                     </label>
@@ -426,7 +450,7 @@ export default function AnimalFormPage() {
                         checked={madreMode === "lote"}
                         onChange={() => { setMadreMode("lote"); setMadreLoteExterno(""); }}
                         className="accent-blue-700"
-                        disabled={effectiveReadonly || isPendingReview}
+                        disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
                       />
                       Lote de Cría
                     </label>
@@ -437,7 +461,7 @@ export default function AnimalFormPage() {
                         checked={madreMode === "externo"}
                         onChange={() => { setMadreMode("externo"); setMadreLoteId(""); }}
                         className="accent-blue-700"
-                        disabled={effectiveReadonly || isPendingReview}
+                        disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
                       />
                       Lote de Cría de otro Criador
                     </label>
@@ -449,14 +473,14 @@ export default function AnimalFormPage() {
                     type="text"
                     className="input-field font-mono"
                     placeholder="Nº anilla de la madre"
-                    disabled={effectiveReadonly || isPendingReview}
+                    disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
                     {...register("madre_anilla")}
                   />
                 ) : madreMode === "lote" ? (
                   <select
                     className="input-field"
                     value={madreLoteId}
-                    disabled={effectiveReadonly || isPendingReview}
+                    disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
                     onChange={(e) => setMadreLoteId(e.target.value)}
                   >
                     <option value="">Sin lote asignado</option>
@@ -474,7 +498,7 @@ export default function AnimalFormPage() {
                     className="input-field"
                     placeholder="Descripción del lote externo (ej: Ganadería García 2023)"
                     value={madreLoteExterno}
-                    disabled={effectiveReadonly || isPendingReview}
+                    disabled={effectiveReadonly || isPendingReview || isProtectedLocked}
                     onChange={(e) => setMadreLoteExterno(e.target.value)}
                   />
                 )}

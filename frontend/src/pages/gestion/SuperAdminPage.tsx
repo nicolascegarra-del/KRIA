@@ -51,6 +51,7 @@ interface TenantForm {
   granjas_enabled: boolean;
   importaciones_enabled: boolean;
   auditorias_enabled: boolean;
+  allow_animal_modifications: boolean;
   anilla_sizes: AnillaSize[];
   smtp_host: string; smtp_port: number; smtp_user: string; smtp_password: string;
   smtp_from_email: string; smtp_from_name: string; smtp_use_tls: boolean; smtp_use_ssl: boolean;
@@ -63,7 +64,7 @@ const TENANT_DEFAULTS: TenantForm = {
   domicilio: "", cod_postal: "", municipio: "", provincia: "",
   telefono1: "", telefono1_nombre: "", telefono1_cargo: "", telefono1_email: "",
   telefono2: "", telefono2_nombre: "", telefono2_cargo: "", telefono2_email: "",
-  granjas_enabled: true, importaciones_enabled: true, auditorias_enabled: true, anilla_sizes: [],
+  granjas_enabled: true, importaciones_enabled: true, auditorias_enabled: true, allow_animal_modifications: true, anilla_sizes: [],
   smtp_host: "", smtp_port: 587, smtp_user: "", smtp_password: "",
   smtp_from_email: "", smtp_from_name: "", smtp_use_tls: true, smtp_use_ssl: false,
 };
@@ -632,6 +633,7 @@ export default function SuperAdminPage() {
       granjas_enabled: t.granjas_enabled ?? true,
       importaciones_enabled: t.importaciones_enabled ?? true,
       auditorias_enabled: t.auditorias_enabled ?? true,
+      allow_animal_modifications: t.allow_animal_modifications ?? true,
       anilla_sizes: t.anilla_sizes ?? [],
       smtp_host: t.smtp_host ?? "", smtp_port: t.smtp_port ?? 587,
       smtp_user: t.smtp_user ?? "", smtp_password: t.smtp_password ?? "",
@@ -1490,6 +1492,10 @@ export default function SuperAdminPage() {
               <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
                 <input type="checkbox" checked={tenantForm.auditorias_enabled} onChange={(e) => setTenantForm({ ...tenantForm, auditorias_enabled: e.target.checked })} className="rounded" />
                 Módulo Auditorías
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                <input type="checkbox" checked={tenantForm.allow_animal_modifications} onChange={(e) => setTenantForm({ ...tenantForm, allow_animal_modifications: e.target.checked })} className="rounded" />
+                Permitir Modificaciones de Animales
               </label>
             </div>
           </div>
