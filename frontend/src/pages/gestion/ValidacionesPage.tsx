@@ -986,12 +986,12 @@ export default function ValidacionesPage() {
             Ganaderías de Nacimiento
           </h2>
           <span className="text-xs text-gray-400 ml-auto">
-            {ganaderiasData?.length ?? 0} distintas
+            {ganaderiasData?.length ?? 0} pendientes
           </span>
         </div>
         <p className="text-xs text-gray-500 mb-3">
           Redirige los nombres de ganadería escritos por los socios hacia el
-          socio registrado correspondiente.
+          socio registrado correspondiente. Desaparecen al aprobar los animales.
         </p>
         {loadingGanaderias ? (
           <div className="flex justify-center py-4">
@@ -999,58 +999,88 @@ export default function ValidacionesPage() {
           </div>
         ) : !ganaderiasData?.length ? (
           <p className="text-sm text-gray-400 text-center py-3">
-            No hay ganaderías registradas todavía.
+            No hay ganaderías pendientes de redirigir.
           </p>
         ) : (
           <div className="divide-y divide-gray-100">
             {ganaderiasData.map((g) => (
-              <div
-                key={g.ganaderia_nombre}
-                className="py-2.5 flex items-center gap-3 flex-wrap"
-              >
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-gray-900 truncate block">
-                    {g.ganaderia_nombre}
-                  </span>
-                  <span className="text-xs text-gray-400">
-                    {g.animal_count} animal{g.animal_count !== 1 ? "es" : ""}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <select
-                    className="input-field text-sm py-1 min-w-[180px]"
-                    value={g.socio_real ?? ""}
-                    onChange={(e) =>
-                      ganaderiaMapMutation.mutate({
-                        nombre: g.ganaderia_nombre,
-                        socio: e.target.value || null,
-                      })
-                    }
-                    disabled={ganaderiaMapMutation.isPending}
-                  >
-                    <option value="">— Sin redirección —</option>
-                    {(sociosData?.results ?? []).map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.nombre_razon_social}
-                      </option>
-                    ))}
-                  </select>
-                  {g.socio_real && (
-                    <button
-                      onClick={() =>
+              <div key={g.ganaderia_nombre} className="py-3 space-y-2">
+                {/* Nombre de ganadería + selector de redirección */}
+                <div className="flex items-start gap-3 flex-wrap">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-semibold text-gray-900 block">
+                      {g.ganaderia_nombre}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {g.animal_count} animal{g.animal_count !== 1 ? "es" : ""} pendiente{g.animal_count !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <select
+                      className="input-field text-sm py-1 min-w-[180px]"
+                      value={g.socio_real ?? ""}
+                      onChange={(e) =>
                         ganaderiaMapMutation.mutate({
                           nombre: g.ganaderia_nombre,
-                          socio: null,
+                          socio: e.target.value || null,
                         })
                       }
                       disabled={ganaderiaMapMutation.isPending}
-                      className="text-gray-400 hover:text-red-500 p-1"
-                      title="Quitar redirección"
                     >
-                      <Link2Off size={14} />
-                    </button>
-                  )}
+                      <option value="">— Sin redirección —</option>
+                      {(sociosData?.results ?? []).map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.nombre_razon_social}
+                        </option>
+                      ))}
+                    </select>
+                    {g.socio_real && (
+                      <>
+                        <button
+                          onClick={() => navigate(`/socios/${g.socio_real}`)}
+                          className="text-blue-500 hover:text-blue-700 p-1"
+                          title="Ver ficha del socio redirigido"
+                        >
+                          <ExternalLink size={14} />
+                        </button>
+                        <button
+                          onClick={() =>
+                            ganaderiaMapMutation.mutate({
+                              nombre: g.ganaderia_nombre,
+                              socio: null,
+                            })
+                          }
+                          disabled={ganaderiaMapMutation.isPending}
+                          className="text-gray-400 hover:text-red-500 p-1"
+                          title="Quitar redirección"
+                        >
+                          <Link2Off size={14} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
+                {/* Animales pendientes con esta ganadería */}
+                {g.animals.length > 0 && (
+                  <div className="ml-1 space-y-1">
+                    {g.animals.map((a) => (
+                      <div key={a.id} className="flex items-center gap-2 text-xs bg-gray-50 rounded-lg px-3 py-1.5">
+                        <Bird size={12} className="text-gray-400 shrink-0" />
+                        <span className="font-mono font-medium text-gray-700">{a.numero_anilla}</span>
+                        <AnimalStateChip estado={a.estado} />
+                        <span className="text-gray-400 mx-1">·</span>
+                        <button
+                          onClick={() => navigate(`/socios/${a.socio_id}`)}
+                          className="text-blue-600 hover:underline flex items-center gap-1 min-w-0 truncate"
+                          title="Ver ficha del socio"
+                        >
+                          {a.socio_nombre}
+                          <ExternalLink size={10} className="shrink-0" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

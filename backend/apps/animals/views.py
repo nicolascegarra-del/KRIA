@@ -716,17 +716,37 @@ class GanaderiasNacimientoView(APIView):
     permission_classes = [IsGestion]
 
     def get(self, request):
-        from django.db.models import Count, OuterRef, Subquery
+        from django.db.models import Count
         tenant = request.tenant
 
-        # All unique ganaderia_nacimiento values (non-empty) with counts
+        PENDING = [Animal.Estado.REGISTRADO, Animal.Estado.MODIFICADO]
+
+        # Only ganaderías that have at least one pending animal
         rows = (
             Animal.objects
-            .filter(ganaderia_nacimiento__gt="")
+            .filter(ganaderia_nacimiento__gt="", estado__in=PENDING)
             .values("ganaderia_nacimiento")
             .annotate(animal_count=Count("id"))
             .order_by("ganaderia_nacimiento")
         )
+
+        # Detail of each pending animal grouped by ganadería
+        animals_qs = (
+            Animal.objects
+            .filter(ganaderia_nacimiento__gt="", estado__in=PENDING)
+            .select_related("socio")
+            .order_by("ganaderia_nacimiento", "numero_anilla")
+        )
+        animals_by_ganaderia: dict = {}
+        for animal in animals_qs:
+            key = animal.ganaderia_nacimiento
+            animals_by_ganaderia.setdefault(key, []).append({
+                "id": str(animal.id),
+                "numero_anilla": animal.numero_anilla,
+                "estado": animal.estado,
+                "socio_id": str(animal.socio_id),
+                "socio_nombre": animal.socio.nombre_razon_social,
+            })
 
         # Fetch existing mappings
         maps = {
@@ -744,6 +764,7 @@ class GanaderiasNacimientoView(APIView):
                 "map_id": str(mapping.id) if mapping else None,
                 "socio_real": str(mapping.socio_real_id) if mapping and mapping.socio_real_id else None,
                 "socio_nombre": mapping.socio_real.nombre_razon_social if mapping and mapping.socio_real else None,
+                "animals": animals_by_ganaderia.get(nombre, []),
             })
 
         return Response(result)

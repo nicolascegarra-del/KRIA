@@ -96,7 +96,14 @@ export const animalsApi = {
 
   getGanaderiasNacimiento: async () => {
     const { data } = await apiClient.get("/animals/ganaderias-nacimiento/");
-    return data as { ganaderia_nombre: string; animal_count: number; map_id: string | null; socio_real: string | null; socio_nombre: string | null }[];
+    return data as {
+      ganaderia_nombre: string;
+      animal_count: number;
+      map_id: string | null;
+      socio_real: string | null;
+      socio_nombre: string | null;
+      animals: { id: string; numero_anilla: string; estado: string; socio_id: string; socio_nombre: string }[];
+    }[];
   },
 
   saveGanaderiaMap: async (ganaderia_nombre: string, socio_real: string | null) => {
