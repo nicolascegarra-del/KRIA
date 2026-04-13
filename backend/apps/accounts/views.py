@@ -278,6 +278,20 @@ class SocioListCreateView(generics.ListCreateAPIView):
         return super().create(request, *args, **kwargs)
 
 
+class SocioCuotaYearsView(APIView):
+    """GET /socios/cuota-years/ — años de cuota distintos registrados en el tenant."""
+    permission_classes = [IsGestion]
+
+    def get(self, request):
+        years = (
+            Socio.objects.filter(cuota_anual_pagada__isnull=False)
+            .values_list("cuota_anual_pagada", flat=True)
+            .distinct()
+            .order_by("-cuota_anual_pagada")
+        )
+        return Response(list(years))
+
+
 class SocioDetailView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsGestion]
     serializer_class = SocioSerializer

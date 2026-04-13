@@ -418,6 +418,12 @@ export default function SociosPage() {
 
   const resetPage = (fn: () => void) => { fn(); setPage(1); };
 
+  const { data: cuotaYears } = useQuery({
+    queryKey: ["socios-cuota-years"],
+    queryFn: () => sociosApi.cuotaYears(),
+    staleTime: 60_000,
+  });
+
   const { data, isLoading } = useQuery({
     queryKey: ["socios", search, filterEstado, filterCuota, ordering, page],
     queryFn: () => sociosApi.list({
@@ -516,7 +522,7 @@ export default function SociosPage() {
         </select>
         <select className="input-field w-44 text-sm" value={filterCuota} onChange={(e) => resetPage(() => setFilterCuota(e.target.value))}>
           <option value="">Cualquier cuota</option>
-          {[yearNow, yearNow - 1, yearNow - 2].map((y) => (
+          {(cuotaYears ?? []).map((y) => (
             <option key={y} value={String(y)}>Cuota {y}</option>
           ))}
         </select>

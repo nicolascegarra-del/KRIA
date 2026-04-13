@@ -40,6 +40,11 @@ export const sociosApi = {
     await apiClient.post(`/socios/${id}/enviar-acceso/`);
   },
 
+  cuotaYears: async (): Promise<number[]> => {
+    const { data } = await apiClient.get("/socios/cuota-years/");
+    return data;
+  },
+
   import: async (file: File): Promise<{ job_id: string; status: string }> => {
     const form = new FormData();
     form.append("file", file);

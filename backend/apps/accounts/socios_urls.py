@@ -2,12 +2,13 @@ from django.urls import path
 from .views import (
     SocioDarBajaView, SocioDetailView, SocioEnviarAccesoView, SocioListCreateView, SocioMeView,
     SocioReactivarView, SocioSolicitarCambioView, SolicitudesCambioListView,
-    SolicitudCambioResolverView,
+    SolicitudCambioResolverView, SocioCuotaYearsView,
 )
 from apps.imports.views import SocioImportView
 
 urlpatterns = [
     path("", SocioListCreateView.as_view(), name="socios-list"),
+    path("cuota-years/", SocioCuotaYearsView.as_view(), name="socios-cuota-years"),
     path("me/", SocioMeView.as_view(), name="socios-me"),
     path("me/solicitar-cambio/", SocioSolicitarCambioView.as_view(), name="socios-solicitar-cambio"),
     path("solicitudes-cambio/", SolicitudesCambioListView.as_view(), name="socios-solicitudes-cambio"),
