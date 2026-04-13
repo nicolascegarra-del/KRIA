@@ -172,6 +172,11 @@ export default function App() {
       .catch(() => {});
   }, [impersonatingTenant?.id, setBranding, clearBranding]);
 
+  // Reset branding colors on logout — covers all logout paths (manual, inactivity, auth:logout event)
+  useEffect(() => {
+    if (!user) { clearBranding(); resetBranding(); }
+  }, [user, clearBranding]);
+
   // Apply branding from cache immediately (skip for superadmins — they have no tenant branding)
   useEffect(() => {
     if (branding && user && !user.is_superadmin) applyBranding(branding);
