@@ -233,39 +233,38 @@ function SocioModal({
     <Modal title={mode === "create" ? "Nuevo Socio" : "Editar Socio"} onClose={onClose}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="col-span-2">
+          {/* Identificación */}
+          <div className="col-span-2 sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Nombre / Razón Social *</label>
             <input className="input-field" {...register("nombre_razon_social", { required: true })} />
             {errors.nombre_razon_social && <p className="text-xs text-red-600 mt-1">Requerido</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">DNI / NIF</label>
-            <input className="input-field" {...register("dni_nif")} />
-            {errors.dni_nif && <p className="text-xs text-red-600 mt-1">Formato inválido</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email{mode === "create" && <span className="font-normal text-gray-400"> (opcional — para acceso al portal)</span>}
-              {mode === "edit" && <span className="font-normal text-gray-400"> (credencial de acceso)</span>}
-            </label>
-            <input
-              type="email"
-              className="input-field"
-              {...register("email")}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-            <input className="input-field" {...register("telefono")} />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nº Socio</label>
             <input className="input-field" {...register("numero_socio")} />
           </div>
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">DNI / NIF</label>
+            <input className="input-field" {...register("dni_nif")} />
+            {errors.dni_nif && <p className="text-xs text-red-600 mt-1">Formato inválido</p>}
+          </div>
+          {/* Contacto */}
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email{mode === "create" && <span className="font-normal text-gray-400"> (opcional — para acceso al portal)</span>}
+              {mode === "edit" && <span className="font-normal text-gray-400"> (credencial de acceso)</span>}
+            </label>
+            <input type="email" className="input-field" {...register("email")} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+            <input className="input-field" {...register("telefono")} />
+          </div>
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Código REGA</label>
             <input className="input-field" {...register("codigo_rega")} />
           </div>
+          {/* Dirección */}
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Domicilio</label>
             <input className="input-field" placeholder="Calle, número, piso..." {...register("domicilio")} />
@@ -278,11 +277,12 @@ function SocioModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">Código postal</label>
             <input className="input-field" {...register("codigo_postal")} />
           </div>
-          <div>
+          <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
             <input className="input-field" {...register("provincia")} />
           </div>
-          <div>
+          {/* Datos de asociado */}
+          <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Número de cuenta (IBAN)</label>
             <input className="input-field" placeholder="ES00 0000 0000..." {...register("numero_cuenta")} />
           </div>
