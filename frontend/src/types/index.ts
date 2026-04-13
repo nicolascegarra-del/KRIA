@@ -91,6 +91,7 @@ export interface Animal {
   variedad: AnimalVariedad;
   fecha_incubacion: string | null;
   ganaderia_nacimiento: string;
+  ganaderia_nacimiento_display?: string;
   estado: AnimalEstado;
   alerta_anilla: "FUERA_RANGO" | "DIAMETRO" | "" | null;
   razon_rechazo: string;

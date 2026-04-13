@@ -72,12 +72,13 @@ class AnimalDetailSerializer(serializers.ModelSerializer):
     granja_nombre = serializers.CharField(source="granja.nombre", read_only=True, allow_null=True)
     motivo_baja_nombre = serializers.CharField(source="motivo_baja.nombre", read_only=True, allow_null=True)
     fotos = serializers.SerializerMethodField()
+    ganaderia_nacimiento_display = serializers.SerializerMethodField()
 
     class Meta:
         model = Animal
         fields = [
             "id", "numero_anilla", "fecha_nacimiento", "sexo", "variedad",
-            "fecha_incubacion", "ganaderia_nacimiento", "ganaderia_actual",
+            "fecha_incubacion", "ganaderia_nacimiento", "ganaderia_nacimiento_display", "ganaderia_actual",
             "estado", "razon_rechazo", "candidato_reproductor", "reproductor_aprobado",
             "alerta_anilla",
             "fecha_baja", "motivo_baja", "motivo_baja_nombre",
@@ -102,6 +103,22 @@ class AnimalDetailSerializer(serializers.ModelSerializer):
         if obj.madre_animal and obj.madre_animal.fecha_nacimiento:
             return obj.madre_animal.fecha_nacimiento.year
         return None
+
+    def get_ganaderia_nacimiento_display(self, obj):
+        """Devuelve el nombre del socio redirigido si existe mapeo, o el texto original."""
+        if not obj.ganaderia_nacimiento:
+            return ""
+        try:
+            mapping = GanaderiaNacimientoMap.objects.filter(
+                tenant_id=obj.tenant_id,
+                ganaderia_nombre=obj.ganaderia_nacimiento,
+                socio_real__isnull=False,
+            ).select_related("socio_real").first()
+            if mapping and mapping.socio_real:
+                return mapping.socio_real.nombre_razon_social
+        except Exception:
+            pass
+        return obj.ganaderia_nacimiento
 
 
 class AnimalWriteSerializer(serializers.ModelSerializer):

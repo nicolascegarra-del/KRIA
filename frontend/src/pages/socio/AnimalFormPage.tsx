@@ -394,13 +394,19 @@ export default function AnimalFormPage() {
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Ganadería de Nacimiento</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Nombre de la ganadería de origen"
-                  disabled={effectiveReadonly || isPendingReview || lockedIfSet(animal?.ganaderia_nacimiento)}
-                  {...register("ganaderia_nacimiento")}
-                />
+                {lockedIfSet(animal?.ganaderia_nacimiento) ? (
+                  <p className="input-field bg-gray-50 text-gray-700 cursor-default">
+                    {animal?.ganaderia_nacimiento_display || animal?.ganaderia_nacimiento}
+                  </p>
+                ) : (
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Nombre de la ganadería de origen"
+                    disabled={effectiveReadonly || isPendingReview}
+                    {...register("ganaderia_nacimiento")}
+                  />
+                )}
               </div>
             </div>
           </div>
