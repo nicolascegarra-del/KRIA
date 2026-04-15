@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { Tenant, PaginatedResponse, ImpersonateResponse, TenantCreatePayload, GestionUser, PlatformSettings } from "../types";
+import type { Tenant, PaginatedResponse, ImpersonateResponse, TenantCreatePayload, GestionUser, PlatformSettings, ImportJob, ImportValidateResult } from "../types";
 
 export const superadminApi = {
   listTenants: async (params?: { page?: number }) => {
@@ -203,6 +203,46 @@ export const superadminApi = {
     },
     clearJobs: async (): Promise<{ detail: string; count: number }> => {
       const { data } = await apiClient.delete<{ detail: string; count: number }>("/backups/jobs/clear/");
+      return data;
+    },
+  },
+
+  // ── Importaciones (superadmin puede importar en nombre de cualquier asociación) ──
+  importaciones: {
+    downloadTemplateSocios: async (): Promise<Blob> => {
+      const { data } = await apiClient.get("/superadmin/importaciones/socios/template/", { responseType: "blob" });
+      return data;
+    },
+    downloadTemplateAnimales: async (): Promise<Blob> => {
+      const { data } = await apiClient.get("/superadmin/importaciones/animales/template/", { responseType: "blob" });
+      return data;
+    },
+    validateSocios: async (tenantId: string, file: File): Promise<ImportValidateResult> => {
+      const form = new FormData();
+      form.append("file", file);
+      const { data } = await apiClient.post<ImportValidateResult>(`/superadmin/importaciones/${tenantId}/socios/validate/`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return data;
+    },
+    confirmSocios: async (tenantId: string, tempKey: string): Promise<{ job_id: string; status: string }> => {
+      const { data } = await apiClient.post(`/superadmin/importaciones/${tenantId}/socios/confirm/`, { temp_key: tempKey });
+      return data;
+    },
+    validateAnimales: async (tenantId: string, file: File): Promise<ImportValidateResult> => {
+      const form = new FormData();
+      form.append("file", file);
+      const { data } = await apiClient.post<ImportValidateResult>(`/superadmin/importaciones/${tenantId}/animales/validate/`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return data;
+    },
+    confirmAnimales: async (tenantId: string, tempKey: string): Promise<{ job_id: string; status: string }> => {
+      const { data } = await apiClient.post(`/superadmin/importaciones/${tenantId}/animales/confirm/`, { temp_key: tempKey });
+      return data;
+    },
+    jobStatus: async (jobId: string): Promise<ImportJob> => {
+      const { data } = await apiClient.get<ImportJob>(`/superadmin/importaciones/job/${jobId}/`);
       return data;
     },
   },

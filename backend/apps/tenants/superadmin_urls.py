@@ -1,4 +1,13 @@
 from django.urls import path
+from apps.imports.superadmin_views import (
+    SuperAdminImportTemplateSociosView,
+    SuperAdminImportValidateSociosView,
+    SuperAdminImportConfirmSociosView,
+    SuperAdminImportTemplateAnimalesView,
+    SuperAdminImportValidateAnimalesView,
+    SuperAdminImportConfirmAnimalesView,
+    SuperAdminImportJobStatusView,
+)
 from .superadmin_views import (
     SuperAdminStatsView,
     SuperAdminTenantActivateView,
@@ -69,4 +78,12 @@ urlpatterns = [
     # Mail log
     path("mail-log/", SuperAdminMailLogView.as_view(), name="superadmin-mail-log"),
     path("mail-log/clear/", SuperAdminClearMailLogView.as_view(), name="superadmin-mail-log-clear"),
+    # Importaciones (superadmin puede importar en nombre de cualquier asociación)
+    path("importaciones/socios/template/", SuperAdminImportTemplateSociosView.as_view(), name="superadmin-import-socios-template"),
+    path("importaciones/animales/template/", SuperAdminImportTemplateAnimalesView.as_view(), name="superadmin-import-animales-template"),
+    path("importaciones/<uuid:tenant_id>/socios/validate/", SuperAdminImportValidateSociosView.as_view(), name="superadmin-import-socios-validate"),
+    path("importaciones/<uuid:tenant_id>/socios/confirm/", SuperAdminImportConfirmSociosView.as_view(), name="superadmin-import-socios-confirm"),
+    path("importaciones/<uuid:tenant_id>/animales/validate/", SuperAdminImportValidateAnimalesView.as_view(), name="superadmin-import-animales-validate"),
+    path("importaciones/<uuid:tenant_id>/animales/confirm/", SuperAdminImportConfirmAnimalesView.as_view(), name="superadmin-import-animales-confirm"),
+    path("importaciones/job/<uuid:job_id>/", SuperAdminImportJobStatusView.as_view(), name="superadmin-import-job-status"),
 ]

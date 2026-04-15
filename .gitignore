@@ -23,6 +23,7 @@ frontend/.vite/
 
 # Environment
 .env
+.env.v1
 .env.local
 .env.*.local
 
