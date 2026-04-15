@@ -90,13 +90,14 @@ class InventoryReportView(APIView):
     def post(self, request):
         socio_id = request.data.get("socio_id")
         formato = request.data.get("formato", "pdf")
+        orden = request.data.get("orden", "variedad_anilla")
         if not get_effective_is_gestion(request):
             # Socio can only request their own
             try:
                 socio_id = str(request.user.socio.id)
             except Exception:
                 return Response({"detail": "No socio profile."}, status=400)
-        return _create_report_job(request, ReportJob.ReportType.INVENTORY, {"socio_id": socio_id, "formato": formato})
+        return _create_report_job(request, ReportJob.ReportType.INVENTORY, {"socio_id": socio_id, "formato": formato, "orden": orden})
 
 
 def _check_animal_ownership(request, animal_id):
@@ -151,7 +152,8 @@ class CatalogoReproductoresView(APIView):
 
     def post(self, request):
         formato = request.data.get("formato", "pdf")
-        return _create_report_job(request, ReportJob.ReportType.CATALOGO_REPRODUCTORES, {"formato": formato})
+        orden = request.data.get("orden", "variedad_anilla")
+        return _create_report_job(request, ReportJob.ReportType.CATALOGO_REPRODUCTORES, {"formato": formato, "orden": orden})
 
 
 class AuditoriaReportView(APIView):

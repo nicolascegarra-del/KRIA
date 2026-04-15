@@ -261,6 +261,12 @@
       <div>Año de nacimiento: <strong>{{ animal.fecha_nacimiento.year|default:"—" }}</strong></div>
       <div>{{ animal.get_sexo_display }} · {{ animal.get_variedad_display }}</div>
       <div><span class="id-banner-estado">{{ animal.get_estado_display }}</span></div>
+      {% if animal.estado == "EVALUADO" and animal.evaluacion %}
+      <div style="margin-top:0.3em; font-size:8.5pt; opacity:0.9;">
+        Puntuación: <strong>{{ animal.evaluacion.puntuacion_media }}/10</strong>
+        &nbsp;·&nbsp; Evaluado el {{ animal.evaluacion.created_at|date:"d/m/Y" }}
+      </div>
+      {% endif %}
     </div>
   </div>
 
@@ -435,6 +441,9 @@
   {% if animal.evaluacion %}
   <div class="section">
     <div class="section-title">Evaluación Morfológica</div>
+    <p style="font-size:8pt; color:#666; margin:0.1em 0 0.8em;">
+      Fecha de evaluación: <strong>{{ animal.evaluacion.created_at|date:"d/m/Y" }}</strong>
+    </p>
     <div class="eval-grid">
       <div class="eval-item">
         <div class="eval-label">Cabeza</div>

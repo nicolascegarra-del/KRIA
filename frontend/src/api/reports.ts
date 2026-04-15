@@ -2,8 +2,8 @@ import { apiClient } from "./client";
 import type { ReportJob } from "../types";
 
 export const reportsApi = {
-  inventory: async (socio_id?: string, formato: "pdf" | "excel" = "pdf"): Promise<{ job_id: string }> => {
-    const { data } = await apiClient.post("/reports/inventory/", { socio_id, formato });
+  inventory: async (socio_id?: string, formato: "pdf" | "excel" = "pdf", orden?: string): Promise<{ job_id: string }> => {
+    const { data } = await apiClient.post("/reports/inventory/", { socio_id, formato, orden });
     return data;
   },
 
@@ -17,8 +17,8 @@ export const reportsApi = {
     return data;
   },
 
-  catalogoReproductores: async (formato: "pdf" | "excel" = "pdf"): Promise<{ job_id: string }> => {
-    const { data } = await apiClient.post("/reports/catalogo-reproductores/", { formato });
+  catalogoReproductores: async (formato: "pdf" | "excel" = "pdf", orden?: string): Promise<{ job_id: string }> => {
+    const { data } = await apiClient.post("/reports/catalogo-reproductores/", { formato, orden });
     return data;
   },
 

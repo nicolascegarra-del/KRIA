@@ -22,6 +22,7 @@ import GranjasPage from "./pages/socio/GranjasPage";
 import MisLotesPage from "./pages/socio/MisLotesPage";
 import MisAnillasPage from "./pages/socio/MisAnillasPage";
 import MisAuditoriasPage from "./pages/socio/MisAuditoriasPage";
+import MisReportesPage from "./pages/socio/MisReportesPage";
 
 // Gestion pages
 import GranjasGestionPage from "./pages/gestion/GranjasGestionPage";
@@ -223,6 +224,7 @@ export default function App() {
         <Route path="/mis-lotes" element={<LayoutRoute socioOnly><MisLotesPage /></LayoutRoute>} />
         <Route path="/mis-anillas" element={<LayoutRoute socioOnly><MisAnillasPage /></LayoutRoute>} />
         <Route path="/mis-auditorias" element={<LayoutRoute socioOnly><MisAuditoriasPage /></LayoutRoute>} />
+        <Route path="/mis-reportes" element={<LayoutRoute socioOnly><MisReportesPage /></LayoutRoute>} />
 
         {/* Gestion routes */}
         <Route path="/dashboard" element={<LayoutRoute gestionOnly><DashboardPage /></LayoutRoute>} />
@@ -247,6 +249,7 @@ export default function App() {
         <Route path="/superadmin/log" element={<LayoutRoute superadminOnly><SuperAdminPage /></LayoutRoute>} />
         <Route path="/superadmin/mail-log" element={<LayoutRoute superadminOnly><SuperAdminPage /></LayoutRoute>} />
         <Route path="/superadmin/backups" element={<LayoutRoute superadminOnly><SuperAdminPage /></LayoutRoute>} />
+        <Route path="/superadmin/importaciones" element={<LayoutRoute superadminOnly><SuperAdminPage /></LayoutRoute>} />
 
         {/* Default redirects */}
         <Route

@@ -2,8 +2,128 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { reportsApi } from "../../api/reports";
 import { animalsApi } from "../../api/animals";
-import { FileText, Table, BookOpen, Download, Loader2, Clock, CheckCircle2, Search, User } from "lucide-react";
+import { FileText, Table, BookOpen, Download, Loader2, Clock, CheckCircle2, Search, User, ArrowUpDown, X } from "lucide-react";
 import type { ReportJob } from "../../types";
+
+// ─── Sort options ───────────────────────────────────────────────────────────
+
+const SORT_OPTIONS = [
+  {
+    value: "variedad_anilla",
+    label: "Variedad → Nº Anilla",
+    description: "Agrupa primero por variedad, luego por número de anilla",
+  },
+  {
+    value: "socio_anilla",
+    label: "Socio → Nº Anilla",
+    description: "Agrupa primero por socio (A–Z), luego por número de anilla",
+  },
+  {
+    value: "estado_anilla",
+    label: "Estado → Nº Anilla",
+    description: "Agrupa primero por estado del animal, luego por número de anilla",
+  },
+  {
+    value: "anilla",
+    label: "Solo Nº Anilla",
+    description: "Ordenado únicamente por número de anilla",
+  },
+] as const;
+
+type SortValue = (typeof SORT_OPTIONS)[number]["value"];
+
+// ─── Sort order modal ───────────────────────────────────────────────────────
+
+function SortOrderModal({
+  tileLabel,
+  value,
+  onChange,
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  tileLabel: string;
+  value: SortValue;
+  onChange: (v: SortValue) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <ArrowUpDown size={18} className="text-blue-700" />
+            <div>
+              <div className="font-semibold text-gray-900 text-sm">Ordenar por…</div>
+              <div className="text-xs text-gray-500">{tileLabel} · PDF</div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Options */}
+        <div className="px-6 py-4 space-y-2">
+          {SORT_OPTIONS.map((opt) => (
+            <label
+              key={opt.value}
+              className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                value === opt.value
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              <input
+                type="radio"
+                name="sort-order"
+                value={opt.value}
+                checked={value === opt.value}
+                onChange={() => onChange(opt.value)}
+                className="mt-0.5 accent-blue-700"
+              />
+              <div>
+                <div className="text-sm font-medium text-gray-900">{opt.label}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{opt.description}</div>
+              </div>
+            </label>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-2 px-6 py-4 border-t border-gray-100">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="btn-secondary flex-1"
+            disabled={loading}
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="btn-primary flex-1"
+          >
+            {loading ? (
+              <><Loader2 size={15} className="animate-spin" /> Iniciando…</>
+            ) : (
+              "Generar PDF"
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Animal search picker ───────────────────────────────────────────────────
 
@@ -130,11 +250,20 @@ interface TileAnimalState {
   selectedLabel: string;
 }
 
+interface SortModalState {
+  tileLabel: string;
+  action: (orden: SortValue) => Promise<{ job_id: string }>;
+}
+
 export default function ReportesPage() {
   const [jobs, setJobs] = useState<Record<string, string>>({}); // label → job_id
   const [generating, setGenerating] = useState<Record<string, boolean>>({});
   const [animalState, setAnimalState] = useState<Record<string, TileAnimalState>>({});
   const [formato, setFormato] = useState<Record<string, "pdf" | "excel">>({});
+
+  // Sort modal state
+  const [sortModal, setSortModal] = useState<SortModalState | null>(null);
+  const [sortOrder, setSortOrder] = useState<SortValue>("variedad_anilla");
 
   const handleGenerate = async (label: string, action: () => Promise<{ job_id: string }>) => {
     setGenerating((prev) => ({ ...prev, [label]: true }));
@@ -146,11 +275,22 @@ export default function ReportesPage() {
     }
   };
 
+  const handleGenerateWithSort = async () => {
+    if (!sortModal) return;
+    const { tileLabel, action } = sortModal;
+    setSortModal(null);
+    await handleGenerate(tileLabel, () => action(sortOrder));
+  };
+
   const setAnimalForTile = (tileLabel: string, id: string, label: string) => {
     setAnimalState((prev) => ({ ...prev, [tileLabel]: { selectedId: id, selectedLabel: label } }));
   };
 
   const getFmt = (label: string): "pdf" | "excel" => formato[label] ?? "pdf";
+
+  // A tile "needs sort" when its format is PDF and it supports sorting (multi-animal PDF)
+  const needsSort = (label: string, hasFormatSelector: boolean, requiresAnimal: boolean) =>
+    hasFormatSelector && !requiresAnimal && getFmt(label) === "pdf";
 
   const tiles = [
     {
@@ -160,7 +300,7 @@ export default function ReportesPage() {
       color: "bg-blue-700",
       requiresAnimal: false,
       hasFormatSelector: true,
-      action: () => reportsApi.inventory(undefined, getFmt("Inventario")),
+      action: (orden?: SortValue) => reportsApi.inventory(undefined, getFmt("Inventario"), orden),
     },
     {
       label: "Libro Genealógico",
@@ -178,7 +318,7 @@ export default function ReportesPage() {
       color: "bg-purple-700",
       requiresAnimal: false,
       hasFormatSelector: true,
-      action: () => reportsApi.catalogoReproductores(getFmt("Catálogo Reproductores")),
+      action: (orden?: SortValue) => reportsApi.catalogoReproductores(getFmt("Catálogo Reproductores"), orden),
     },
     {
       label: "Ficha Individual",
@@ -196,91 +336,115 @@ export default function ReportesPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Reportes</h1>
-        <p className="text-sm text-gray-500">
-          Generación asíncrona — recibirás el enlace de descarga al completar
-        </p>
-      </div>
+    <>
+      {/* Sort order modal */}
+      {sortModal && (
+        <SortOrderModal
+          tileLabel={sortModal.tileLabel}
+          value={sortOrder}
+          onChange={setSortOrder}
+          onConfirm={handleGenerateWithSort}
+          onCancel={() => setSortModal(null)}
+          loading={!!generating[sortModal.tileLabel]}
+        />
+      )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {tiles.map((tile) => {
-          const animalSel = animalState[tile.label];
-          const canGenerate = !tile.requiresAnimal || !!animalSel?.selectedId;
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Reportes</h1>
+          <p className="text-sm text-gray-500">
+            Generación asíncrona — recibirás el enlace de descarga al completar
+          </p>
+        </div>
 
-          return (
-            <div key={tile.label} className="card space-y-3">
-              <div className="flex items-center gap-3">
-                <div className={`${tile.color} text-white p-2.5 rounded-xl`}>{tile.icon}</div>
-                <div>
-                  <div className="font-semibold text-gray-900 text-sm">{tile.label}</div>
-                  <div className="text-xs text-gray-500">{tile.description}</div>
-                </div>
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {tiles.map((tile) => {
+            const animalSel = animalState[tile.label];
+            const canGenerate = !tile.requiresAnimal || !!animalSel?.selectedId;
+            const showSortModal = needsSort(tile.label, tile.hasFormatSelector, tile.requiresAnimal);
 
-              {/* Format selector */}
-              {tile.hasFormatSelector && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">Formato:</span>
-                  <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
-                    {(["pdf", "excel"] as const).map((fmt) => (
-                      <button
-                        key={fmt}
-                        type="button"
-                        onClick={() => setFormato((p) => ({ ...p, [tile.label]: fmt }))}
-                        className={`px-3 py-1 transition-colors ${
-                          getFmt(tile.label) === fmt
-                            ? "bg-blue-700 text-white"
-                            : "bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                      >
-                        {fmt === "pdf" ? "PDF" : "Excel"}
-                      </button>
-                    ))}
+            return (
+              <div key={tile.label} className="card space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className={`${tile.color} text-white p-2.5 rounded-xl`}>{tile.icon}</div>
+                  <div>
+                    <div className="font-semibold text-gray-900 text-sm">{tile.label}</div>
+                    <div className="text-xs text-gray-500">{tile.description}</div>
                   </div>
                 </div>
-              )}
 
-              {/* Animal picker for individual reports */}
-              {tile.requiresAnimal && (
-                animalSel?.selectedId ? (
-                  <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs">
-                    <span className="font-mono font-medium text-blue-800 flex-1">
-                      {animalSel.selectedLabel}
-                    </span>
-                    <button
-                      onClick={() => setAnimalState((p) => { const n = { ...p }; delete n[tile.label]; return n; })}
-                      className="text-blue-400 hover:text-blue-700"
-                    >
-                      Cambiar
-                    </button>
+                {/* Format selector */}
+                {tile.hasFormatSelector && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">Formato:</span>
+                    <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+                      {(["pdf", "excel"] as const).map((fmt) => (
+                        <button
+                          key={fmt}
+                          type="button"
+                          onClick={() => setFormato((p) => ({ ...p, [tile.label]: fmt }))}
+                          className={`px-3 py-1 transition-colors ${
+                            getFmt(tile.label) === fmt
+                              ? "bg-blue-700 text-white"
+                              : "bg-white text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          {fmt === "pdf" ? "PDF" : "Excel"}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                ) : (
-                  <AnimalPicker
-                    label="Selecciona el animal"
-                    onSelect={(id, label) => setAnimalForTile(tile.label, id, label)}
-                  />
-                )
-              )}
-
-              <button
-                onClick={() => handleGenerate(tile.label, tile.action)}
-                disabled={generating[tile.label] || !canGenerate}
-                className="btn-primary w-full disabled:opacity-50"
-              >
-                {generating[tile.label] ? (
-                  <><Loader2 size={16} className="animate-spin" /> Iniciando...</>
-                ) : (
-                  "Generar"
                 )}
-              </button>
 
-              {jobs[tile.label] && <ReportJobStatus jobId={jobs[tile.label]} />}
-            </div>
-          );
-        })}
+                {/* Animal picker for individual reports */}
+                {tile.requiresAnimal && (
+                  animalSel?.selectedId ? (
+                    <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs">
+                      <span className="font-mono font-medium text-blue-800 flex-1">
+                        {animalSel.selectedLabel}
+                      </span>
+                      <button
+                        onClick={() => setAnimalState((p) => { const n = { ...p }; delete n[tile.label]; return n; })}
+                        className="text-blue-400 hover:text-blue-700"
+                      >
+                        Cambiar
+                      </button>
+                    </div>
+                  ) : (
+                    <AnimalPicker
+                      label="Selecciona el animal"
+                      onSelect={(id, label) => setAnimalForTile(tile.label, id, label)}
+                    />
+                  )
+                )}
+
+                <button
+                  onClick={() => {
+                    if (showSortModal) {
+                      setSortModal({
+                        tileLabel: tile.label,
+                        action: tile.action as (orden: SortValue) => Promise<{ job_id: string }>,
+                      });
+                    } else {
+                      handleGenerate(tile.label, () => tile.action());
+                    }
+                  }}
+                  disabled={generating[tile.label] || !canGenerate}
+                  className="btn-primary w-full disabled:opacity-50"
+                >
+                  {generating[tile.label] ? (
+                    <><Loader2 size={16} className="animate-spin" /> Iniciando...</>
+                  ) : (
+                    "Generar"
+                  )}
+                </button>
+
+                {jobs[tile.label] && <ReportJobStatus jobId={jobs[tile.label]} />}
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

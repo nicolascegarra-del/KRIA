@@ -63,6 +63,19 @@ def _render_pdf(template_name: str, context: dict) -> bytes:
     return HTML(string=html_string).write_pdf()
 
 
+_ORDER_MAP = {
+    "variedad_anilla": ("variedad", "numero_anilla"),
+    "socio_anilla": ("socio__nombre_razon_social", "numero_anilla"),
+    "estado_anilla": ("estado", "numero_anilla"),
+    "anilla": ("numero_anilla",),
+}
+
+
+def _resolve_order(job) -> tuple:
+    key = job.params.get("orden", "variedad_anilla")
+    return _ORDER_MAP.get(key, ("variedad", "numero_anilla"))
+
+
 def _anio(animal) -> str:
     """Return birth year as string, tolerating both fecha_nacimiento and missing."""
     try:
@@ -76,18 +89,19 @@ def _gen_inventory_pdf(job) -> str:
     from apps.audits.models import AuditoriaAnimal
 
     socio_id = job.params.get("socio_id")
+    order_fields = _resolve_order(job)
     socio_nombre = None
     if socio_id:
         animals_qs = Animal.all_objects.filter(
             tenant=job.tenant, socio_id=socio_id
-        ).select_related("socio", "padre", "madre_animal").order_by("variedad", "numero_anilla")
+        ).select_related("socio", "padre", "madre_animal").order_by(*order_fields)
         first = animals_qs.first()
         if first:
             socio_nombre = first.socio.nombre_razon_social
     else:
         animals_qs = Animal.all_objects.filter(
             tenant=job.tenant
-        ).select_related("socio", "padre", "madre_animal").order_by("variedad", "numero_anilla")
+        ).select_related("socio", "padre", "madre_animal").order_by(*order_fields)
 
     animals = list(animals_qs)
 
@@ -574,10 +588,11 @@ def _gen_catalogo_reproductores(job) -> str:
     from apps.animals.models import Animal
     import io, base64
 
+    order_fields = _resolve_order(job)
     animals = Animal.all_objects.filter(
         tenant=job.tenant,
         reproductor_aprobado=True,
-    ).select_related("socio").prefetch_related("evaluacion").order_by("variedad", "numero_anilla")
+    ).select_related("socio").prefetch_related("evaluacion").order_by(*order_fields)
 
     pages = []
     for animal in animals:

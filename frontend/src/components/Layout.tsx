@@ -72,12 +72,14 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/superadmin/log",               label: "Log de Accesos",          icon: <ScrollText size={18} />, superadminOnly: true },
   { to: "/superadmin/mail-log",          label: "Log de Mail",             icon: <Mail size={18} />,       superadminOnly: true },
   { to: "/superadmin/backups",           label: "Copias de Seguridad",     icon: <Archive size={18} />,    superadminOnly: true },
+  { to: "/superadmin/importaciones",     label: "Importaciones",           icon: <Upload size={18} />,     superadminOnly: true },
   // Socio
   { to: "/mis-animales",             label: "Mis Animales",          icon: <Bird size={18} />,            socioOnly: true },
   { to: "/mis-granjas",              label: "Mis Granjas",           icon: <Building size={18} />,        socioOnly: true, requiresGranjas: true },
   { to: "/mis-lotes",                label: "Mis Lotes",             icon: <Layers size={18} />,          socioOnly: true },
   { to: "/mis-anillas",              label: "Mis Anillas",           icon: <Tag size={18} />,             socioOnly: true },
   { to: "/mis-auditorias",           label: "Mis Auditorías",        icon: <ClipboardCheck size={18} />,  socioOnly: true, requiresAuditorias: true },
+  { to: "/mis-reportes",             label: "Mis Reportes",          icon: <FileText size={18} />,        socioOnly: true },
 ];
 
 // Bottom nav items for socios (mobile)
