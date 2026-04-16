@@ -36,6 +36,7 @@ import {
   Mail,
   Lightbulb,
   Archive,
+  Table2,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -50,6 +51,7 @@ interface NavItem {
   requiresGranjas?: boolean;
   requiresImportaciones?: boolean;
   requiresAuditorias?: boolean;
+  requiresTablas?: boolean;
   subtle?: boolean;
 }
 
@@ -64,6 +66,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/importar",                 label: "Importaciones",         icon: <Upload size={18} />,          gestionOnly: true, requiresImportaciones: true },
   { to: "/reportes",                 label: "Reportes",              icon: <FileText size={18} />,        gestionOnly: true },
   { to: "/auditorias",              label: "Auditorías",            icon: <ClipboardCheck size={18} />,  gestionOnly: true, requiresAuditorias: true },
+  { to: "/tablas",                  label: "Tablas",                icon: <Table2 size={18} />,          gestionOnly: true, requiresTablas: true },
   // SuperAdmin
   { to: "/superadmin",               label: "Dashboard",             icon: <LayoutDashboard size={18} />, superadminOnly: true, exact: true },
   { to: "/superadmin/asociaciones",  label: "Asociaciones",          icon: <Building size={18} />,        superadminOnly: true },
@@ -265,6 +268,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const granjasEnabled       = branding ? branding.granjas_enabled       !== false : false;
   const importacionesEnabled = branding ? branding.importaciones_enabled !== false : false;
   const auditoriasEnabled    = branding ? branding.auditorias_enabled    !== false : false;
+  const tablasEnabled        = branding ? branding.tablas_enabled        === true  : false;
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (isSuperadmin && !impersonatingTenant) {
@@ -276,6 +280,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     if (item.requiresGranjas && !granjasEnabled) return false;
     if (item.requiresImportaciones && !importacionesEnabled) return false;
     if (item.requiresAuditorias && !auditoriasEnabled) return false;
+    if (item.requiresTablas && !tablasEnabled) return false;
     return true;
   });
 

@@ -30,4 +30,5 @@ urlpatterns = [
     path("api/v1/notificaciones/", include("apps.accounts.notificaciones_urls")),
     path("api/v1/auditorias/", include("apps.audits.urls")),
     path("api/v1/backups/", include("apps.backups.urls")),
+    path("api/v1/tablas/", include("apps.tablas.urls")),
 ]

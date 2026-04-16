@@ -39,6 +39,8 @@ import SuperAdminPage from "./pages/gestion/SuperAdminPage";
 import AnillasPage from "./pages/gestion/AnillasPage";
 import AuditoriasPage from "./pages/gestion/AuditoriasPage";
 import AuditoriaDetailPage from "./pages/gestion/AuditoriaDetailPage";
+import TablasPage from "./pages/gestion/TablasPage";
+import TablaDetallePage from "./pages/gestion/TablaDetallePage";
 
 // Layout
 import Layout from "./components/Layout";
@@ -242,6 +244,8 @@ export default function App() {
         <Route path="/reproductores/catalogo" element={<LayoutRoute gestionOnly><CatalogoReproductoresPage /></LayoutRoute>} />
         <Route path="/auditorias" element={<LayoutRoute gestionOnly><AuditoriasPage /></LayoutRoute>} />
         <Route path="/auditorias/:id" element={<LayoutRoute gestionOnly><AuditoriaDetailPage /></LayoutRoute>} />
+        <Route path="/tablas" element={<LayoutRoute gestionOnly><TablasPage /></LayoutRoute>} />
+        <Route path="/tablas/:id" element={<LayoutRoute gestionOnly><TablaDetallePage /></LayoutRoute>} />
         <Route path="/superadmin" element={<LayoutRoute superadminOnly><SuperAdminPage /></LayoutRoute>} />
         <Route path="/superadmin/asociaciones" element={<LayoutRoute superadminOnly><SuperAdminPage /></LayoutRoute>} />
         <Route path="/superadmin/configuracion" element={<LayoutRoute superadminOnly><SuperAdminPage /></LayoutRoute>} />

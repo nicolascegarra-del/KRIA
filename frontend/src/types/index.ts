@@ -15,6 +15,7 @@ export interface TenantBranding {
   importaciones_enabled: boolean;
   auditorias_enabled: boolean;
   allow_animal_modifications: boolean;
+  tablas_enabled: boolean;
   anilla_sizes: AnillaSize[];
 }
 
@@ -357,6 +358,7 @@ export interface Tenant {
   importaciones_enabled?: boolean;
   auditorias_enabled?: boolean;
   allow_animal_modifications?: boolean;
+  tablas_enabled?: boolean;
   anilla_sizes?: AnillaSize[];
   email_notificaciones?: string;
   created_at?: string;
@@ -508,4 +510,60 @@ export interface PaginatedResponse<T> {
   next: string | null;
   previous: string | null;
   results: T[];
+}
+
+// ─── Tablas de Control ────────────────────────────────────────────────────────
+export type TablaColumnaTipo = "CHECKBOX" | "TEXT" | "DATE" | "NUMBER";
+
+export interface TablaColumna {
+  id: string;
+  nombre: string;
+  tipo: TablaColumnaTipo;
+  orden: number;
+}
+
+export interface TablaControlList {
+  id: string;
+  nombre: string;
+  socio_columns: string[];
+  columnas_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TablaControl {
+  id: string;
+  nombre: string;
+  socio_columns: string[];
+  columnas: TablaColumna[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TablaEntrada {
+  id: string;
+  socio_id: string;
+  socio_numero: string;
+  socio_nombre: string;
+  socio_dni: string;
+  socio_email: string;
+  socio_telefono: string;
+  socio_municipio: string;
+  socio_provincia: string;
+  socio_estado: "ALTA" | "BAJA";
+  socio_fecha_alta: string | null;
+  socio_cuota_anual_pagada: number | null;
+  valores: Record<string, boolean | string | number | null>;
+  updated_at: string;
+}
+
+export interface SocioFieldOption {
+  key: string;
+  label: string;
+}
+
+export interface TablaControlWrite {
+  nombre: string;
+  socio_columns: string[];
+  columnas: { nombre: string; tipo: TablaColumnaTipo; orden: number }[];
 }

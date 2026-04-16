@@ -1,0 +1,47 @@
+{% extends "reports/base_report.html" %}
+
+{% block page_style %}
+@page { size: A4 landscape; margin: 1.5cm; }
+.tabla-nombre { font-size: 15pt; font-weight: bold; color: {{ tenant.primary_color }}; margin-bottom: 0.3em; }
+.col-check-si  { color: #2e7d32; font-weight: bold; }
+.col-check-no  { color: #c62828; }
+{% endblock %}
+
+{% block content %}
+<p class="tabla-nombre">{{ tabla.nombre }}</p>
+
+<table>
+  <thead>
+    <tr>
+      {% for header in socio_headers %}
+        <th>{{ header }}</th>
+      {% endfor %}
+      {% for col in columnas %}
+        <th>{{ col.nombre }}</th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      {% for val in row.socio_values %}
+        <td>{{ val }}</td>
+      {% endfor %}
+      {% for val in row.col_values %}
+        <td>
+          {% if val == "Sí" %}
+            <span class="col-check-si">&#10004; Sí</span>
+          {% elif val == "No" %}
+            <span class="col-check-no">&#10008; No</span>
+          {% else %}
+            {{ val }}
+          {% endif %}
+        </td>
+      {% endfor %}
+    </tr>
+    {% empty %}
+    <tr><td colspan="99" style="text-align:center;color:#999;">Sin registros</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
