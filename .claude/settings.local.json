@@ -31,7 +31,26 @@
       "Bash(unzip -p '/c/Users/Adrián Nicolás/Downloads/Klyp_Brand_Guide.docx' word/document.xml)",
       "Bash(cp \"G:/Mi unidad/KLYP/KRIA/Logo/kria.jpg\" \"C:/Users/Adrián Nicolás/Desktop/KRIA-Version-0.2/frontend/public/kria-logo.jpg\")",
       "Bash(cp \"G:/Mi unidad/KLYP/KRIA/Logo/logo_blanco.png\" \"C:/Users/Adrián Nicolás/Desktop/KRIA-Version-0.2/frontend/public/kria-logo-dark.png\")",
-      "Bash(grep -r \"celery\\\\|beat\\\\|worker\" docker-compose*.yml)"
+      "Bash(grep -r \"celery\\\\|beat\\\\|worker\" docker-compose*.yml)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(git -C 'C:/Users/Adrián Nicolás/Desktop/KRIA_Desarrollo' add backend/apps/tenants/models.py backend/apps/tenants/serializers.py backend/apps/tenants/migrations/0010_tenant_allow_animal_modifications.py backend/apps/animals/views.py frontend/src/types/index.ts frontend/src/pages/socio/AnimalFormPage.tsx frontend/src/pages/gestion/SuperAdminPage.tsx frontend/src/pages/gestion/ValidacionesPage.tsx)",
+      "Bash(git -C \"C:/Users/Adrián Nicolás/Desktop/KRIA_Desarrollo\" status --short)",
+      "Bash(git:*)",
+      "Bash(cmd /c \"cd \\\\\"C:\\\\Users\\\\Adrián Nicolás\\\\Desktop\\\\KRIA_Desarrollo_V1\\\\frontend\\\\\" && npx tsc --noEmit 2>&1\")",
+      "Bash(pandoc --version)",
+      "Bash(python3 -m pip install markdown weasyprint)",
+      "Read(//c/Users/Adrián Nicolás/AppData/Local/Programs/**)",
+      "Read(//c/Users/Adrián Nicolás/AppData/Local/Programs//**)",
+      "Bash(where python *)",
+      "Bash(cmd /c \"where python\")",
+      "Bash(npm --version)",
+      "Bash(docker --version)",
+      "PowerShell(Get-Command *)",
+      "Read(//c/Users/Adrián Nicolás/Desktop//**)",
+      "Read(//c/Users/Adrián Nicolás/Desktop/Pr//**)",
+      "Bash(py *)",
+      "PowerShell(node --version)",
+      "Bash(npm run *)"
     ]
   }
 }

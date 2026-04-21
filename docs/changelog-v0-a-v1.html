@@ -1,0 +1,113 @@
+﻿<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Changelog V0 a V1</title>
+<style>
+body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; margin: 60px 80px; color: #222; }
+h1 { color: #051937; border-bottom: 2px solid #051937; padding-bottom: 8px; font-size: 20pt; }
+h2 { color: #2E6DB4; margin-top: 28px; font-size: 14pt; }
+h3 { color: #444; font-size: 12pt; }
+li { margin-bottom: 4px; }
+ul { margin: 8px 0 12px 20px; }
+hr { border: none; border-top: 1px solid #ccc; margin: 20px 0; }
+em { color: #888; font-size: 10pt; }
+strong { color: #222; }
+code { background: #f0f0f0; padding: 1px 4px; border-radius: 3px; font-family: Consolas, monospace; font-size: 10pt; }
+p { margin: 8px 0; line-height: 1.6; }
+</style></head>
+<body><h1>Control de Cambios — KRIA Versión 0 → Versión 1</h1>
+
+<strong>Fecha de redacción:</strong> 21 de abril de 2026  
+<strong>Rama de producción actual:</strong> <code>KRIA/Version-0</code>  
+<strong>Rama en desarrollo:</strong> <code>KRIA/Version-1</code>
+
+<hr>
+
+<h2>Resumen ejecutivo</h2>
+
+La Versión 1 incorpora tres bloques de mejora sobre la base de la Versión 0: un nuevo módulo de tablas de control configurables, la capacidad de importar socios y animales directamente desde el panel del SuperAdmin, y mejoras en la generación de reportes tanto para gestores como para socios.
+
+<hr>
+
+<h2>1. Módulo de Tablas de Control</h2>
+
+<strong>Descripción</strong>
+
+Nuevo módulo opcional que permite a cada asociación crear tablas de control personalizadas para gestionar información de sus socios de forma estructurada (por ejemplo: «Libretas año 2026», «Control de pagos», etc.).
+
+<strong>Funcionalidades incluidas</strong>
+
+<li>Activación/desactivación del módulo por asociación desde el panel SuperAdmin, mediante el flag <code>tablas_enabled</code>.</li>
+<li>Creación de múltiples tablas por asociación, cada una con nombre propio.</li>
+<li>Configuración de cada tabla al crearla:</li>
+  - Campos del socio a mostrar como columnas (número de socio, nombre, DNI, email, teléfono, etc.).
+  - Columnas de control propias, con tipos: <strong>checkbox</strong>, <strong>texto</strong>, <strong>fecha</strong> o <strong>número</strong>.
+<li>Todos los socios de la asociación aparecen como filas de la tabla.</li>
+<li>Edición de celdas directamente en la tabla (inline) con guardado automático.</li>
+<li>Filtros por nombre/DNI/número de socio y por estado (Alta/Baja).</li>
+<li>Ordenación por columnas de socio.</li>
+<li>Exportación de la tabla a <strong>PDF</strong> (formato A4 apaisado) y a <strong>Excel</strong>.</li>
+<li>Botón «Sincronizar» para incorporar a la tabla los socios dados de alta después de su creación.</li>
+
+<hr>
+
+<h2>2. Importaciones desde el Panel SuperAdmin</h2>
+
+<strong>Descripción</strong>
+
+El SuperAdmin puede ahora realizar importaciones masivas de socios y animales en nombre de cualquier asociación directamente desde su panel, sin necesidad de acceder al panel de esa asociación ni usar la funcionalidad de impersonación.
+
+<strong>Funcionalidades incluidas</strong>
+
+<li>Selección de la asociación destino antes de iniciar la importación.</li>
+<li>Descarga de la plantilla Excel correspondiente (socios o animales) para cada asociación.</li>
+<li>Validación previa del archivo antes de importar:</li>
+  - Vista de previsualización con el resultado fila a fila.
+  - Detalle de errores encontrados antes de confirmar.
+<li>Confirmación explícita antes de ejecutar la importación.</li>
+<li>Seguimiento en tiempo real del progreso del job de importación.</li>
+
+<hr>
+
+<h2>3. Mejoras en Reportes</h2>
+
+<h3>$3</h3>
+
+Antes de generar un PDF de Inventario o de Catálogo de Reproductores, el sistema permite elegir el criterio de ordenación:
+
+<li>Por Variedad → Nº de Anilla</li>
+<li>Por Socio → Nº de Anilla</li>
+<li>Por Estado → Nº de Anilla</li>
+<li>Solo por Nº de Anilla</li>
+
+<h3>$3</h3>
+
+Los animales en estado <strong>EVALUADO</strong> muestran ahora en su ficha PDF:
+
+<li>Puntuación media obtenida en la evaluación morfológica.</li>
+<li>Fecha en que se realizó la evaluación.</li>
+
+Esta información aparece tanto en el banner de identificación del animal como en la sección de Evaluación Morfológica.
+
+<h3>$3</h3>
+
+Los socios disponen de una nueva sección en su panel desde la que pueden generar de forma autónoma:
+
+<li><strong>Inventario propio en PDF</strong>, con el mismo selector de ordenación disponible para gestores.</li>
+<li><strong>Inventario propio en Excel</strong>.</li>
+
+<hr>
+
+<h2>Notas técnicas para el equipo</h2>
+
+| Componente | Cambio |
+|---|---|
+| <code>Tenant</code> | Nuevo campo <code>tablas_enabled</code> (Boolean, defecto <code>False</code>) |
+| Nueva app <code>tablas</code> | Modelos, serializers, vistas y URLs del módulo de tablas |
+| <code>imports/superadmin_views.py</code> | Endpoints de validación y confirmación de importaciones para SuperAdmin |
+| <code>reports/tasks.py</code> y <code>views.py</code> | Soporte de criterio de ordenación en generación de PDFs |
+| <code>reports/individual.html</code> | Puntuación y fecha de evaluación en ficha PDF |
+| Frontend | Páginas <code>TablasPage</code>, <code>TablaDetallePage</code>, <code>MisReportesPage</code>; modal de ordenación en <code>ReportesPage</code>; sección de importaciones en <code>SuperAdminPage</code> |
+
+<hr>
+
+<em>Documento generado automáticamente a partir del historial de la rama <code>KRIA/Version-1</code>.</em>
+</body></html>
