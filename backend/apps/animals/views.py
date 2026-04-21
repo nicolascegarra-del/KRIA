@@ -243,7 +243,13 @@ class AnimalListCreateView(generics.ListCreateAPIView):
 
 
 class AnimalDetailView(generics.RetrieveUpdateAPIView):
-    permission_classes = [IsAuthenticated, IsSocioOwner]
+
+    def get_permissions(self):
+        # Read-only: any authenticated user in the tenant (e.g. socios viewing genealogy ancestors)
+        # Write: must own the animal
+        if self.request.method in ("GET", "HEAD", "OPTIONS"):
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsSocioOwner()]
 
     def get_serializer_class(self):
         if self.request.method == "GET":
