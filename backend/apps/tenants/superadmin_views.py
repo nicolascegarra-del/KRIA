@@ -40,7 +40,7 @@ class SuperAdminTenantListCreateView(generics.ListCreateAPIView):
         return Tenant.objects.exclude(slug="system").annotate(
             socios_count=Count("socios", filter=Q(socios__estado="ALTA"), distinct=True),
             socios_baja_count=Count("socios", filter=Q(socios__estado="BAJA"), distinct=True),
-            animales_count=Count("animales", distinct=True),
+            animales_count=Count("animals", distinct=True),
         ).order_by("name")
 
     def create(self, request, *args, **kwargs):
