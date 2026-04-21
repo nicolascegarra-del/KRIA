@@ -231,7 +231,7 @@ class Command(BaseCommand):
                 variedad = parse_variedad(col(row, "AE"))
 
                 ganaderia_actual = str(col(row, "F") or "").strip()
-                ganaderia_nacimiento = ganaderia_g
+                ganaderia_nacimiento = ganaderia_g if ganaderia_g else "Desconocida"
 
                 fecha_incubacion = parse_date(col(row, "C"))
 
