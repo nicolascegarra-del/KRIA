@@ -28,6 +28,7 @@ GANADERIA_SOCIO: dict[str, str | None] = {
     "ANiC": None,  # excluida
     "ASG":  None,
     "AVaE": "Antonio Valera Espin",
+    "AVAE": "Antonio Valera Espin",
     "AVN":  "Antonio Vidal Nicolas",
     "AVQ":  None,
     "BNP":  "Blanca Navarro Polvorosa",
