@@ -40,10 +40,10 @@ export default function AnimalesPage() {
   const allColumns: CensoColumnDef[] = colMeta?.columns ?? [];
   const defaultCols: string[] = colMeta?.defaults ?? [];
 
-  const [selectedCols, setSelectedCols] = useState<string[]>(() => {
+  const [selectedCols, setSelectedCols] = useState<string[] | null>(() => {
     try {
       const saved = localStorage.getItem(LS_KEY);
-      return saved ? JSON.parse(saved) : null;
+      return saved ? (JSON.parse(saved) as string[]) : null;
     } catch { return null; }
   });
   const activeCols = selectedCols ?? defaultCols;
@@ -113,19 +113,13 @@ export default function AnimalesPage() {
 
   // Export
   async function handleExport(format: "pdf" | "excel") {
-    const params = {
-      ...filters,
-      format,
-      columns: activeCols.join(","),
-      page: undefined,
-      page_size: undefined,
-    };
-    const query = new URLSearchParams(
-      Object.entries(params).reduce((acc, [k, v]) => {
-        if (v !== undefined && v !== "") acc[k] = String(v);
-        return acc;
-      }, {} as Record<string, string>)
-    ).toString();
+    const exportParams: Record<string, string> = { format, columns: activeCols.join(",") };
+    const filterEntries = Object.entries(filters) as [string, unknown][];
+    for (const [k, v] of filterEntries) {
+      if (k === "page" || k === "page_size") continue;
+      if (v !== undefined && v !== "") exportParams[k] = String(v);
+    }
+    const query = new URLSearchParams(exportParams).toString();
     const url = `/animals/censo/export/?${query}`;
     const { data: blob } = await apiClient.get(url, { responseType: "blob" });
     const href = URL.createObjectURL(blob);
