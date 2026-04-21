@@ -7,7 +7,7 @@ Uso:
 El slug del tenant se identifica con --tenant (ej. "agamur").
 """
 import re
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta, datetime as dt_datetime
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -76,6 +76,7 @@ EXCEL_EPOCH = date(1899, 12, 30)
 
 def parse_date(val) -> date | None:
     """Convierte un valor de celda Excel a date.
+    - datetime/date (openpyxl data_only) → directo
     - "R-xx/YY"  → 31/12/20(YY-1)
     - serial > 3000 → fecha Excel
     - entero 1900-2100 → 1 de enero de ese año
@@ -83,6 +84,13 @@ def parse_date(val) -> date | None:
     """
     if val is None or val == "":
         return None
+
+    # openpyxl con data_only=True devuelve datetime o date en celdas con formato fecha
+    if isinstance(val, dt_datetime):
+        return val.date()
+    if isinstance(val, date):
+        return val
+
     s = str(val).strip()
     if not s:
         return None
