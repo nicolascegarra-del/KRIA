@@ -37,7 +37,7 @@ import {
   Lightbulb,
   Archive,
   Table2,
-  BookMarked,
+  ClipboardList,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -69,7 +69,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/reportes",                 label: "Reportes",              icon: <FileText size={18} />,        gestionOnly: true },
   { to: "/auditorias",              label: "Auditorías",            icon: <ClipboardCheck size={18} />,  gestionOnly: true, requiresAuditorias: true },
   { to: "/tablas",                  label: "Tablas",                icon: <Table2 size={18} />,          gestionOnly: true, requiresTablas: true },
-  { to: "/animales",                label: "Animales",              icon: <BookMarked size={18} />,      gestionOnly: true, requiresAnimales: true },
+  { to: "/animales",                label: "Animales",              icon: <ClipboardList size={18} />,   gestionOnly: true, requiresAnimales: true },
   // SuperAdmin
   { to: "/superadmin",               label: "Dashboard",             icon: <LayoutDashboard size={18} />, superadminOnly: true, exact: true },
   { to: "/superadmin/asociaciones",  label: "Asociaciones",          icon: <Building size={18} />,        superadminOnly: true },

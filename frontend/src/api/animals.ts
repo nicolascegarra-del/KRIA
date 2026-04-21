@@ -166,13 +166,4 @@ export const censoApi = {
     return data;
   },
 
-  exportUrl: (params: CensoFilters & { format: "pdf" | "excel"; columns: string }) => {
-    const query = new URLSearchParams(
-      Object.entries({ ...params }).reduce((acc, [k, v]) => {
-        if (v !== undefined && v !== "") acc[k] = String(v);
-        return acc;
-      }, {} as Record<string, string>)
-    ).toString();
-    return `/animals/censo/export/?${query}`;
-  },
 };

@@ -44,7 +44,7 @@ export default function AnimalesPage() {
     try {
       const saved = localStorage.getItem(LS_KEY);
       return saved ? (JSON.parse(saved) as string[]) : null;
-    } catch { return null; }
+    } catch (_e) { return null; }
   });
   const activeCols = selectedCols ?? defaultCols;
 
