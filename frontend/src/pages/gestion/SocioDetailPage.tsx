@@ -26,8 +26,7 @@ import {
 import type { Animal, AnimalEstado } from "../../types";
 import clsx from "clsx";
 
-const ACTIVO_STATES: AnimalEstado[] = ["REGISTRADO", "APROBADO", "EVALUADO"];
-const NO_ACTIVO_STATES: AnimalEstado[] = ["RECHAZADO", "SOCIO_EN_BAJA", "BAJA"];
+const PAGE_SIZE = 50;
 
 type Tab = "animales" | "granjas";
 
@@ -39,6 +38,8 @@ export default function SocioDetailPage() {
   const granjasEnabled = branding?.granjas_enabled !== false;
   const [tab, setTab] = useState<Tab>("animales");
   const [animalesSubTab, setAnimalesSubTab] = useState<"activos" | "no_activos">("activos");
+  const [pageActivos, setPageActivos] = useState(1);
+  const [pageNoActivos, setPageNoActivos] = useState(1);
   const [successMsg, setSuccessMsg] = useState("");
 
   // Dar de baja inline form
@@ -52,10 +53,18 @@ export default function SocioDetailPage() {
     enabled: !!id,
   });
 
-  const { data: animalesData } = useQuery({
-    queryKey: ["animals", { socio_id: id }],
-    queryFn: () => animalsApi.list({ socio_id: id!, page_size: 2000 }),
+  const { data: activosData, isLoading: loadingActivos } = useQuery({
+    queryKey: ["animals", { socio_id: id, activo: true, page: pageActivos }],
+    queryFn: () => animalsApi.list({ socio_id: id!, activo: true, page: pageActivos, page_size: PAGE_SIZE } as any),
     enabled: tab === "animales" && !!id,
+    placeholderData: (prev) => prev,
+  });
+
+  const { data: noActivosData, isLoading: loadingNoActivos } = useQuery({
+    queryKey: ["animals", { socio_id: id, activo: false, page: pageNoActivos }],
+    queryFn: () => animalsApi.list({ socio_id: id!, activo: false, page: pageNoActivos, page_size: PAGE_SIZE } as any),
+    enabled: tab === "animales" && !!id,
+    placeholderData: (prev) => prev,
   });
 
   const { data: granjasData } = useQuery({
@@ -99,6 +108,11 @@ export default function SocioDetailPage() {
     },
   });
 
+  const totalActivos = activosData?.count ?? 0;
+  const totalNoActivos = noActivosData?.count ?? 0;
+  const totalPagesActivos = Math.ceil(totalActivos / PAGE_SIZE);
+  const totalPagesNoActivos = Math.ceil(totalNoActivos / PAGE_SIZE);
+
   const { data: motivosBaja = [] } = useQuery({
     queryKey: ["motivos-baja"],
     queryFn: configuracionApi.listMotivosBaja,
@@ -124,10 +138,9 @@ export default function SocioDetailPage() {
     );
   }
 
-  const animales = animalesData?.results ?? [];
+  const animalesActivos = activosData?.results ?? [];
+  const animalesNoActivos = noActivosData?.results ?? [];
   const granjas = granjasData?.results ?? [];
-  const animalesActivos = animales.filter((a: Animal) => ACTIVO_STATES.includes(a.estado));
-  const animalesNoActivos = animales.filter((a: Animal) => NO_ACTIVO_STATES.includes(a.estado));
 
   return (
     <div className="space-y-4">
@@ -258,7 +271,7 @@ export default function SocioDetailPage() {
                 animalesSubTab === "activos" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
               )}
             >
-              Activos ({animalesActivos.length})
+              Activos ({totalActivos})
             </button>
             <button
               onClick={() => setAnimalesSubTab("no_activos")}
@@ -267,26 +280,138 @@ export default function SocioDetailPage() {
                 animalesSubTab === "no_activos" ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
               )}
             >
-              No activos ({animalesNoActivos.length})
+              No activos ({totalNoActivos})
             </button>
           </div>
 
           {animalesSubTab === "activos" && (
-            animalesActivos.length === 0 ? (
+            loadingActivos ? (
+              <div className="flex justify-center py-8"><Loader2 size={24} className="animate-spin text-gray-400" /></div>
+            ) : animalesActivos.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <Bird size={36} className="mx-auto mb-2 text-gray-300" />
                 <p>No hay animales activos.</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100">
-                {animalesActivos.map((a: Animal) => (
-                  <div key={a.id} className="py-3 first:pt-0 last:pb-0">
-                    <div className="flex items-center justify-between gap-3">
+              <>
+                <div className="divide-y divide-gray-100">
+                  {animalesActivos.map((a: Animal) => (
+                    <div key={a.id} className="py-3 first:pt-0 last:pb-0">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <span className="font-mono font-medium text-gray-900">{a.numero_anilla}</span>
+                          <span className="text-sm text-gray-500 ml-2">
+                            / {a.fecha_nacimiento ? new Date(a.fecha_nacimiento).getFullYear() : "—"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">{a.variedad}</span>
+                          <AnimalStateChip estado={a.estado} />
+                          <button
+                            onClick={() => navigate(`/socios/${id}/animales/${a.id}`)}
+                            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
+                            title="Ver / Editar"
+                          >
+                            <Pencil size={12} />
+                            Ver/Editar
+                          </button>
+                          <button
+                            onClick={() => {
+                              setBajaAnimalId(a.id);
+                              setBajaFecha(new Date().toISOString().slice(0, 10));
+                              setBajaMotivoId("");
+                            }}
+                            className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-800 px-2 py-1 rounded hover:bg-orange-50"
+                            title="Dar de baja"
+                          >
+                            <AlertTriangle size={12} />
+                            Dar de baja
+                          </button>
+                        </div>
+                      </div>
+                      {/* Inline dar de baja form */}
+                      {bajaAnimalId === a.id && (
+                        <div className="mt-2 bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-2">
+                          <p className="text-xs font-medium text-orange-800">Confirmar baja del animal</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Fecha de baja</label>
+                              <input
+                                type="date"
+                                className="input-field text-xs"
+                                value={bajaFecha}
+                                onChange={(e) => setBajaFecha(e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Motivo</label>
+                              <select
+                                className="input-field text-xs"
+                                value={bajaMotivoId}
+                                onChange={(e) => setBajaMotivoId(e.target.value)}
+                              >
+                                <option value="">Seleccionar...</option>
+                                {motivosBaja.filter(m => m.is_active).map((m) => (
+                                  <option key={m.id} value={m.id}>{m.nombre}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => darBajaMutation.mutate({ animalId: a.id, fecha_baja: bajaFecha, motivo_baja: bajaMotivoId })}
+                              disabled={!bajaFecha || !bajaMotivoId || darBajaMutation.isPending}
+                              className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1"
+                            >
+                              {darBajaMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : null}
+                              Confirmar
+                            </button>
+                            <button
+                              onClick={() => { setBajaAnimalId(null); setBajaMotivoId(""); }}
+                              className="btn-secondary text-xs py-1.5 px-3"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {totalPagesActivos > 1 && (
+                  <div className="flex items-center justify-between pt-2 text-xs text-gray-500">
+                    <span>Página {pageActivos} de {totalPagesActivos} · {totalActivos} animales</span>
+                    <div className="flex gap-1">
+                      <button disabled={pageActivos <= 1} onClick={() => setPageActivos(p => p - 1)} className="px-2 py-1 border rounded disabled:opacity-40 hover:bg-gray-50">Anterior</button>
+                      <button disabled={pageActivos >= totalPagesActivos} onClick={() => setPageActivos(p => p + 1)} className="px-2 py-1 border rounded disabled:opacity-40 hover:bg-gray-50">Siguiente</button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )
+          )}
+
+          {animalesSubTab === "no_activos" && (
+            loadingNoActivos ? (
+              <div className="flex justify-center py-8"><Loader2 size={24} className="animate-spin text-gray-400" /></div>
+            ) : animalesNoActivos.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <Bird size={36} className="mx-auto mb-2 text-gray-300" />
+                <p>No hay animales no activos.</p>
+              </div>
+            ) : (
+              <>
+                <div className="divide-y divide-gray-100">
+                  {animalesNoActivos.map((a: Animal) => (
+                    <div key={a.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
                       <div>
                         <span className="font-mono font-medium text-gray-900">{a.numero_anilla}</span>
                         <span className="text-sm text-gray-500 ml-2">
                           / {a.fecha_nacimiento ? new Date(a.fecha_nacimiento).getFullYear() : "—"}
                         </span>
+                        {a.estado === "BAJA" && a.motivo_baja_nombre && (
+                          <span className="text-xs text-gray-400 ml-2">({a.motivo_baja_nombre})</span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-gray-500">{a.variedad}</span>
@@ -300,116 +425,30 @@ export default function SocioDetailPage() {
                           Ver/Editar
                         </button>
                         <button
-                          onClick={() => {
-                            setBajaAnimalId(a.id);
-                            setBajaFecha(new Date().toISOString().slice(0, 10));
-                            setBajaMotivoId("");
-                          }}
-                          className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-800 px-2 py-1 rounded hover:bg-orange-50"
-                          title="Dar de baja"
+                          onClick={() => reactivarAnimalMutation.mutate(a.id)}
+                          disabled={reactivarAnimalMutation.isPending}
+                          className="flex items-center gap-1 text-xs text-green-700 hover:text-green-900 px-2 py-1 rounded hover:bg-green-50 disabled:opacity-40"
+                          title="Reactivar animal"
                         >
-                          <AlertTriangle size={12} />
-                          Dar de baja
+                          {reactivarAnimalMutation.isPending
+                            ? <Loader2 size={12} className="animate-spin" />
+                            : <RefreshCw size={12} />}
+                          Reactivar
                         </button>
                       </div>
                     </div>
-                    {/* Inline dar de baja form */}
-                    {bajaAnimalId === a.id && (
-                      <div className="mt-2 bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-2">
-                        <p className="text-xs font-medium text-orange-800">Confirmar baja del animal</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="block text-xs text-gray-500 mb-1">Fecha de baja</label>
-                            <input
-                              type="date"
-                              className="input-field text-xs"
-                              value={bajaFecha}
-                              onChange={(e) => setBajaFecha(e.target.value)}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-gray-500 mb-1">Motivo</label>
-                            <select
-                              className="input-field text-xs"
-                              value={bajaMotivoId}
-                              onChange={(e) => setBajaMotivoId(e.target.value)}
-                            >
-                              <option value="">Seleccionar...</option>
-                              {motivosBaja.filter(m => m.is_active).map((m) => (
-                                <option key={m.id} value={m.id}>{m.nombre}</option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => darBajaMutation.mutate({ animalId: a.id, fecha_baja: bajaFecha, motivo_baja: bajaMotivoId })}
-                            disabled={!bajaFecha || !bajaMotivoId || darBajaMutation.isPending}
-                            className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1"
-                          >
-                            {darBajaMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : null}
-                            Confirmar
-                          </button>
-                          <button
-                            onClick={() => { setBajaAnimalId(null); setBajaMotivoId(""); }}
-                            className="btn-secondary text-xs py-1.5 px-3"
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )
-          )}
-
-          {animalesSubTab === "no_activos" && (
-            animalesNoActivos.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                <Bird size={36} className="mx-auto mb-2 text-gray-300" />
-                <p>No hay animales no activos.</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {animalesNoActivos.map((a: Animal) => (
-                  <div key={a.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                    <div>
-                      <span className="font-mono font-medium text-gray-900">{a.numero_anilla}</span>
-                      <span className="text-sm text-gray-500 ml-2">
-                        / {a.fecha_nacimiento ? new Date(a.fecha_nacimiento).getFullYear() : "—"}
-                      </span>
-                      {a.estado === "BAJA" && a.motivo_baja_nombre && (
-                        <span className="text-xs text-gray-400 ml-2">({a.motivo_baja_nombre})</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">{a.variedad}</span>
-                      <AnimalStateChip estado={a.estado} />
-                      <button
-                        onClick={() => navigate(`/socios/${id}/animales/${a.id}`)}
-                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
-                        title="Ver / Editar"
-                      >
-                        <Pencil size={12} />
-                        Ver/Editar
-                      </button>
-                      <button
-                        onClick={() => reactivarAnimalMutation.mutate(a.id)}
-                        disabled={reactivarAnimalMutation.isPending}
-                        className="flex items-center gap-1 text-xs text-green-700 hover:text-green-900 px-2 py-1 rounded hover:bg-green-50 disabled:opacity-40"
-                        title="Reactivar animal"
-                      >
-                        {reactivarAnimalMutation.isPending
-                          ? <Loader2 size={12} className="animate-spin" />
-                          : <RefreshCw size={12} />}
-                        Reactivar
-                      </button>
+                  ))}
+                </div>
+                {totalPagesNoActivos > 1 && (
+                  <div className="flex items-center justify-between pt-2 text-xs text-gray-500">
+                    <span>Página {pageNoActivos} de {totalPagesNoActivos} · {totalNoActivos} animales</span>
+                    <div className="flex gap-1">
+                      <button disabled={pageNoActivos <= 1} onClick={() => setPageNoActivos(p => p - 1)} className="px-2 py-1 border rounded disabled:opacity-40 hover:bg-gray-50">Anterior</button>
+                      <button disabled={pageNoActivos >= totalPagesNoActivos} onClick={() => setPageNoActivos(p => p + 1)} className="px-2 py-1 border rounded disabled:opacity-40 hover:bg-gray-50">Siguiente</button>
                     </div>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )
           )}
         </div>

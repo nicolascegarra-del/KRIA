@@ -111,16 +111,26 @@ def _update_alerta_anilla(animal):
         animal.save(update_fields=["alerta_anilla"])
 
 
+ESTADOS_ACTIVOS = ["REGISTRADO", "MODIFICADO", "APROBADO", "EVALUADO"]
+ESTADOS_NO_ACTIVOS = ["BAJA", "RECHAZADO", "SOCIO_EN_BAJA"]
+
+
 class AnimalFilter(django_filters.FilterSet):
     estado = django_filters.CharFilter()
     variedad = django_filters.CharFilter()
     sexo = django_filters.CharFilter()
     anio = django_filters.NumberFilter(field_name="fecha_nacimiento", lookup_expr="year")
     socio_id = django_filters.UUIDFilter(field_name="socio__id")
+    activo = django_filters.BooleanFilter(method="filter_activo")
 
     class Meta:
         model = Animal
         fields = ["estado", "variedad", "sexo", "socio"]
+
+    def filter_activo(self, queryset, name, value):
+        if value:
+            return queryset.filter(estado__in=ESTADOS_ACTIVOS)
+        return queryset.filter(estado__in=ESTADOS_NO_ACTIVOS)
 
 
 class AnimalListCreateView(generics.ListCreateAPIView):
