@@ -16,8 +16,12 @@ from .views import (
     GanaderiasNacimientoView,
     LotesExternosView,
 )
+from .censo_views import CensoColumnasView, CensoExportView, CensoListView
 
 urlpatterns = [
+    path("censo/", CensoListView.as_view(), name="animals-censo"),
+    path("censo/columnas/", CensoColumnasView.as_view(), name="animals-censo-columnas"),
+    path("censo/export/", CensoExportView.as_view(), name="animals-censo-export"),
     path("", AnimalListCreateView.as_view(), name="animals-list"),
     path("search-global/", AnimalGlobalSearchView.as_view(), name="animals-search-global"),
     path("motivos-rechazo/", AnimalMotivosRechazoView.as_view(), name="animals-motivos-rechazo"),

@@ -43,6 +43,7 @@ class Tenant(models.Model):
         help_text="Si está desactivado, ni socios ni gestores pueden modificar campos principales de animales ya aprobados.",
     )
     tablas_enabled = models.BooleanField(default=False, help_text="Habilita el módulo de Tablas de Control.")
+    animales_enabled = models.BooleanField(default=False, help_text="Habilita el módulo de Animales (censo genealógico).")
 
     # ── Configuración de anillas ─────────────────────────────────────────────
     anilla_sizes = models.JSONField(

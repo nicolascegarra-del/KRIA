@@ -62,6 +62,7 @@ class Animal(UUIDModel):
     )
     socio = models.ForeignKey(
         "accounts.Socio",
+        null=True, blank=True,
         on_delete=models.CASCADE,
         related_name="animals",
     )

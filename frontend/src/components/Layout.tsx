@@ -37,6 +37,7 @@ import {
   Lightbulb,
   Archive,
   Table2,
+  BookMarked,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -52,6 +53,7 @@ interface NavItem {
   requiresImportaciones?: boolean;
   requiresAuditorias?: boolean;
   requiresTablas?: boolean;
+  requiresAnimales?: boolean;
   subtle?: boolean;
 }
 
@@ -67,6 +69,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/reportes",                 label: "Reportes",              icon: <FileText size={18} />,        gestionOnly: true },
   { to: "/auditorias",              label: "Auditorías",            icon: <ClipboardCheck size={18} />,  gestionOnly: true, requiresAuditorias: true },
   { to: "/tablas",                  label: "Tablas",                icon: <Table2 size={18} />,          gestionOnly: true, requiresTablas: true },
+  { to: "/animales",                label: "Animales",              icon: <BookMarked size={18} />,      gestionOnly: true, requiresAnimales: true },
   // SuperAdmin
   { to: "/superadmin",               label: "Dashboard",             icon: <LayoutDashboard size={18} />, superadminOnly: true, exact: true },
   { to: "/superadmin/asociaciones",  label: "Asociaciones",          icon: <Building size={18} />,        superadminOnly: true },
@@ -269,6 +272,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const importacionesEnabled = branding ? branding.importaciones_enabled !== false : false;
   const auditoriasEnabled    = branding ? branding.auditorias_enabled    !== false : false;
   const tablasEnabled        = branding ? branding.tablas_enabled        === true  : false;
+  const animalesEnabled      = branding ? branding.animales_enabled      === true  : false;
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (isSuperadmin && !impersonatingTenant) {
@@ -281,6 +285,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     if (item.requiresImportaciones && !importacionesEnabled) return false;
     if (item.requiresAuditorias && !auditoriasEnabled) return false;
     if (item.requiresTablas && !tablasEnabled) return false;
+    if (item.requiresAnimales && !animalesEnabled) return false;
     return true;
   });
 

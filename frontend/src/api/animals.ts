@@ -121,3 +121,58 @@ export const animalsApi = {
     return data;
   },
 };
+
+// ── Censo (módulo Animales) ───────────────────────────────────────────────────
+
+export interface CensoColumnDef {
+  key: string;
+  label: string;
+}
+
+export interface CensoFilters {
+  search?: string;
+  variedad?: string;
+  estado?: string;
+  sexo?: string;
+  propietario?: "con" | "sin" | "";
+  fecha_desde?: string;
+  fecha_hasta?: string;
+  order_by?: string;
+  order_dir?: "asc" | "desc";
+  page?: number;
+  page_size?: number;
+}
+
+export interface CensoAnimal {
+  id: string;
+  [key: string]: string;
+}
+
+export interface CensoResponse {
+  count: number;
+  page: number;
+  page_size: number;
+  results: CensoAnimal[];
+}
+
+export const censoApi = {
+  getColumnas: async (): Promise<{ columns: CensoColumnDef[]; defaults: string[] }> => {
+    const { data } = await apiClient.get("/animals/censo/columnas/");
+    return data;
+  },
+
+  list: async (params?: CensoFilters): Promise<CensoResponse> => {
+    const { data } = await apiClient.get("/animals/censo/", { params });
+    return data;
+  },
+
+  exportUrl: (params: CensoFilters & { format: "pdf" | "excel"; columns: string }) => {
+    const query = new URLSearchParams(
+      Object.entries({ ...params }).reduce((acc, [k, v]) => {
+        if (v !== undefined && v !== "") acc[k] = String(v);
+        return acc;
+      }, {} as Record<string, string>)
+    ).toString();
+    return `/animals/censo/export/?${query}`;
+  },
+};

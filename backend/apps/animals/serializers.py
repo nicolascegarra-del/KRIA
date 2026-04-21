@@ -33,7 +33,8 @@ class MotivoBajaSerializer(serializers.ModelSerializer):
 
 
 class AnimalListSerializer(serializers.ModelSerializer):
-    socio_nombre = serializers.CharField(source="socio.nombre_razon_social", read_only=True)
+    socio_nombre = serializers.CharField(source="socio.nombre_razon_social", read_only=True, allow_null=True)
+    socio_id = serializers.UUIDField(source="socio.id", read_only=True, allow_null=True)
     granja_nombre = serializers.CharField(source="granja.nombre", read_only=True, allow_null=True)
     padre_anilla = serializers.CharField(source="padre.numero_anilla", read_only=True, allow_null=True)
     madre_anilla = serializers.SerializerMethodField()
@@ -45,7 +46,7 @@ class AnimalListSerializer(serializers.ModelSerializer):
             "id", "numero_anilla", "fecha_nacimiento", "sexo", "variedad",
             "estado", "candidato_reproductor", "reproductor_aprobado",
             "alerta_anilla",
-            "socio_nombre", "granja", "granja_nombre",
+            "socio_id", "socio_nombre", "granja", "granja_nombre",
             "padre_anilla", "madre_anilla",
             "fotos", "created_at",
         ]
@@ -64,7 +65,7 @@ class AnimalListSerializer(serializers.ModelSerializer):
 
 
 class AnimalDetailSerializer(serializers.ModelSerializer):
-    socio_nombre = serializers.CharField(source="socio.nombre_razon_social", read_only=True)
+    socio_nombre = serializers.CharField(source="socio.nombre_razon_social", read_only=True, allow_null=True)
     padre_anilla = serializers.CharField(source="padre.numero_anilla", read_only=True, allow_null=True)
     padre_anio_nacimiento = serializers.SerializerMethodField()
     madre_anilla = serializers.CharField(source="madre_animal.numero_anilla", read_only=True, allow_null=True)

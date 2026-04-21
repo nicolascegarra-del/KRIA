@@ -7,7 +7,7 @@ class TenantBrandingSerializer(serializers.ModelSerializer):
         model = Tenant
         fields = ["id", "name", "slug", "logo_url", "primary_color", "secondary_color",
                   "granjas_enabled", "importaciones_enabled", "auditorias_enabled",
-                  "allow_animal_modifications", "tablas_enabled", "anilla_sizes"]
+                  "allow_animal_modifications", "tablas_enabled", "animales_enabled", "anilla_sizes"]
 
 
 class TenantSerializer(serializers.ModelSerializer):
@@ -23,7 +23,7 @@ class TenantSerializer(serializers.ModelSerializer):
             "telefono1", "telefono1_nombre", "telefono1_cargo", "telefono1_email",
             "telefono2", "telefono2_nombre", "telefono2_cargo", "telefono2_email",
             "granjas_enabled", "importaciones_enabled", "auditorias_enabled",
-            "allow_animal_modifications", "tablas_enabled", "anilla_sizes", "email_notificaciones",
+            "allow_animal_modifications", "tablas_enabled", "animales_enabled", "anilla_sizes", "email_notificaciones",
             "smtp_host", "smtp_port", "smtp_user", "smtp_password",
             "smtp_from_email", "smtp_from_name", "smtp_use_tls", "smtp_use_ssl",
         ]

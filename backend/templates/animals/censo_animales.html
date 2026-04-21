@@ -1,0 +1,30 @@
+{% extends "reports/base_report.html" %}
+
+{% block page_style %}
+@page { size: A4 landscape; margin: 1.5cm; }
+{% endblock %}
+
+{% block content %}
+<h1>Censo de Animales</h1>
+
+<table>
+  <thead>
+    <tr>
+      {% for h in headers %}
+        <th>{{ h }}</th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      {% for val in row %}
+        <td>{{ val }}</td>
+      {% endfor %}
+    </tr>
+    {% empty %}
+    <tr><td colspan="99" style="text-align:center;color:#999;">Sin registros</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
