@@ -655,17 +655,29 @@ export default function AnimalFormPage() {
             <History size={16} className="text-gray-500" />
             <h3 className="text-sm font-semibold text-gray-700">Historial de Ganaderías</h3>
           </div>
-          <div className="divide-y divide-gray-100">
-            {(animal?.historico_ganaderias ?? []).map((g, i) => (
-              <div key={i} className="flex items-center justify-between py-2 text-sm">
-                <span className="font-medium text-gray-800">{g.ganaderia}</span>
-                <span className="text-gray-500 text-xs">
-                  {g.fecha_alta ?? "—"}
-                  {" → "}
-                  {g.fecha_baja ?? <span className="text-green-600 font-medium">Actual</span>}
-                </span>
-              </div>
-            ))}
+          <div className="overflow-x-auto rounded-xl border border-gray-200">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <th className="px-3 py-2 text-left">Ganadería</th>
+                  <th className="px-3 py-2 text-left whitespace-nowrap">Fecha Alta</th>
+                  <th className="px-3 py-2 text-left whitespace-nowrap">Fecha Baja</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(animal?.historico_ganaderias ?? []).map((g, i) => (
+                  <tr key={i} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                    <td className="px-3 py-2 font-medium text-gray-800">{g.ganaderia}</td>
+                    <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{g.fecha_alta ?? "—"}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      {g.fecha_baja
+                        ? <span className="text-gray-500">{g.fecha_baja}</span>
+                        : <span className="text-green-600 font-medium text-xs">Actual</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

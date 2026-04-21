@@ -134,6 +134,40 @@ export default function AnimalViewModal({ animalId, onClose }: Props) {
                 {animal.razon_rechazo && <InfoRow label="Razón de rechazo" value={animal.razon_rechazo} />}
               </div>
 
+              {/* Ganadería history */}
+              {animal.historico_ganaderias && animal.historico_ganaderias.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <Calendar size={14} className="text-green-600" />
+                    <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Historial de Ganaderías</span>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 overflow-hidden">
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <th className="px-3 py-2 text-left font-semibold text-gray-500">Ganadería</th>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">Fecha Alta</th>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-500 whitespace-nowrap">Fecha Baja</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {animal.historico_ganaderias.map((g, i) => (
+                          <tr key={i} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                            <td className="px-3 py-2 font-medium text-gray-800">{g.ganaderia}</td>
+                            <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{g.fecha_alta ?? "—"}</td>
+                            <td className="px-3 py-2 whitespace-nowrap">
+                              {g.fecha_baja
+                                ? <span className="text-gray-500">{g.fecha_baja}</span>
+                                : <span className="text-green-600 font-semibold">Actual</span>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               {/* Weight history */}
               {animal.historico_pesos && animal.historico_pesos.length > 0 && (
                 <div>
