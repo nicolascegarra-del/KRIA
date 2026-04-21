@@ -337,101 +337,47 @@
   <!-- GENEALOGÍA -->
   {% if has_genealogy %}
   <div class="section">
-    <div class="section-title">Genealogía</div>
+    <div class="section-title">Genealogía (hasta 5 generaciones)</div>
     <table class="gen-table">
       <thead>
         <tr>
-          <th style="width:20%">Relación</th>
+          <th style="width:22%">Relación</th>
           <th style="width:18%">Nº Anilla</th>
-          <th style="width:8%">Año</th>
-          <th style="width:8%">Sexo</th>
-          <th style="width:14%">Variedad</th>
-          <th style="width:14%">Estado</th>
-          <th style="width:18%">Ganadería</th>
+          <th style="width:7%">Año</th>
+          <th style="width:7%">Sexo</th>
+          <th style="width:13%">Variedad</th>
+          <th style="width:13%">Estado</th>
+          <th style="width:20%">Ganadería</th>
         </tr>
       </thead>
       <tbody>
-
-        {% if gen.padre %}
-        <tr style="background:#eef2f7;">
-          <td><strong>Padre</strong></td>
-          <td style="font-family:monospace; font-size:9.5pt;">{{ gen.padre.numero_anilla }}</td>
-          <td>{{ gen.padre.fecha_nacimiento.year|default:"—" }}</td>
-          <td>{{ gen.padre.get_sexo_display }}</td>
-          <td>{{ gen.padre.get_variedad_display }}</td>
-          <td><span class="chip chip-{{ gen.padre.estado }}">{{ gen.padre.get_estado_display }}</span></td>
-          <td style="font-size:8.5pt;">{{ gen.padre.ganaderia_nacimiento|default:"—" }}</td>
-        </tr>
-        {% if gen.abuelo_paterno %}
-        <tr>
-          <td style="padding-left:1.4em; color:#666; font-size:8.5pt;">↳ Abuelo paterno</td>
-          <td style="font-family:monospace; font-size:8.5pt;">{{ gen.abuelo_paterno.numero_anilla }}</td>
-          <td style="font-size:8.5pt;">{{ gen.abuelo_paterno.fecha_nacimiento.year|default:"—" }}</td>
-          <td style="font-size:8.5pt;">{{ gen.abuelo_paterno.get_sexo_display }}</td>
-          <td style="font-size:8.5pt;">{{ gen.abuelo_paterno.get_variedad_display }}</td>
-          <td><span class="chip chip-{{ gen.abuelo_paterno.estado }}" style="font-size:7pt;">{{ gen.abuelo_paterno.get_estado_display }}</span></td>
-          <td style="font-size:8pt;">{{ gen.abuelo_paterno.ganaderia_nacimiento|default:"—" }}</td>
-        </tr>
-        {% endif %}
-        {% if gen.abuela_paterna %}
-        <tr>
-          <td style="padding-left:1.4em; color:#666; font-size:8.5pt;">↳ Abuela paterna</td>
-          <td style="font-family:monospace; font-size:8.5pt;">{{ gen.abuela_paterna.numero_anilla }}</td>
-          <td style="font-size:8.5pt;">{{ gen.abuela_paterna.fecha_nacimiento.year|default:"—" }}</td>
-          <td style="font-size:8.5pt;">{{ gen.abuela_paterna.get_sexo_display }}</td>
-          <td style="font-size:8.5pt;">{{ gen.abuela_paterna.get_variedad_display }}</td>
-          <td><span class="chip chip-{{ gen.abuela_paterna.estado }}" style="font-size:7pt;">{{ gen.abuela_paterna.get_estado_display }}</span></td>
-          <td style="font-size:8pt;">{{ gen.abuela_paterna.ganaderia_nacimiento|default:"—" }}</td>
-        </tr>
-        {% endif %}
-        {% endif %}
-
-        <tr><td colspan="7" style="padding:0; height:5px; background:#dde5ef; border:none;"></td></tr>
-
-        {% if gen.madre %}
-        <tr style="background:#eef2f7;">
-          <td><strong>Madre</strong></td>
-          <td style="font-family:monospace; font-size:9.5pt;">{{ gen.madre.numero_anilla }}</td>
-          <td>{{ gen.madre.fecha_nacimiento.year|default:"—" }}</td>
-          <td>{{ gen.madre.get_sexo_display }}</td>
-          <td>{{ gen.madre.get_variedad_display }}</td>
-          <td><span class="chip chip-{{ gen.madre.estado }}">{{ gen.madre.get_estado_display }}</span></td>
-          <td style="font-size:8.5pt;">{{ gen.madre.ganaderia_nacimiento|default:"—" }}</td>
-        </tr>
-        {% if gen.abuelo_materno %}
-        <tr>
-          <td style="padding-left:1.4em; color:#666; font-size:8.5pt;">↳ Abuelo materno</td>
-          <td style="font-family:monospace; font-size:8.5pt;">{{ gen.abuelo_materno.numero_anilla }}</td>
-          <td style="font-size:8.5pt;">{{ gen.abuelo_materno.fecha_nacimiento.year|default:"—" }}</td>
-          <td style="font-size:8.5pt;">{{ gen.abuelo_materno.get_sexo_display }}</td>
-          <td style="font-size:8.5pt;">{{ gen.abuelo_materno.get_variedad_display }}</td>
-          <td><span class="chip chip-{{ gen.abuelo_materno.estado }}" style="font-size:7pt;">{{ gen.abuelo_materno.get_estado_display }}</span></td>
-          <td style="font-size:8pt;">{{ gen.abuelo_materno.ganaderia_nacimiento|default:"—" }}</td>
-        </tr>
-        {% endif %}
-        {% if gen.abuela_materna %}
-        <tr>
-          <td style="padding-left:1.4em; color:#666; font-size:8.5pt;">↳ Abuela materna</td>
-          <td style="font-family:monospace; font-size:8.5pt;">{{ gen.abuela_materna.numero_anilla }}</td>
-          <td style="font-size:8.5pt;">{{ gen.abuela_materna.fecha_nacimiento.year|default:"—" }}</td>
-          <td style="font-size:8.5pt;">{{ gen.abuela_materna.get_sexo_display }}</td>
-          <td style="font-size:8.5pt;">{{ gen.abuela_materna.get_variedad_display }}</td>
-          <td><span class="chip chip-{{ gen.abuela_materna.estado }}" style="font-size:7pt;">{{ gen.abuela_materna.get_estado_display }}</span></td>
-          <td style="font-size:8pt;">{{ gen.abuela_materna.ganaderia_nacimiento|default:"—" }}</td>
-        </tr>
-        {% endif %}
-        {% elif animal.madre_lote %}
-        <tr style="background:#eef2f7;">
-          <td><strong>Madre (lote)</strong></td>
-          <td colspan="6">{{ animal.madre_lote.nombre }}</td>
-        </tr>
-        {% elif animal.madre_lote_externo %}
-        <tr style="background:#eef2f7;">
-          <td><strong>Madre (ext.)</strong></td>
-          <td colspan="6">{{ animal.madre_lote_externo }}</td>
-        </tr>
-        {% endif %}
-
+        {% for row in gen_rows %}
+          {% if row.animal %}
+            {% with a=row.animal lvl=row.level %}
+            <tr style="{% if lvl == 1 %}background:#eef2f7;{% endif %}">
+              <td style="padding-left:{{ lvl|add:"-1" }}em; {% if lvl > 1 %}color:#555; font-size:{% if lvl == 2 %}8.5{% elif lvl == 3 %}8{% else %}7.5{% endif %}pt;{% endif %}">
+                {% if lvl == 1 %}<strong>{{ row.role }}</strong>{% else %}↳ {{ row.role }}{% endif %}
+              </td>
+              <td style="font-family:monospace; font-size:{% if lvl == 1 %}9.5{% elif lvl == 2 %}8.5{% else %}8{% endif %}pt;">{{ a.numero_anilla }}</td>
+              <td style="font-size:{% if lvl == 1 %}9.5{% else %}8{% endif %}pt;">{{ a.fecha_nacimiento.year|default:"—" }}</td>
+              <td style="font-size:{% if lvl == 1 %}9.5{% else %}8{% endif %}pt;">{{ a.get_sexo_display }}</td>
+              <td style="font-size:{% if lvl == 1 %}9.5{% else %}8{% endif %}pt;">{{ a.get_variedad_display }}</td>
+              <td><span class="chip chip-{{ a.estado }}" style="font-size:{% if lvl == 1 %}8{% else %}7{% endif %}pt;">{{ a.get_estado_display }}</span></td>
+              <td style="font-size:{% if lvl == 1 %}8.5{% else %}7.5{% endif %}pt;">{{ a.ganaderia_nacimiento|default:"—" }}</td>
+            </tr>
+            {% endwith %}
+          {% elif row.lote %}
+            <tr style="background:#eef2f7;">
+              <td><strong>{{ row.role }}</strong></td>
+              <td colspan="6">{{ row.lote.nombre }}</td>
+            </tr>
+          {% elif row.lote_externo %}
+            <tr style="background:#eef2f7;">
+              <td><strong>{{ row.role }}</strong></td>
+              <td colspan="6">{{ row.lote_externo }}</td>
+            </tr>
+          {% endif %}
+        {% endfor %}
       </tbody>
     </table>
   </div>

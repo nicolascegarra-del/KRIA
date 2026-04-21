@@ -92,12 +92,23 @@ class InventoryReportView(APIView):
         formato = request.data.get("formato", "pdf")
         orden = request.data.get("orden", "variedad_anilla")
         if not get_effective_is_gestion(request):
-            # Socio can only request their own
             try:
                 socio_id = str(request.user.socio.id)
             except Exception:
                 return Response({"detail": "No socio profile."}, status=400)
-        return _create_report_job(request, ReportJob.ReportType.INVENTORY, {"socio_id": socio_id, "formato": formato, "orden": orden})
+
+        params = {
+            "socio_id": socio_id,
+            "formato": formato,
+            "orden": orden,
+            # optional filters
+            "activo": request.data.get("activo"),          # "true" | "false" | None
+            "variedad": request.data.get("variedad"),      # "SALMON" | "PLATA" | "SIN_DEFINIR"
+            "sexo": request.data.get("sexo"),              # "M" | "H"
+            "anio_desde": request.data.get("anio_desde"),  # int as str
+            "anio_hasta": request.data.get("anio_hasta"),  # int as str
+        }
+        return _create_report_job(request, ReportJob.ReportType.INVENTORY, params)
 
 
 def _check_animal_ownership(request, animal_id):
@@ -144,16 +155,6 @@ class LibroGenealogicView(APIView):
 
     def post(self, request):
         return _create_report_job(request, ReportJob.ReportType.LIBRO_GENEALOGICO, {})
-
-
-class CatalogoReproductoresView(APIView):
-    permission_classes = [IsGestion]
-    throttle_classes = [UploadRateThrottle]
-
-    def post(self, request):
-        formato = request.data.get("formato", "pdf")
-        orden = request.data.get("orden", "variedad_anilla")
-        return _create_report_job(request, ReportJob.ReportType.CATALOGO_REPRODUCTORES, {"formato": formato, "orden": orden})
 
 
 class AuditoriaReportView(APIView):

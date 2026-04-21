@@ -84,6 +84,41 @@ def _anio(animal) -> str:
         return ""
 
 
+_ESTADOS_ACTIVOS = ["REGISTRADO", "MODIFICADO", "APROBADO", "EVALUADO"]
+_ESTADOS_NO_ACTIVOS = ["BAJA", "RECHAZADO", "SOCIO_EN_BAJA"]
+
+
+def _apply_inventory_filters(qs, job):
+    """Apply optional inventory filters from job.params to a queryset."""
+    params = job.params
+
+    activo = params.get("activo")
+    if activo == "true":
+        qs = qs.filter(estado__in=_ESTADOS_ACTIVOS)
+    elif activo == "false":
+        qs = qs.filter(estado__in=_ESTADOS_NO_ACTIVOS)
+
+    if variedad := params.get("variedad"):
+        qs = qs.filter(variedad=variedad)
+
+    if sexo := params.get("sexo"):
+        qs = qs.filter(sexo=sexo)
+
+    if anio_desde := params.get("anio_desde"):
+        try:
+            qs = qs.filter(fecha_nacimiento__year__gte=int(anio_desde))
+        except (ValueError, TypeError):
+            pass
+
+    if anio_hasta := params.get("anio_hasta"):
+        try:
+            qs = qs.filter(fecha_nacimiento__year__lte=int(anio_hasta))
+        except (ValueError, TypeError):
+            pass
+
+    return qs
+
+
 def _gen_inventory_pdf(job) -> str:
     from apps.animals.models import Animal
     from apps.audits.models import AuditoriaAnimal
@@ -102,6 +137,8 @@ def _gen_inventory_pdf(job) -> str:
         animals_qs = Animal.all_objects.filter(
             tenant=job.tenant
         ).select_related("socio", "padre", "madre_animal").order_by(*order_fields)
+
+    animals_qs = _apply_inventory_filters(animals_qs, job)
 
     animals = list(animals_qs)
 
@@ -141,30 +178,60 @@ def _gen_inventory_pdf(job) -> str:
     return upload_bytes(key, pdf_bytes, "application/pdf")
 
 
+def _build_gen_rows(animal, role, level, rows, tenant, visited, max_level=5):
+    """Recursively collect ancestor rows (ORM objects) for the individual PDF."""
+    from apps.animals.models import Animal as AnimalModel
+
+    if animal is None or level > max_level:
+        return
+    aid = str(animal.pk)
+    if aid in visited:
+        return
+    visited.add(aid)
+
+    # Re-fetch with the relatives we need at this level
+    try:
+        a = AnimalModel.all_objects.select_related("padre", "madre_animal", "madre_lote").get(pk=aid, tenant=tenant)
+    except AnimalModel.DoesNotExist:
+        return
+
+    rows.append({"role": role, "animal": a, "level": level})
+
+    _build_gen_rows(a.padre, "Padre", level + 1, rows, tenant, visited, max_level)
+    if a.madre_animal_id:
+        _build_gen_rows(a.madre_animal, "Madre", level + 1, rows, tenant, visited, max_level)
+    elif a.madre_lote_id:
+        rows.append({"role": "Madre (lote)", "animal": None, "lote": a.madre_lote, "level": level + 1})
+    elif a.madre_lote_externo:
+        rows.append({"role": "Madre (ext.)", "animal": None, "lote_externo": a.madre_lote_externo, "level": level + 1})
+
+
 def _gen_individual_pdf(job) -> str:
     from apps.animals.models import Animal
 
     animal_id = job.params.get("animal_id")
     animal = Animal.all_objects.select_related(
-        "socio",
-        "padre", "padre__padre", "padre__madre_animal",
-        "madre_animal", "madre_animal__padre", "madre_animal__madre_animal",
-        "madre_lote", "evaluacion",
+        "socio", "padre", "madre_animal", "madre_lote", "evaluacion",
     ).get(pk=animal_id, tenant=job.tenant)
 
-    padre = animal.padre
-    madre = animal.madre_animal
-    gen = {
-        "padre": padre,
-        "madre": madre,
-        "abuelo_paterno": getattr(padre, "padre", None) if padre else None,
-        "abuela_paterna": getattr(padre, "madre_animal", None) if padre else None,
-        "abuelo_materno": getattr(madre, "padre", None) if madre else None,
-        "abuela_materna": getattr(madre, "madre_animal", None) if madre else None,
-    }
-    has_genealogy = bool(padre or madre or animal.madre_lote_id or animal.madre_lote_externo)
+    gen_rows: list = []
+    visited: set = set()
+    _build_gen_rows(animal.padre, "Padre", 1, gen_rows, job.tenant, visited)
+    if animal.madre_animal_id:
+        _build_gen_rows(animal.madre_animal, "Madre", 1, gen_rows, job.tenant, visited)
+    elif animal.madre_lote_id:
+        gen_rows.append({"role": "Madre (lote)", "animal": None, "lote": animal.madre_lote, "level": 1})
+    elif animal.madre_lote_externo:
+        gen_rows.append({"role": "Madre (ext.)", "animal": None, "lote_externo": animal.madre_lote_externo, "level": 1})
 
-    context = {"tenant": job.tenant, "animal": animal, "gen": gen, "has_genealogy": has_genealogy}
+    has_genealogy = bool(gen_rows)
+
+    context = {
+        "tenant": job.tenant,
+        "animal": animal,
+        "gen_rows": gen_rows,
+        "has_genealogy": has_genealogy,
+    }
     pdf_bytes = _render_pdf("reports/individual.html", context)
     key = f"reports/{job.tenant.slug}/individual/{animal_id}.pdf"
     from .storage import upload_bytes
@@ -204,6 +271,7 @@ def _gen_inventory_excel(job) -> str:
             tenant=job.tenant
         ).select_related("socio", "padre", "madre_animal").prefetch_related("evaluacion").order_by("variedad", "numero_anilla")
 
+    animals_qs = _apply_inventory_filters(animals_qs, job)
     animals_list = list(animals_qs)
 
     wb = openpyxl.Workbook()

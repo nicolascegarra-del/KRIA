@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { animalsApi } from "../../api/animals";
-import { reproductoresApi } from "../../api/reproductores";
 import { realtaApi } from "../../api/realta";
 import { apiClient } from "../../api/client";
 import { sociosApi } from "../../api/socios";
@@ -93,28 +92,6 @@ export default function ValidacionesPage() {
       });
       setExpandedId(null);
       setSuccessMsg("Animal rechazado.");
-    },
-  });
-
-  // ── Candidatos a reproductor ──────────────────────────────────────────────
-  const [candidatoNotas, setCandidatoNotas] = useState<Record<string, string>>({});
-  const [actionId, setActionId] = useState<string | null>(null);
-
-  const { data: candidatosData, isLoading: loadingCandidatos } = useQuery({
-    queryKey: ["candidatos-reproductor"],
-    queryFn: () => reproductoresApi.candidatos(),
-  });
-
-  const candidatoMutation = useMutation({
-    mutationFn: ({ id, aprobado }: { id: string; aprobado: boolean }) =>
-      reproductoresApi.aprobar(id, aprobado, candidatoNotas[id]),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["candidatos-reproductor"] });
-      qc.invalidateQueries({ queryKey: ["animals"] });
-      qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
-      setActionId(null);
-      setExpandedId(null);
-      setSuccessMsg("Candidato procesado.");
     },
   });
 
@@ -267,17 +244,14 @@ export default function ValidacionesPage() {
     ...(validacionesData?.results ?? []),
     ...(modificadosData?.results ?? []),
   ];
-  const candidatos: Animal[] = candidatosData?.results ?? [];
   const conflictos = conflictosData?.results ?? [];
 
   const totalPending =
     animals.length +
-    candidatos.length +
     conflictos.length +
     solicitudesRealta.length;
   const isLoading =
     loadingValidaciones ||
-    loadingCandidatos ||
     loadingConflictos ||
     loadingSolicitudes;
 
@@ -481,160 +455,6 @@ export default function ValidacionesPage() {
                           <X size={16} />
                         )}
                         Rechazar
-                      </button>
-                      <button
-                        onClick={() =>
-                          navigate(
-                            `/socios/${animal.socio}/animales/${animal.id}`
-                          )
-                        }
-                        className="btn-secondary gap-2 ml-auto"
-                      >
-                        <ExternalLink size={14} />
-                        Ver Ficha
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          {/* ── Candidatos a reproductor ─────────────────────────────────── */}
-          {candidatos.map((animal) => {
-            const key = `c-${animal.id}`;
-            const isExpanded = expandedId === key;
-            const isPending =
-              actionId === animal.id && candidatoMutation.isPending;
-            return (
-              <div
-                key={key}
-                className="card border-l-4 border-emerald-400"
-              >
-                {/* Header */}
-                <div className="flex items-start gap-3">
-                  <AnimalPhoto
-                    fotos={animal.fotos}
-                    placeholderClass="bg-emerald-50"
-                    placeholder={
-                      <Bird size={22} className="text-emerald-300" />
-                    }
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono font-bold text-gray-900">
-                        {animal.numero_anilla}
-                      </span>
-                      <span className="text-gray-400 text-sm">
-                        (
-                        {animal.fecha_nacimiento
-                          ? new Date(animal.fecha_nacimiento).getFullYear()
-                          : "—"}
-                        )
-                      </span>
-                      <AnimalStateChip estado={animal.estado} />
-                      <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-medium">
-                        Candidato reproductor
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-600 mt-0.5 flex items-center gap-2 flex-wrap">
-                      <SexoChip sexo={animal.sexo} />
-                      <span className="text-gray-500">{animal.variedad}</span>
-                      <span className="text-gray-400">·</span>
-                      <span className="font-medium truncate">
-                        {animal.socio_nombre}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => toggleExpand(key)}
-                    className="text-gray-400 hover:text-gray-600 p-1 shrink-0 mt-0.5"
-                  >
-                    {isExpanded ? (
-                      <ChevronUp size={18} />
-                    ) : (
-                      <ChevronDown size={18} />
-                    )}
-                  </button>
-                </div>
-
-                {/* Expanded body */}
-                {isExpanded && (
-                  <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
-                    {(animal.padre_anilla || animal.madre_anilla) && (
-                      <div className="text-sm text-gray-600 flex gap-4 flex-wrap">
-                        {animal.padre_anilla && (
-                          <span>
-                            Padre:{" "}
-                            <code className="bg-gray-100 px-1 rounded text-xs">
-                              {animal.padre_anilla}
-                            </code>
-                          </span>
-                        )}
-                        {animal.madre_anilla && (
-                          <span>
-                            Madre:{" "}
-                            <code className="bg-gray-100 px-1 rounded text-xs">
-                              {animal.madre_anilla}
-                            </code>
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Notas de decisión{" "}
-                        <span className="text-gray-400">(opcional)</span>
-                      </label>
-                      <textarea
-                        rows={2}
-                        className="input-field text-sm resize-none"
-                        placeholder="Motivo de aprobación o denegación…"
-                        value={candidatoNotas[animal.id] ?? ""}
-                        onChange={(e) =>
-                          setCandidatoNotas((prev) => ({
-                            ...prev,
-                            [animal.id]: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="flex gap-2 flex-wrap items-center">
-                      <button
-                        onClick={() => {
-                          setActionId(animal.id);
-                          candidatoMutation.mutate({
-                            id: animal.id,
-                            aprobado: true,
-                          });
-                        }}
-                        disabled={isPending}
-                        className="btn-primary gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
-                      >
-                        {isPending ? (
-                          <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                          <Check size={16} />
-                        )}
-                        Aprobar reproductor
-                      </button>
-                      <button
-                        onClick={() => {
-                          setActionId(animal.id);
-                          candidatoMutation.mutate({
-                            id: animal.id,
-                            aprobado: false,
-                          });
-                        }}
-                        disabled={isPending}
-                        className="btn-danger gap-2 disabled:opacity-50"
-                      >
-                        {isPending ? (
-                          <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                          <X size={16} />
-                        )}
-                        Denegar
                       </button>
                       <button
                         onClick={() =>

@@ -250,27 +250,28 @@ class Command(BaseCommand):
                 motivo_baja_texto = str(col(row, "M") or "").strip()
                 motivo_baja = get_motivo(motivo_baja_texto) if fecha_baja else None
 
-                # Histórico de ganaderías (cols G+H, I+J)
-                # Cada entrada: {ganaderia, fecha_alta, fecha_baja}
-                # La fecha_baja de gan1 = fecha_alta de gan2 (si existe)
-                # La fecha_baja de gan2 = fecha_baja del animal (si está en baja)
+                # Histórico de ganaderías (cols G+H, I+J) — almacenamos nombre completo
                 historico_ganaderias = []
                 gan1 = str(col(row, "G") or "").strip()
                 alta1 = parse_date(col(row, "H"))
                 gan2 = str(col(row, "I") or "").strip()
                 alta2 = parse_date(col(row, "J"))
 
+                def _ganaderia_nombre(siglas: str) -> str:
+                    nombre = GANADERIA_SOCIO.get(siglas)
+                    return nombre if nombre else (siglas if siglas else "Ganadería desconocida")
+
                 if gan1:
                     baja1 = alta2 if gan2 else (parse_date(col(row, "L")) if str(col(row, "K") or "").strip().upper() != "SI" else None)
                     historico_ganaderias.append({
-                        "ganaderia": gan1,
+                        "ganaderia": _ganaderia_nombre(gan1),
                         "fecha_alta": alta1.isoformat() if alta1 else None,
                         "fecha_baja": baja1.isoformat() if baja1 else None,
                     })
                 if gan2:
                     baja2 = parse_date(col(row, "L")) if str(col(row, "K") or "").strip().upper() != "SI" else None
                     historico_ganaderias.append({
-                        "ganaderia": gan2,
+                        "ganaderia": _ganaderia_nombre(gan2),
                         "fecha_alta": alta2.isoformat() if alta2 else None,
                         "fecha_baja": baja2.isoformat() if baja2 else None,
                     })

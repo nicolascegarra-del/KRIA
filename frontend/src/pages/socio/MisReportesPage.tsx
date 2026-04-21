@@ -1,103 +1,142 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { reportsApi } from "../../api/reports";
-import { FileText, Download, Loader2, Clock, CheckCircle2, ArrowUpDown, X } from "lucide-react";
+import {
+  FileText, Download, Loader2, Clock, CheckCircle2,
+  ArrowUpDown, X, SlidersHorizontal,
+} from "lucide-react";
 import type { ReportJob } from "../../types";
 
 // ─── Sort options ───────────────────────────────────────────────────────────
 
 const SORT_OPTIONS = [
-  {
-    value: "variedad_anilla",
-    label: "Variedad → Nº Anilla",
-    description: "Agrupa primero por variedad, luego por número de anilla",
-  },
-  {
-    value: "socio_anilla",
-    label: "Solo Nº Anilla (por socio)",
-    description: "Agrupado por socio y luego por número de anilla",
-  },
-  {
-    value: "estado_anilla",
-    label: "Estado → Nº Anilla",
-    description: "Agrupa primero por estado del animal, luego por número de anilla",
-  },
-  {
-    value: "anilla",
-    label: "Solo Nº Anilla",
-    description: "Ordenado únicamente por número de anilla",
-  },
+  { value: "variedad_anilla", label: "Variedad → Nº Anilla",      description: "Agrupa primero por variedad, luego por número de anilla" },
+  { value: "socio_anilla",    label: "Solo Nº Anilla (por socio)", description: "Agrupado por socio y luego por número de anilla" },
+  { value: "estado_anilla",   label: "Estado → Nº Anilla",        description: "Agrupa primero por estado del animal, luego por número de anilla" },
+  { value: "anilla",          label: "Solo Nº Anilla",            description: "Ordenado únicamente por número de anilla" },
 ] as const;
 
 type SortValue = (typeof SORT_OPTIONS)[number]["value"];
 
-// ─── Sort order modal ───────────────────────────────────────────────────────
+// ─── Inventory filters modal ─────────────────────────────────────────────────
 
-function SortOrderModal({
-  value,
-  onChange,
+interface InventoryFilters {
+  activo: "" | "true" | "false";
+  variedad: string;
+  sexo: string;
+  anio_desde: string;
+  anio_hasta: string;
+}
+
+const DEFAULT_FILTERS: InventoryFilters = { activo: "", variedad: "", sexo: "", anio_desde: "", anio_hasta: "" };
+
+function InventoryModal({
+  formato,
   onConfirm,
   onCancel,
   loading,
 }: {
-  value: SortValue;
-  onChange: (v: SortValue) => void;
-  onConfirm: () => void;
+  formato: "pdf" | "excel";
+  onConfirm: (filters: InventoryFilters, orden: SortValue) => void;
   onCancel: () => void;
   loading: boolean;
 }) {
+  const [filters, setFilters] = useState<InventoryFilters>(DEFAULT_FILTERS);
+  const [orden, setOrden] = useState<SortValue>("variedad_anilla");
+
+  const set = <K extends keyof InventoryFilters>(k: K, v: InventoryFilters[K]) =>
+    setFilters((f) => ({ ...f, [k]: v }));
+
+  const selectCls = "border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500";
+  const inputCls  = "border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
-            <ArrowUpDown size={18} className="text-blue-700" />
+            <SlidersHorizontal size={18} className="text-blue-700" />
             <div>
-              <div className="font-semibold text-gray-900 text-sm">Ordenar por…</div>
-              <div className="text-xs text-gray-500">Inventario · PDF</div>
+              <div className="font-semibold text-gray-900 text-sm">Filtros de Inventario</div>
+              <div className="text-xs text-gray-500">Mis Animales · {formato.toUpperCase()}</div>
             </div>
           </div>
-          <button type="button" onClick={onCancel} className="text-gray-400 hover:text-gray-600 transition-colors">
-            <X size={18} />
-          </button>
+          <button type="button" onClick={onCancel} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
 
-        <div className="px-6 py-4 space-y-2">
-          {SORT_OPTIONS.map((opt) => (
-            <label
-              key={opt.value}
-              className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                value === opt.value
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-              }`}
-            >
-              <input
-                type="radio"
-                name="sort-order"
-                value={opt.value}
-                checked={value === opt.value}
-                onChange={() => onChange(opt.value)}
-                className="mt-0.5 accent-blue-700"
-              />
-              <div>
-                <div className="text-sm font-medium text-gray-900">{opt.label}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{opt.description}</div>
+        <div className="px-6 py-5 space-y-4">
+          {/* Estado */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Estado de los animales</label>
+            <select className={selectCls} value={filters.activo} onChange={(e) => set("activo", e.target.value as InventoryFilters["activo"])}>
+              <option value="">Todos (activos y no activos)</option>
+              <option value="true">Solo activos (Registrado, Aprobado, Evaluado…)</option>
+              <option value="false">Solo no activos (Baja, Rechazado…)</option>
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {/* Variedad */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">Variedad</label>
+              <select className={selectCls} value={filters.variedad} onChange={(e) => set("variedad", e.target.value)}>
+                <option value="">Todas</option>
+                <option value="SALMON">Salmón</option>
+                <option value="PLATA">Plata</option>
+                <option value="SIN_DEFINIR">Sin definir</option>
+              </select>
+            </div>
+
+            {/* Sexo */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">Sexo</label>
+              <select className={selectCls} value={filters.sexo} onChange={(e) => set("sexo", e.target.value)}>
+                <option value="">Ambos</option>
+                <option value="M">Macho</option>
+                <option value="H">Hembra</option>
+              </select>
+            </div>
+
+            {/* Año desde */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">Año nacimiento (desde)</label>
+              <input type="number" className={inputCls} placeholder="ej. 2020" min={1990} max={2100}
+                value={filters.anio_desde} onChange={(e) => set("anio_desde", e.target.value)} />
+            </div>
+
+            {/* Año hasta */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">Año nacimiento (hasta)</label>
+              <input type="number" className={inputCls} placeholder="ej. 2025" min={1990} max={2100}
+                value={filters.anio_hasta} onChange={(e) => set("anio_hasta", e.target.value)} />
+            </div>
+          </div>
+
+          {/* Ordenación — solo PDF */}
+          {formato === "pdf" && (
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5 flex items-center gap-1">
+                <ArrowUpDown size={12} /> Ordenación del PDF
+              </label>
+              <div className="space-y-1.5">
+                {SORT_OPTIONS.map((opt) => (
+                  <label key={opt.value} className={`flex items-start gap-3 p-2.5 rounded-xl border cursor-pointer transition-colors text-sm ${orden === opt.value ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"}`}>
+                    <input type="radio" name="sort-order" value={opt.value} checked={orden === opt.value} onChange={() => setOrden(opt.value)} className="mt-0.5 accent-blue-700" />
+                    <div>
+                      <div className="font-medium text-gray-900">{opt.label}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{opt.description}</div>
+                    </div>
+                  </label>
+                ))}
               </div>
-            </label>
-          ))}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 px-6 py-4 border-t border-gray-100">
-          <button type="button" onClick={onCancel} className="btn-secondary flex-1" disabled={loading}>
-            Cancelar
-          </button>
-          <button type="button" onClick={onConfirm} disabled={loading} className="btn-primary flex-1">
-            {loading ? (
-              <><Loader2 size={15} className="animate-spin" /> Iniciando…</>
-            ) : (
-              "Generar PDF"
-            )}
+          <button type="button" onClick={onCancel} className="btn-secondary flex-1" disabled={loading}>Cancelar</button>
+          <button type="button" onClick={() => onConfirm(filters, orden)} disabled={loading} className="btn-primary flex-1">
+            {loading ? <><Loader2 size={15} className="animate-spin" /> Iniciando…</> : `Generar ${formato.toUpperCase()}`}
           </button>
         </div>
       </div>
@@ -160,41 +199,37 @@ export default function MisReportesPage() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [formato, setFormato] = useState<"pdf" | "excel">("pdf");
-  const [sortModal, setSortModal] = useState(false);
-  const [sortOrder, setSortOrder] = useState<SortValue>("variedad_anilla");
+  const [showModal, setShowModal] = useState(false);
 
-  const generate = async (orden?: SortValue) => {
+  const generate = async (filters: InventoryFilters, orden: SortValue) => {
     setGenerating(true);
     try {
-      const res = await reportsApi.inventory(undefined, formato, orden);
+      const res = await reportsApi.inventory(undefined, formato, orden, {
+        activo: filters.activo || undefined,
+        variedad: filters.variedad || undefined,
+        sexo: filters.sexo || undefined,
+        anio_desde: filters.anio_desde || undefined,
+        anio_hasta: filters.anio_hasta || undefined,
+      });
       setJobId(res.job_id);
     } finally {
       setGenerating(false);
     }
   };
 
-  const handleClick = () => {
-    if (formato === "pdf") {
-      setSortModal(true);
-    } else {
-      generate();
-    }
-  };
-
-  const handleConfirmSort = async () => {
-    setSortModal(false);
-    await generate(sortOrder);
-  };
+  const handleClick = () => setShowModal(true);
 
   return (
     <>
-      {sortModal && (
-        <SortOrderModal
-          value={sortOrder}
-          onChange={setSortOrder}
-          onConfirm={handleConfirmSort}
-          onCancel={() => setSortModal(false)}
+      {showModal && (
+        <InventoryModal
+          formato={formato}
           loading={generating}
+          onCancel={() => setShowModal(false)}
+          onConfirm={(filters, orden) => {
+            setShowModal(false);
+            generate(filters, orden);
+          }}
         />
       )}
 
@@ -247,7 +282,7 @@ export default function MisReportesPage() {
               {generating ? (
                 <><Loader2 size={16} className="animate-spin" /> Iniciando...</>
               ) : (
-                "Generar"
+                <><SlidersHorizontal size={14} /> Filtrar y Generar</>
               )}
             </button>
 

@@ -10,7 +10,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { tablasApi } from "../../api/tablas";
-import type { TablaControlList, TablaControlWrite, SocioFieldOption, TablaColumnaTipo } from "../../types";
+import type { TablaControlList, SocioFieldOption } from "../../types";
 import TablaFormModal from "../../components/tablas/TablaFormModal";
 
 export default function TablasPage() {
@@ -64,7 +64,7 @@ export default function TablasPage() {
           style={{ background: "var(--color-primary)" }}
         >
           <Plus size={16} />
-          Nueva tabla
+          Nueva Tabla
         </button>
       </div>
 
@@ -138,7 +138,6 @@ export default function TablasPage() {
 
 function TablaCard({
   tabla,
-  socioFields,
   onOpen,
   onEdit,
   onDelete,
@@ -149,64 +148,53 @@ function TablaCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const fieldLabels = Object.fromEntries(socioFields.map((f) => [f.key, f.label]));
-  const shownFields = tabla.socio_columns
-    .slice(0, 3)
-    .map((k) => fieldLabels[k] || k);
-  const extra = tabla.socio_columns.length - 3;
-
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+    <div className="group bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-lg hover:border-[var(--color-primary)] transition-all duration-200 flex flex-col overflow-hidden">
       {/* Clickable body */}
-      <button
-        onClick={onOpen}
-        className="w-full text-left p-4 block"
-      >
-        <div className="flex items-start gap-3">
+      <button onClick={onOpen} className="w-full text-left flex-1 p-5">
+        {/* Icon + name */}
+        <div className="flex items-center gap-3 mb-4">
           <div
-            className="p-2 rounded-lg shrink-0"
-            style={{ background: "var(--color-primary)15" }}
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: "color-mix(in srgb, var(--color-primary) 12%, transparent)" }}
           >
             <Table2 size={20} style={{ color: "var(--color-primary)" }} />
           </div>
-          <div className="min-w-0">
-            <p className="font-semibold text-gray-900 truncate">{tabla.nombre}</p>
-            <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-              <span className="flex items-center gap-1">
-                <Columns3 size={12} />
-                {tabla.columnas_count} col. control
-              </span>
-              <span className="flex items-center gap-1">
-                <CalendarDays size={12} />
-                {new Date(tabla.created_at).toLocaleDateString("es-ES")}
-              </span>
-            </div>
-            {shownFields.length > 0 && (
-              <p className="text-xs text-gray-400 mt-1 truncate">
-                Campos: {shownFields.join(", ")}
-                {extra > 0 && ` +${extra} más`}
-              </p>
-            )}
-          </div>
+          <p className="font-bold text-gray-900 text-base truncate leading-tight">{tabla.nombre}</p>
+        </div>
+
+        {/* Stats row */}
+        <div className="flex items-center gap-4 text-xs text-gray-500">
+          <span className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-lg font-medium">
+            <Columns3 size={12} style={{ color: "var(--color-primary)" }} />
+            {tabla.columnas_count} {tabla.columnas_count === 1 ? "columna" : "columnas"}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <CalendarDays size={12} />
+            {new Date(tabla.created_at).toLocaleDateString("es-ES")}
+          </span>
         </div>
       </button>
 
-      {/* Actions */}
-      <div className="border-t border-gray-100 px-4 py-2 flex justify-end gap-1">
-        <button
-          onClick={onEdit}
-          title="Editar tabla"
-          className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-        >
-          <Pencil size={15} />
-        </button>
-        <button
-          onClick={onDelete}
-          title="Eliminar tabla"
-          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-        >
-          <Trash2 size={15} />
-        </button>
+      {/* Actions footer */}
+      <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-2.5 flex items-center justify-between">
+        <span className="text-xs text-gray-400 italic">Pulsa para abrir</span>
+        <div className="flex gap-1">
+          <button
+            onClick={onEdit}
+            title="Editar tabla"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+          >
+            <Pencil size={14} />
+          </button>
+          <button
+            onClick={onDelete}
+            title="Eliminar tabla"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </div>
     </div>
   );

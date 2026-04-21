@@ -11,6 +11,7 @@ import { realtaApi } from "../../api/realta";
 import { configuracionApi } from "../../api/configuracion";
 import AnimalStateChip from "../../components/AnimalStateChip";
 import GenealogyTooltip from "../../components/GenealogyTooltip";
+import AnimalViewModal from "../../components/AnimalViewModal";
 import type { Animal, AnimalEstado } from "../../types";
 
 // ── Tipos de tab ──────────────────────────────────────────────────────────────
@@ -240,6 +241,9 @@ export default function MisAnimalesPage() {
   // Solicitar reactivación inline
   const [realtaOpenId, setRealtaOpenId] = useState<string | null>(null);
   const [realtaNotas, setRealtaNotas] = useState("");
+
+  // Vista de animal (desde árbol genealógico)
+  const [viewAnimalId, setViewAnimalId] = useState<string | null>(null);
 
   // Árbol genealógico
   const [genealogyAnimalId, setGenealogyAnimalId] = useState<string | null>(null);
@@ -705,6 +709,14 @@ export default function MisAnimalesPage() {
         />
       )}
 
+      {/* Modal vista de animal (desde árbol genealógico) */}
+      {viewAnimalId && (
+        <AnimalViewModal
+          animalId={viewAnimalId}
+          onClose={() => setViewAnimalId(null)}
+        />
+      )}
+
       {/* Modal árbol genealógico */}
       {genealogyAnimalId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
@@ -735,14 +747,12 @@ export default function MisAnimalesPage() {
               ) : genealogyData?.tree ? (
                 <>
                   <p className="text-xs text-gray-400 mb-4">
-                    Pulsa sobre cualquier animal del árbol para ir a su ficha.
+                    Pulsa sobre cualquier animal del árbol para ver su ficha.
                   </p>
                   <GenealogyTooltip
                     tree={genealogyData.tree}
                     onNodeClick={(nodeId) => {
-                      setGenealogyAnimalId(null);
-                      setGenealogyAnimal(null);
-                      navigate(`/mis-animales/${nodeId}`);
+                      setViewAnimalId(nodeId);
                     }}
                   />
                 </>

@@ -36,8 +36,11 @@ class SuperAdminTenantListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsSuperAdmin]
 
     def get_queryset(self):
+        from apps.animals.models import Animal
         return Tenant.objects.exclude(slug="system").annotate(
-            socios_count=Count("socios", filter=Q(socios__estado="ALTA"))
+            socios_count=Count("socios", filter=Q(socios__estado="ALTA"), distinct=True),
+            socios_baja_count=Count("socios", filter=Q(socios__estado="BAJA"), distinct=True),
+            animales_count=Count("animales", distinct=True),
         ).order_by("name")
 
     def create(self, request, *args, **kwargs):

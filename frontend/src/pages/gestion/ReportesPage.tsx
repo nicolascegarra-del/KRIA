@@ -2,122 +2,142 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { reportsApi } from "../../api/reports";
 import { animalsApi } from "../../api/animals";
-import { FileText, Table, BookOpen, Download, Loader2, Clock, CheckCircle2, Search, User, ArrowUpDown, X } from "lucide-react";
+import {
+  FileText, Table, Download, Loader2, Clock, CheckCircle2,
+  Search, User, ArrowUpDown, X, SlidersHorizontal,
+} from "lucide-react";
 import type { ReportJob } from "../../types";
 
 // ─── Sort options ───────────────────────────────────────────────────────────
 
 const SORT_OPTIONS = [
-  {
-    value: "variedad_anilla",
-    label: "Variedad → Nº Anilla",
-    description: "Agrupa primero por variedad, luego por número de anilla",
-  },
-  {
-    value: "socio_anilla",
-    label: "Socio → Nº Anilla",
-    description: "Agrupa primero por socio (A–Z), luego por número de anilla",
-  },
-  {
-    value: "estado_anilla",
-    label: "Estado → Nº Anilla",
-    description: "Agrupa primero por estado del animal, luego por número de anilla",
-  },
-  {
-    value: "anilla",
-    label: "Solo Nº Anilla",
-    description: "Ordenado únicamente por número de anilla",
-  },
+  { value: "variedad_anilla", label: "Variedad → Nº Anilla", description: "Agrupa primero por variedad, luego por número de anilla" },
+  { value: "socio_anilla",    label: "Socio → Nº Anilla",    description: "Agrupa primero por socio (A–Z), luego por número de anilla" },
+  { value: "estado_anilla",   label: "Estado → Nº Anilla",   description: "Agrupa primero por estado del animal, luego por número de anilla" },
+  { value: "anilla",          label: "Solo Nº Anilla",       description: "Ordenado únicamente por número de anilla" },
 ] as const;
 
 type SortValue = (typeof SORT_OPTIONS)[number]["value"];
 
-// ─── Sort order modal ───────────────────────────────────────────────────────
+// ─── Inventory filters modal ─────────────────────────────────────────────────
 
-function SortOrderModal({
-  tileLabel,
-  value,
-  onChange,
+interface InventoryFilters {
+  activo: "" | "true" | "false";
+  variedad: string;
+  sexo: string;
+  anio_desde: string;
+  anio_hasta: string;
+}
+
+const DEFAULT_FILTERS: InventoryFilters = { activo: "", variedad: "", sexo: "", anio_desde: "", anio_hasta: "" };
+
+function InventoryModal({
+  formato,
   onConfirm,
   onCancel,
   loading,
 }: {
-  tileLabel: string;
-  value: SortValue;
-  onChange: (v: SortValue) => void;
-  onConfirm: () => void;
+  formato: "pdf" | "excel";
+  onConfirm: (filters: InventoryFilters, orden: SortValue) => void;
   onCancel: () => void;
   loading: boolean;
 }) {
+  const [filters, setFilters] = useState<InventoryFilters>(DEFAULT_FILTERS);
+  const [orden, setOrden] = useState<SortValue>("variedad_anilla");
+
+  const set = <K extends keyof InventoryFilters>(k: K, v: InventoryFilters[K]) =>
+    setFilters((f) => ({ ...f, [k]: v }));
+
+  const selectCls = "border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500";
+  const inputCls  = "border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-        {/* Header */}
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
-            <ArrowUpDown size={18} className="text-blue-700" />
+            <SlidersHorizontal size={18} className="text-blue-700" />
             <div>
-              <div className="font-semibold text-gray-900 text-sm">Ordenar por…</div>
-              <div className="text-xs text-gray-500">{tileLabel} · PDF</div>
+              <div className="font-semibold text-gray-900 text-sm">Filtros de Inventario</div>
+              <div className="text-xs text-gray-500">Inventario · {formato.toUpperCase()}</div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X size={18} />
-          </button>
+          <button type="button" onClick={onCancel} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
 
-        {/* Options */}
-        <div className="px-6 py-4 space-y-2">
-          {SORT_OPTIONS.map((opt) => (
-            <label
-              key={opt.value}
-              className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                value === opt.value
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-              }`}
-            >
-              <input
-                type="radio"
-                name="sort-order"
-                value={opt.value}
-                checked={value === opt.value}
-                onChange={() => onChange(opt.value)}
-                className="mt-0.5 accent-blue-700"
-              />
-              <div>
-                <div className="text-sm font-medium text-gray-900">{opt.label}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{opt.description}</div>
+        <div className="px-6 py-5 space-y-4">
+          {/* Estado */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Estado de los animales</label>
+            <select className={selectCls} value={filters.activo} onChange={(e) => set("activo", e.target.value as InventoryFilters["activo"])}>
+              <option value="">Todos (activos y no activos)</option>
+              <option value="true">Solo activos (Registrado, Aprobado, Evaluado…)</option>
+              <option value="false">Solo no activos (Baja, Rechazado…)</option>
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {/* Variedad */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">Variedad</label>
+              <select className={selectCls} value={filters.variedad} onChange={(e) => set("variedad", e.target.value)}>
+                <option value="">Todas</option>
+                <option value="SALMON">Salmón</option>
+                <option value="PLATA">Plata</option>
+                <option value="SIN_DEFINIR">Sin definir</option>
+              </select>
+            </div>
+
+            {/* Sexo */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">Sexo</label>
+              <select className={selectCls} value={filters.sexo} onChange={(e) => set("sexo", e.target.value)}>
+                <option value="">Ambos</option>
+                <option value="M">Macho</option>
+                <option value="H">Hembra</option>
+              </select>
+            </div>
+
+            {/* Año desde */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">Año nacimiento (desde)</label>
+              <input type="number" className={inputCls} placeholder="ej. 2020" min={1990} max={2100}
+                value={filters.anio_desde} onChange={(e) => set("anio_desde", e.target.value)} />
+            </div>
+
+            {/* Año hasta */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">Año nacimiento (hasta)</label>
+              <input type="number" className={inputCls} placeholder="ej. 2025" min={1990} max={2100}
+                value={filters.anio_hasta} onChange={(e) => set("anio_hasta", e.target.value)} />
+            </div>
+          </div>
+
+          {/* Ordenación — solo PDF */}
+          {formato === "pdf" && (
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5 flex items-center gap-1">
+                <ArrowUpDown size={12} /> Ordenación del PDF
+              </label>
+              <div className="space-y-1.5">
+                {SORT_OPTIONS.map((opt) => (
+                  <label key={opt.value} className={`flex items-start gap-3 p-2.5 rounded-xl border cursor-pointer transition-colors text-sm ${orden === opt.value ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"}`}>
+                    <input type="radio" name="sort-order" value={opt.value} checked={orden === opt.value} onChange={() => setOrden(opt.value)} className="mt-0.5 accent-blue-700" />
+                    <div>
+                      <div className="font-medium text-gray-900">{opt.label}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{opt.description}</div>
+                    </div>
+                  </label>
+                ))}
               </div>
-            </label>
-          ))}
+            </div>
+          )}
         </div>
 
-        {/* Footer */}
         <div className="flex gap-2 px-6 py-4 border-t border-gray-100">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="btn-secondary flex-1"
-            disabled={loading}
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={loading}
-            className="btn-primary flex-1"
-          >
-            {loading ? (
-              <><Loader2 size={15} className="animate-spin" /> Iniciando…</>
-            ) : (
-              "Generar PDF"
-            )}
+          <button type="button" onClick={onCancel} className="btn-secondary flex-1" disabled={loading}>Cancelar</button>
+          <button type="button" onClick={() => onConfirm(filters, orden)} disabled={loading} className="btn-primary flex-1">
+            {loading ? <><Loader2 size={15} className="animate-spin" /> Iniciando…</> : `Generar ${formato.toUpperCase()}`}
           </button>
         </div>
       </div>
@@ -127,59 +147,33 @@ function SortOrderModal({
 
 // ─── Animal search picker ───────────────────────────────────────────────────
 
-function AnimalPicker({
-  label,
-  onSelect,
-}: {
-  label: string;
-  onSelect: (id: string, label: string) => void;
-}) {
+function AnimalPicker({ label, onSelect }: { label: string; onSelect: (id: string, label: string) => void }) {
   const [anilla, setAnilla] = useState("");
   const [anio, setAnio] = useState(String(new Date().getFullYear()));
-
   const { data: results, isFetching } = useQuery({
     queryKey: ["animals-search-report", anilla, anio],
     queryFn: () => animalsApi.searchByAnilla(anilla, anio ? parseInt(anio, 10) : undefined),
     enabled: anilla.length >= 2,
   });
-
   return (
     <div className="space-y-2">
       <p className="text-xs text-gray-500">{label}</p>
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            className="input-field pl-8 text-sm font-mono"
-            placeholder="Nº anilla"
-            value={anilla}
-            onChange={(e) => setAnilla(e.target.value)}
-          />
+          <input type="text" className="input-field pl-8 text-sm font-mono" placeholder="Nº anilla"
+            value={anilla} onChange={(e) => setAnilla(e.target.value)} />
         </div>
-        <input
-          type="number"
-          className="input-field w-20 text-sm"
-          placeholder="Año"
-          value={anio}
-          onChange={(e) => setAnio(e.target.value)}
-          min={2000}
-          max={new Date().getFullYear()}
-        />
+        <input type="number" className="input-field w-20 text-sm" placeholder="Año"
+          value={anio} onChange={(e) => setAnio(e.target.value)} min={2000} max={new Date().getFullYear()} />
         {isFetching && <Loader2 size={14} className="animate-spin self-center text-gray-400" />}
       </div>
       {results && results.length > 0 && (
         <ul className="bg-white border border-gray-200 rounded-lg shadow-sm divide-y divide-gray-100 max-h-32 overflow-y-auto">
           {results.map((a) => (
             <li key={a.id}>
-              <button
-                type="button"
-                className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 flex gap-2 items-center"
-                onClick={() => {
-                  onSelect(a.id, `${a.numero_anilla} / ${a.fecha_nacimiento ? new Date(a.fecha_nacimiento).getFullYear() : "—"}`);
-                  setAnilla("");
-                }}
-              >
+              <button type="button" className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 flex gap-2 items-center"
+                onClick={() => { onSelect(a.id, `${a.numero_anilla} / ${a.fecha_nacimiento ? new Date(a.fecha_nacimiento).getFullYear() : "—"}`); setAnilla(""); }}>
                 <span className="font-mono font-medium">{a.numero_anilla}</span>
                 <span className="text-gray-400">{a.fecha_nacimiento ? new Date(a.fecha_nacimiento).getFullYear() : "—"} · {a.socio_nombre}</span>
               </button>
@@ -187,9 +181,7 @@ function AnimalPicker({
           ))}
         </ul>
       )}
-      {results && results.length === 0 && anilla.length >= 2 && (
-        <p className="text-xs text-gray-400">Sin resultados</p>
-      )}
+      {results && results.length === 0 && anilla.length >= 2 && <p className="text-xs text-gray-400">Sin resultados</p>}
     </div>
   );
 }
@@ -205,37 +197,25 @@ function ReportJobStatus({ jobId }: { jobId: string }) {
       return s === "PENDING" || s === "PROCESSING" ? 2000 : false;
     },
   });
-
   if (!data) return <div className="text-xs text-gray-400 animate-pulse">Iniciando...</div>;
-
   return (
     <div className="text-xs space-y-1">
       <div className="flex items-center gap-1">
-        {data.status === "DONE" ? (
-          <CheckCircle2 size={14} className="text-green-600" />
-        ) : data.status === "FAILED" ? (
-          <span className="text-red-600">✗</span>
-        ) : (
-          <Clock size={14} className="text-amber-500 animate-pulse" />
-        )}
+        {data.status === "DONE" ? <CheckCircle2 size={14} className="text-green-600" />
+          : data.status === "FAILED" ? <span className="text-red-600">✗</span>
+          : <Clock size={14} className="text-amber-500 animate-pulse" />}
         <span className="text-gray-600">{data.status}</span>
       </div>
       {data.status === "DONE" && data.download_url && (
-        <button
-          onClick={() => reportsApi.downloadFile(jobId)}
-          className="flex items-center gap-1 text-blue-700 hover:underline"
-        >
-          <Download size={12} />
-          Descargar
+        <button onClick={() => reportsApi.downloadFile(jobId)} className="flex items-center gap-1 text-blue-700 hover:underline">
+          <Download size={12} /> Descargar
         </button>
       )}
       {data.status === "FAILED" && (
         <div className="text-red-600 space-y-0.5">
           <p className="font-medium">Error al generar</p>
           {data.error_log && (
-            <pre className="text-xs text-red-500 whitespace-pre-wrap break-all bg-red-50 rounded p-1 max-h-32 overflow-y-auto">
-              {data.error_log}
-            </pre>
+            <pre className="text-xs text-red-500 whitespace-pre-wrap break-all bg-red-50 rounded p-1 max-h-32 overflow-y-auto">{data.error_log}</pre>
           )}
         </div>
       )}
@@ -245,25 +225,15 @@ function ReportJobStatus({ jobId }: { jobId: string }) {
 
 // ─── Main page ──────────────────────────────────────────────────────────────
 
-interface TileAnimalState {
-  selectedId: string;
-  selectedLabel: string;
-}
-
-interface SortModalState {
-  tileLabel: string;
-  action: (orden: SortValue) => Promise<{ job_id: string }>;
-}
+interface TileAnimalState { selectedId: string; selectedLabel: string; }
 
 export default function ReportesPage() {
-  const [jobs, setJobs] = useState<Record<string, string>>({}); // label → job_id
+  const [jobs, setJobs] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState<Record<string, boolean>>({});
   const [animalState, setAnimalState] = useState<Record<string, TileAnimalState>>({});
   const [formato, setFormato] = useState<Record<string, "pdf" | "excel">>({});
 
-  // Sort modal state
-  const [sortModal, setSortModal] = useState<SortModalState | null>(null);
-  const [sortOrder, setSortOrder] = useState<SortValue>("variedad_anilla");
+  const [showInventoryModal, setShowInventoryModal] = useState(false);
 
   const handleGenerate = async (label: string, action: () => Promise<{ job_id: string }>) => {
     setGenerating((prev) => ({ ...prev, [label]: true }));
@@ -275,32 +245,19 @@ export default function ReportesPage() {
     }
   };
 
-  const handleGenerateWithSort = async () => {
-    if (!sortModal) return;
-    const { tileLabel, action } = sortModal;
-    setSortModal(null);
-    await handleGenerate(tileLabel, () => action(sortOrder));
-  };
-
-  const setAnimalForTile = (tileLabel: string, id: string, label: string) => {
-    setAnimalState((prev) => ({ ...prev, [tileLabel]: { selectedId: id, selectedLabel: label } }));
-  };
-
   const getFmt = (label: string): "pdf" | "excel" => formato[label] ?? "pdf";
 
-  // A tile "needs sort" when its format is PDF and it supports sorting (multi-animal PDF)
-  const needsSort = (label: string, hasFormatSelector: boolean, requiresAnimal: boolean) =>
-    hasFormatSelector && !requiresAnimal && getFmt(label) === "pdf";
+  const setAnimalForTile = (tileLabel: string, id: string, label: string) =>
+    setAnimalState((prev) => ({ ...prev, [tileLabel]: { selectedId: id, selectedLabel: label } }));
 
   const tiles = [
     {
       label: "Inventario",
-      description: "Lista completa de animales (todos los socios)",
+      description: "Lista completa de animales con filtros y ordenación",
       icon: <FileText size={24} />,
       color: "bg-blue-700",
       requiresAnimal: false,
       hasFormatSelector: true,
-      action: (orden?: SortValue) => reportsApi.inventory(undefined, getFmt("Inventario"), orden),
     },
     {
       label: "Libro Genealógico",
@@ -309,16 +266,6 @@ export default function ReportesPage() {
       color: "bg-green-700",
       requiresAnimal: false,
       hasFormatSelector: false,
-      action: () => reportsApi.libroGenealogico(),
-    },
-    {
-      label: "Catálogo Reproductores",
-      description: "Reproductores aprobados con puntuaciones",
-      icon: <BookOpen size={24} />,
-      color: "bg-purple-700",
-      requiresAnimal: false,
-      hasFormatSelector: true,
-      action: (orden?: SortValue) => reportsApi.catalogoReproductores(getFmt("Catálogo Reproductores"), orden),
     },
     {
       label: "Ficha Individual",
@@ -327,41 +274,41 @@ export default function ReportesPage() {
       color: "bg-orange-600",
       requiresAnimal: true,
       hasFormatSelector: false,
-      action: () => {
-        const id = animalState["Ficha Individual"]?.selectedId;
-        if (!id) throw new Error("Selecciona un animal.");
-        return reportsApi.individual(id);
-      },
     },
   ];
 
   return (
     <>
-      {/* Sort order modal */}
-      {sortModal && (
-        <SortOrderModal
-          tileLabel={sortModal.tileLabel}
-          value={sortOrder}
-          onChange={setSortOrder}
-          onConfirm={handleGenerateWithSort}
-          onCancel={() => setSortModal(null)}
-          loading={!!generating[sortModal.tileLabel]}
+      {showInventoryModal && (
+        <InventoryModal
+          formato={getFmt("Inventario")}
+          loading={!!generating["Inventario"]}
+          onCancel={() => setShowInventoryModal(false)}
+          onConfirm={(filters, orden) => {
+            setShowInventoryModal(false);
+            handleGenerate("Inventario", () =>
+              reportsApi.inventory(undefined, getFmt("Inventario"), orden, {
+                activo: filters.activo || undefined,
+                variedad: filters.variedad || undefined,
+                sexo: filters.sexo || undefined,
+                anio_desde: filters.anio_desde || undefined,
+                anio_hasta: filters.anio_hasta || undefined,
+              })
+            );
+          }}
         />
       )}
 
       <div className="space-y-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Reportes</h1>
-          <p className="text-sm text-gray-500">
-            Generación asíncrona — recibirás el enlace de descarga al completar
-          </p>
+          <p className="text-sm text-gray-500">Generación asíncrona — recibirás el enlace de descarga al completar</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {tiles.map((tile) => {
             const animalSel = animalState[tile.label];
             const canGenerate = !tile.requiresAnimal || !!animalSel?.selectedId;
-            const showSortModal = needsSort(tile.label, tile.hasFormatSelector, tile.requiresAnimal);
 
             return (
               <div key={tile.label} className="card space-y-3">
@@ -373,22 +320,14 @@ export default function ReportesPage() {
                   </div>
                 </div>
 
-                {/* Format selector */}
                 {tile.hasFormatSelector && (
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-500">Formato:</span>
                     <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
                       {(["pdf", "excel"] as const).map((fmt) => (
-                        <button
-                          key={fmt}
-                          type="button"
+                        <button key={fmt} type="button"
                           onClick={() => setFormato((p) => ({ ...p, [tile.label]: fmt }))}
-                          className={`px-3 py-1 transition-colors ${
-                            getFmt(tile.label) === fmt
-                              ? "bg-blue-700 text-white"
-                              : "bg-white text-gray-600 hover:bg-gray-50"
-                          }`}
-                        >
+                          className={`px-3 py-1 transition-colors ${getFmt(tile.label) === fmt ? "bg-blue-700 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
                           {fmt === "pdf" ? "PDF" : "Excel"}
                         </button>
                       ))}
@@ -396,47 +335,35 @@ export default function ReportesPage() {
                   </div>
                 )}
 
-                {/* Animal picker for individual reports */}
                 {tile.requiresAnimal && (
                   animalSel?.selectedId ? (
                     <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs">
-                      <span className="font-mono font-medium text-blue-800 flex-1">
-                        {animalSel.selectedLabel}
-                      </span>
-                      <button
-                        onClick={() => setAnimalState((p) => { const n = { ...p }; delete n[tile.label]; return n; })}
-                        className="text-blue-400 hover:text-blue-700"
-                      >
-                        Cambiar
-                      </button>
+                      <span className="font-mono font-medium text-blue-800 flex-1">{animalSel.selectedLabel}</span>
+                      <button onClick={() => setAnimalState((p) => { const n = { ...p }; delete n[tile.label]; return n; })} className="text-blue-400 hover:text-blue-700">Cambiar</button>
                     </div>
                   ) : (
-                    <AnimalPicker
-                      label="Selecciona el animal"
-                      onSelect={(id, label) => setAnimalForTile(tile.label, id, label)}
-                    />
+                    <AnimalPicker label="Selecciona el animal" onSelect={(id, label) => setAnimalForTile(tile.label, id, label)} />
                   )
                 )}
 
                 <button
                   onClick={() => {
-                    if (showSortModal) {
-                      setSortModal({
-                        tileLabel: tile.label,
-                        action: tile.action as (orden: SortValue) => Promise<{ job_id: string }>,
-                      });
-                    } else {
-                      handleGenerate(tile.label, () => tile.action());
+                    if (tile.label === "Inventario") {
+                      setShowInventoryModal(true);
+                    } else if (tile.label === "Libro Genealógico") {
+                      handleGenerate(tile.label, () => reportsApi.libroGenealogico());
+                    } else if (tile.label === "Ficha Individual") {
+                      const id = animalState["Ficha Individual"]?.selectedId;
+                      if (!id) return;
+                      handleGenerate(tile.label, () => reportsApi.individual(id));
                     }
                   }}
                   disabled={generating[tile.label] || !canGenerate}
                   className="btn-primary w-full disabled:opacity-50"
                 >
-                  {generating[tile.label] ? (
-                    <><Loader2 size={16} className="animate-spin" /> Iniciando...</>
-                  ) : (
-                    "Generar"
-                  )}
+                  {generating[tile.label]
+                    ? <><Loader2 size={16} className="animate-spin" /> Iniciando...</>
+                    : tile.label === "Inventario" ? <><SlidersHorizontal size={14} /> Filtrar y Generar</> : "Generar"}
                 </button>
 
                 {jobs[tile.label] && <ReportJobStatus jobId={jobs[tile.label]} />}

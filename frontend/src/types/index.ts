@@ -344,7 +344,9 @@ export interface Tenant {
   is_active: boolean;
   logo_url: string | null;
   max_socios: number;
-  socios_count?: number;  // anotado por el backend, solo lectura
+  socios_count?: number;       // socios en ALTA
+  socios_baja_count?: number;  // socios en BAJA
+  animales_count?: number;     // total animales
   // Datos de contacto opcionales
   nombre_completo?: string;
   cif?: string;

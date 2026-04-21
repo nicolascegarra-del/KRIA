@@ -1,11 +1,14 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, FileSpreadsheet, ChevronUp, ChevronDown, ChevronsUpDown, Settings2, X } from "lucide-react";
+import {
+  FileText, FileSpreadsheet, ChevronUp, ChevronDown, ChevronsUpDown,
+  Settings2, X, GripVertical,
+} from "lucide-react";
 import { censoApi } from "../../api/animals";
 import type { CensoFilters, CensoColumnDef } from "../../api/animals";
 import { apiClient } from "../../api/client";
 
-const LS_KEY = "animales_censo_columns";
+const LS_KEY = "animales_censo_columns_v2";
 const PAGE_SIZE = 50;
 
 const ESTADO_LABELS: Record<string, string> = {
@@ -23,6 +26,8 @@ const ESTADO_COLORS: Record<string, string> = {
   BAJA: "bg-gray-200 text-gray-500",
 };
 
+interface ColState { key: string; visible: boolean; }
+
 function SortIcon({ col, orderBy, orderDir }: { col: string; orderBy: string; orderDir: string }) {
   if (orderBy !== col) return <ChevronsUpDown size={13} className="text-gray-300" />;
   return orderDir === "asc"
@@ -30,8 +35,79 @@ function SortIcon({ col, orderBy, orderDir }: { col: string; orderBy: string; or
     : <ChevronDown size={13} className="text-white" />;
 }
 
+function ColConfigPanel({
+  allColumns, colState, onChange, onClose,
+}: {
+  allColumns: CensoColumnDef[];
+  colState: ColState[];
+  onChange: (s: ColState[]) => void;
+  onClose: () => void;
+}) {
+  const [local, setLocal] = useState<ColState[]>(colState);
+  const dragIdx = useRef<number | null>(null);
+
+  const toggleVisible = (key: string) =>
+    setLocal((prev) => prev.map((c) => c.key === key ? { ...c, visible: !c.visible } : c));
+
+  const handleDragStart = (idx: number) => { dragIdx.current = idx; };
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (dragIdx.current === null || dragIdx.current === idx) return;
+    const next = [...local];
+    const [moved] = next.splice(dragIdx.current, 1);
+    next.splice(idx, 0, moved);
+    dragIdx.current = idx;
+    setLocal(next);
+  };
+  const handleDrop = () => { dragIdx.current = null; };
+
+  const save = () => { onChange(local); onClose(); };
+  const reset = () => setLocal(allColumns.map((c) => ({ key: c.key, visible: true })));
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-black/30" onClick={onClose} />
+      <div className="w-72 max-w-[calc(100vw-2rem)] bg-white shadow-2xl flex flex-col">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+          <span className="font-semibold text-gray-800 text-sm">Configurar columnas</span>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+        </div>
+        <p className="text-xs text-gray-500 px-4 pt-2 pb-1">Arrastra para reordenar · Marca para mostrar</p>
+        <ul className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
+          {local.map((cs, idx) => {
+            const def = allColumns.find((c) => c.key === cs.key);
+            if (!def) return null;
+            return (
+              <li
+                key={cs.key}
+                draggable
+                onDragStart={() => handleDragStart(idx)}
+                onDragOver={(e) => handleDragOver(e, idx)}
+                onDrop={handleDrop}
+                className="flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-gray-50 cursor-grab active:cursor-grabbing select-none"
+              >
+                <GripVertical size={14} className="text-gray-300 shrink-0" />
+                <input
+                  type="checkbox"
+                  checked={cs.visible}
+                  onChange={() => toggleVisible(cs.key)}
+                  className="accent-blue-600"
+                />
+                <span className="text-sm text-gray-700">{def.label}</span>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="border-t border-gray-200 px-4 py-3 flex gap-2">
+          <button onClick={reset} className="btn-secondary text-xs flex-1">Restablecer</button>
+          <button onClick={save} className="btn-primary text-xs flex-1">Aplicar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AnimalesPage() {
-  // Column picker
   const { data: colMeta } = useQuery({
     queryKey: ["censo-columnas"],
     queryFn: censoApi.getColumnas,
@@ -40,26 +116,39 @@ export default function AnimalesPage() {
   const allColumns: CensoColumnDef[] = colMeta?.columns ?? [];
   const defaultCols: string[] = colMeta?.defaults ?? [];
 
-  const [selectedCols, setSelectedCols] = useState<string[] | null>(() => {
+  const [colState, setColState] = useState<ColState[] | null>(() => {
     try {
       const saved = localStorage.getItem(LS_KEY);
-      return saved ? (JSON.parse(saved) as string[]) : null;
-    } catch (_e) { return null; }
+      return saved ? (JSON.parse(saved) as ColState[]) : null;
+    } catch { return null; }
   });
-  const activeCols = selectedCols ?? defaultCols;
+  const [showColPanel, setShowColPanel] = useState(false);
 
-  const [showColPicker, setShowColPicker] = useState(false);
+  const effectiveColState: ColState[] = colState ?? allColumns.map((c) => ({ key: c.key, visible: defaultCols.includes(c.key) }));
 
-  function toggleCol(key: string) {
-    const next = activeCols.includes(key)
-      ? activeCols.filter((k) => k !== key)
-      : [...activeCols, key];
-    setSelectedCols(next);
+  function handleColChange(next: ColState[]) {
+    setColState(next);
     localStorage.setItem(LS_KEY, JSON.stringify(next));
   }
 
+  // Merge new columns that may not be in saved state
+  const mergedColState: ColState[] = (() => {
+    const saved = effectiveColState;
+    const savedKeys = new Set(saved.map((c) => c.key));
+    return [
+      ...saved,
+      ...allColumns.filter((c) => !savedKeys.has(c.key)).map((c) => ({ key: c.key, visible: false })),
+    ];
+  })();
+
+  const activeColDefs = mergedColState
+    .filter((cs) => cs.visible)
+    .map((cs) => allColumns.find((c) => c.key === cs.key))
+    .filter(Boolean) as CensoColumnDef[];
+
   // Filters
   const [search, setSearch] = useState("");
+  const [activo, setActivo] = useState<"" | "true" | "false">("");
   const [variedad, setVariedad] = useState("");
   const [estado, setEstado] = useState("");
   const [sexo, setSexo] = useState("");
@@ -67,7 +156,6 @@ export default function AnimalesPage() {
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
 
-  // Sorting & pagination
   const [orderBy, setOrderBy] = useState("numero_anilla");
   const [orderDir, setOrderDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
@@ -84,6 +172,7 @@ export default function AnimalesPage() {
 
   const filters: CensoFilters = useMemo(() => ({
     search: search || undefined,
+    activo: activo || undefined,
     variedad: variedad || undefined,
     estado: estado || undefined,
     sexo: sexo || undefined,
@@ -94,7 +183,7 @@ export default function AnimalesPage() {
     order_dir: orderDir,
     page,
     page_size: PAGE_SIZE,
-  }), [search, variedad, estado, sexo, propietario, fechaDesde, fechaHasta, orderBy, orderDir, page]);
+  }), [search, activo, variedad, estado, sexo, propietario, fechaDesde, fechaHasta, orderBy, orderDir, page]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["censo-animales", filters],
@@ -104,16 +193,14 @@ export default function AnimalesPage() {
 
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 1;
 
-  // Sortable columns
   const SORTABLE = new Set([
     "numero_anilla", "fecha_nacimiento", "sexo", "variedad",
     "estado", "socio_nombre", "ganaderia_nacimiento", "ganaderia_actual",
     "fecha_baja", "fecha_incubacion",
   ]);
 
-  // Export
   async function handleExport(format: "pdf" | "excel") {
-    const exportParams: Record<string, string> = { format, columns: activeCols.join(",") };
+    const exportParams: Record<string, string> = { format, columns: mergedColState.filter(c => c.visible).map(c => c.key).join(",") };
     const filterEntries = Object.entries(filters) as [string, unknown][];
     for (const [k, v] of filterEntries) {
       if (k === "page" || k === "page_size") continue;
@@ -130,21 +217,28 @@ export default function AnimalesPage() {
     URL.revokeObjectURL(href);
   }
 
-  const activeColDefs = allColumns.filter((c) => activeCols.includes(c.key));
-
   return (
     <div className="p-4 md:p-6 space-y-4">
+      {showColPanel && (
+        <ColConfigPanel
+          allColumns={allColumns}
+          colState={mergedColState}
+          onChange={handleColChange}
+          onClose={() => setShowColPanel(false)}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Animales</h1>
           {data && (
-            <p className="text-sm text-gray-500 mt-0.5">{data.count} animales en total</p>
+            <p className="text-sm text-gray-500 mt-0.5">{data.count} animales</p>
           )}
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowColPicker((v) => !v)}
+            onClick={() => setShowColPanel(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
           >
             <Settings2 size={15} /> Columnas
@@ -164,38 +258,24 @@ export default function AnimalesPage() {
         </div>
       </div>
 
-      {/* Column picker panel */}
-      {showColPicker && (
-        <div className="border border-gray-200 rounded-xl bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-gray-700">Columnas visibles</span>
-            <button onClick={() => setShowColPicker(false)}><X size={16} className="text-gray-400" /></button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {allColumns.map((col) => (
-              <label key={col.key} className="flex items-center gap-1.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={activeCols.includes(col.key)}
-                  onChange={() => toggleCol(col.key)}
-                  className="rounded"
-                />
-                <span className="text-sm text-gray-700">{col.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Filters */}
       <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           <input
             className="col-span-2 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Buscar anilla, propietario, ganadería..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
+          <select
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={activo}
+            onChange={(e) => { setActivo(e.target.value as "" | "true" | "false"); setEstado(""); setPage(1); }}
+          >
+            <option value="">Activos y no activos</option>
+            <option value="true">Solo activos</option>
+            <option value="false">Solo no activos</option>
+          </select>
           <select
             className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={variedad}
@@ -209,7 +289,7 @@ export default function AnimalesPage() {
           <select
             className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={estado}
-            onChange={(e) => { setEstado(e.target.value); setPage(1); }}
+            onChange={(e) => { setEstado(e.target.value); setActivo(""); setPage(1); }}
           >
             <option value="">Todos los estados</option>
             {Object.entries(ESTADO_LABELS).map(([k, v]) => (
@@ -239,14 +319,14 @@ export default function AnimalesPage() {
             className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={fechaDesde}
             onChange={(e) => { setFechaDesde(e.target.value); setPage(1); }}
-            placeholder="Nacimiento desde"
+            title="Nacimiento desde"
           />
           <input
             type="date"
             className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={fechaHasta}
             onChange={(e) => { setFechaHasta(e.target.value); setPage(1); }}
-            placeholder="Nacimiento hasta"
+            title="Nacimiento hasta"
           />
         </div>
       </div>

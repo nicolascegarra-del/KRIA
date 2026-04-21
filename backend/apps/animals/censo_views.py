@@ -29,9 +29,10 @@ COLUMN_DEFS = [
     {"key": "fecha_baja",           "label": "Fecha baja"},
     {"key": "motivo_baja",          "label": "Motivo baja"},
     {"key": "fecha_incubacion",     "label": "Fecha incubación"},
-    {"key": "candidato_reproductor","label": "Candidato reproductor"},
-    {"key": "reproductor_aprobado", "label": "Reproductor aprobado"},
 ]
+
+_ESTADOS_ACTIVOS = ["REGISTRADO", "MODIFICADO", "APROBADO", "EVALUADO"]
+_ESTADOS_NO_ACTIVOS = ["BAJA", "RECHAZADO", "SOCIO_EN_BAJA"]
 
 DEFAULT_COLUMNS = [
     "numero_anilla", "fecha_nacimiento", "sexo", "variedad",
@@ -61,10 +62,13 @@ def _serialize_animal(animal):
     elif animal.madre_lote_externo:
         madre_anilla = animal.madre_lote_externo
 
+    def _fmt_date(d):
+        return d.strftime("%d-%m-%Y") if d else ""
+
     return {
         "id":                    str(animal.id),
         "numero_anilla":         animal.numero_anilla,
-        "fecha_nacimiento":      str(animal.fecha_nacimiento) if animal.fecha_nacimiento else "",
+        "fecha_nacimiento":      _fmt_date(animal.fecha_nacimiento),
         "sexo":                  animal.get_sexo_display(),
         "variedad":              animal.get_variedad_display(),
         "estado":                animal.estado,
@@ -73,11 +77,9 @@ def _serialize_animal(animal):
         "ganaderia_actual":      animal.ganaderia_actual,
         "padre_anilla":          animal.padre.numero_anilla if animal.padre_id and animal.padre else "",
         "madre_anilla":          madre_anilla or "",
-        "fecha_baja":            str(animal.fecha_baja) if animal.fecha_baja else "",
+        "fecha_baja":            _fmt_date(animal.fecha_baja),
         "motivo_baja":           animal.motivo_baja.nombre if animal.motivo_baja_id and animal.motivo_baja else "",
-        "fecha_incubacion":      str(animal.fecha_incubacion) if animal.fecha_incubacion else "",
-        "candidato_reproductor": "Sí" if animal.candidato_reproductor else "No",
-        "reproductor_aprobado":  "Sí" if animal.reproductor_aprobado else "No",
+        "fecha_incubacion":      _fmt_date(animal.fecha_incubacion),
     }
 
 
@@ -95,6 +97,12 @@ def _build_queryset(tenant, params):
             Q(ganaderia_nacimiento__icontains=search) |
             Q(ganaderia_actual__icontains=search)
         )
+
+    activo = params.get("activo")
+    if activo == "true":
+        qs = qs.filter(estado__in=_ESTADOS_ACTIVOS)
+    elif activo == "false":
+        qs = qs.filter(estado__in=_ESTADOS_NO_ACTIVOS)
 
     if variedad := params.get("variedad"):
         qs = qs.filter(variedad=variedad)

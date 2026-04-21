@@ -131,6 +131,7 @@ export interface CensoColumnDef {
 
 export interface CensoFilters {
   search?: string;
+  activo?: "true" | "false" | "";
   variedad?: string;
   estado?: string;
   sexo?: string;

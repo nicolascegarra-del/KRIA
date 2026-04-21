@@ -12,12 +12,15 @@ class TenantBrandingSerializer(serializers.ModelSerializer):
 
 class TenantSerializer(serializers.ModelSerializer):
     socios_count = serializers.IntegerField(read_only=True, default=0)
+    socios_baja_count = serializers.IntegerField(read_only=True, default=0)
+    animales_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = Tenant
         fields = [
             "id", "name", "slug", "logo_url", "primary_color", "secondary_color",
-            "custom_domain", "is_active", "max_socios", "socios_count", "created_at",
+            "custom_domain", "is_active", "max_socios", "socios_count", "socios_baja_count",
+            "animales_count", "created_at",
             "nombre_completo", "cif", "domicilio", "cod_postal", "municipio", "provincia",
             "email_asociacion",
             "telefono1", "telefono1_nombre", "telefono1_cargo", "telefono1_email",

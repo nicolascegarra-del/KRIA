@@ -144,12 +144,6 @@ class DashboardTareasPendientesView(APIView):
             status__in=[ImportJob.Status.PENDING, ImportJob.Status.PROCESSING],
         ).count()
 
-        candidatos_reproductor = Animal.all_objects.filter(
-            tenant=tenant,
-            candidato_reproductor=True,
-            reproductor_aprobado=False,
-        ).count()
-
         alertas_anilla = Animal.all_objects.filter(
             tenant=tenant,
             alerta_anilla__in=["FUERA_RANGO", "DIAMETRO"],
@@ -209,7 +203,6 @@ class DashboardTareasPendientesView(APIView):
             "pendientes_aprobacion": pendientes_aprobacion,
             "conflictos_pendientes": conflictos_pendientes,
             "imports_pendientes": imports_pendientes,
-            "candidatos_reproductor": candidatos_reproductor,
             "alertas_anilla": alertas_anilla,
             "solicitudes_realta": solicitudes_realta,
             # socios

@@ -61,8 +61,7 @@ const NAV_ITEMS: NavItem[] = [
   // Gestión
   { to: "/dashboard",                label: "Dashboard",             icon: <LayoutDashboard size={18} />, gestionOnly: true },
   { to: "/validaciones",             label: "Validaciones",          icon: <CheckSquare size={18} />,     gestionOnly: true },
-  { to: "/reproductores/catalogo",   label: "Catálogo Reprod.",      icon: <BookOpen size={18} />,        gestionOnly: true },
-{ to: "/socios",                   label: "Socios",                icon: <Users size={18} />,           gestionOnly: true },
+  { to: "/socios",                   label: "Socios",                icon: <Users size={18} />,           gestionOnly: true },
   { to: "/granjas",                  label: "Granjas",               icon: <Building2 size={18} />,       gestionOnly: true, requiresGranjas: true },
   { to: "/anillas",                  label: "Anillas",               icon: <Tag size={18} />,             gestionOnly: true },
   { to: "/importar",                 label: "Importaciones",         icon: <Upload size={18} />,          gestionOnly: true, requiresImportaciones: true },

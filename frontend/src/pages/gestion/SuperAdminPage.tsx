@@ -87,16 +87,24 @@ const TENANT_ALL_COLS: TenantColDef[] = [
   { id: "email", label: "Email", render: (t) => <span className="text-sm text-gray-600">{t.email_asociacion || <span className="text-gray-300">—</span>}</span> },
   { id: "municipio", label: "Municipio", render: (t) => <span className="text-sm text-gray-600">{t.municipio || <span className="text-gray-300">—</span>}</span> },
   { id: "provincia", label: "Provincia", render: (t) => <span className="text-sm text-gray-600">{t.provincia || <span className="text-gray-300">—</span>}</span> },
-  { id: "socios", label: "Socios", render: (t) => {
+  { id: "socios_activos", label: "Socios Activos", render: (t) => {
     const pct = (t.max_socios ?? 0) > 0 ? Math.min(((t.socios_count ?? 0) / (t.max_socios ?? 1)) * 100, 100) : 0;
     const bar = pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-400" : "bg-green-500";
     return (
       <div className="flex items-center gap-2 min-w-[100px]">
         {(t.max_socios ?? 0) > 0 && <div className="w-16 bg-gray-100 rounded-full h-1.5 shrink-0"><div className={`h-1.5 rounded-full ${bar}`} style={{ width: `${pct}%` }} /></div>}
-        <span className="text-xs text-gray-500 whitespace-nowrap">{t.socios_count ?? 0}{(t.max_socios ?? 0) > 0 ? `/${t.max_socios}` : ""}</span>
+        <span className="text-xs font-semibold text-green-700 whitespace-nowrap">{t.socios_count ?? 0}{(t.max_socios ?? 0) > 0 ? `/${t.max_socios}` : ""}</span>
       </div>
     );
   }},
+  { id: "socios_baja", label: "Socios Baja", render: (t) => (
+    <span className={`text-xs font-semibold ${(t.socios_baja_count ?? 0) > 0 ? "text-red-500" : "text-gray-400"}`}>
+      {t.socios_baja_count ?? 0}
+    </span>
+  )},
+  { id: "animales", label: "Animales", render: (t) => (
+    <span className="text-xs font-semibold text-blue-700">{t.animales_count ?? 0}</span>
+  )},
   { id: "estado", label: "Estado", render: (t) => (
     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${t.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
       {t.is_active ? "Activa" : "Suspendida"}
@@ -105,7 +113,7 @@ const TENANT_ALL_COLS: TenantColDef[] = [
   { id: "created_at", label: "Fecha alta", render: (t) => t.created_at ? <span className="text-sm text-gray-500">{new Date(t.created_at).toLocaleDateString("es-ES")}</span> : <span className="text-gray-300">—</span> },
 ];
 
-const TENANT_DEFAULT_VISIBLE = ["cif", "email", "socios", "estado"];
+const TENANT_DEFAULT_VISIBLE = ["cif", "email", "socios_activos", "socios_baja", "animales", "estado"];
 
 interface TenantColState { id: string; visible: boolean; }
 
