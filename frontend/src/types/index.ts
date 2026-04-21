@@ -360,6 +360,7 @@ export interface Tenant {
   auditorias_enabled?: boolean;
   allow_animal_modifications?: boolean;
   tablas_enabled?: boolean;
+  animales_enabled?: boolean;
   anilla_sizes?: AnillaSize[];
   email_notificaciones?: string;
   created_at?: string;
