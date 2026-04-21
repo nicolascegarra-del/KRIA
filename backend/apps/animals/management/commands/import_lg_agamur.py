@@ -224,9 +224,8 @@ class Command(BaseCommand):
 
                 fecha_nacimiento = parse_date(col(row, "D"))
                 if fecha_nacimiento is None:
-                    self.stdout.write(f"  [SKIP-FECHA] fila {row_num} anilla={numero_anilla} sin fecha_nacimiento")
-                    skipped_error += 1
-                    continue
+                    self.stdout.write(f"  [SIN-FECHA] fila {row_num} anilla={numero_anilla} — usando 01/01/1900")
+                    fecha_nacimiento = date(1900, 1, 1)
 
                 sexo = parse_sexo(col(row, "E"))
                 variedad = parse_variedad(col(row, "AE"))
@@ -348,8 +347,8 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(
             f"\nImportación completada:"
-            f"\n  Creados:          {created}"
+            f"\n  Creados:           {created}"
             f"\n  Excluidos (socio): {skipped_excluded}"
             f"\n  Duplicados:        {skipped_dup}"
-            f"\n  Errores/skip:      {skipped_error}"
+            f"\n  Errores:           {skipped_error}"
         ))
