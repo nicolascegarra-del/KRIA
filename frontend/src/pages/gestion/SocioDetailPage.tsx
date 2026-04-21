@@ -54,7 +54,7 @@ export default function SocioDetailPage() {
 
   const { data: animalesData } = useQuery({
     queryKey: ["animals", { socio_id: id }],
-    queryFn: () => animalsApi.list({ socio_id: id! }),
+    queryFn: () => animalsApi.list({ socio_id: id!, page_size: 2000 }),
     enabled: tab === "animales" && !!id,
   });
 
