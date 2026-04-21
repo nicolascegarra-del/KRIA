@@ -116,8 +116,15 @@ export interface Animal {
   granja_nombre: string | null;
   fotos: PhotoEntry[];
   historico_pesos: WeightEntry[];
+  historico_ganaderias: GanaderiaEntry[];
   created_at: string;
   updated_at: string;
+}
+
+export interface GanaderiaEntry {
+  ganaderia: string;
+  fecha_alta: string | null;
+  fecha_baja: string | null;
 }
 
 export interface PhotoEntry {

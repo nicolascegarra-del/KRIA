@@ -102,6 +102,8 @@ class Animal(UUIDModel):
     # Media + history (JSONB)
     fotos = models.JSONField(default=list, blank=True)
     historico_pesos = models.JSONField(default=list, blank=True)
+    # Lista de ganaderías históricas: [{"ganaderia": str, "fecha_alta": "YYYY-MM-DD"}, ...]
+    historico_ganaderias = models.JSONField(default=list, blank=True)
 
     # State machine
     estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.REGISTRADO)

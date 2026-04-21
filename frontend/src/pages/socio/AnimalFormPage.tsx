@@ -7,7 +7,7 @@ import { granjasApi } from "../../api/granjas";
 import { lotesApi } from "../../api/lotes";
 import { useTenantStore } from "../../store/tenantStore";
 import AnimalStateChip from "../../components/AnimalStateChip";
-import { Loader2, ArrowLeft, Info, Camera, X, Scale, Plus, CheckCircle2, Circle, XCircle, AlertCircle } from "lucide-react";
+import { Loader2, ArrowLeft, Info, Camera, X, Scale, Plus, CheckCircle2, Circle, XCircle, AlertCircle, History } from "lucide-react";
 import type { Animal, FotoTipo } from "../../types";
 
 const FOTO_TIPOS: { tipo: FotoTipo; label: string }[] = [
@@ -647,6 +647,28 @@ export default function AnimalFormPage() {
         </form>
 
       </div>
+
+      {/* Ganadería history — only in edit mode when data exists */}
+      {isEdit && (animal?.historico_ganaderias ?? []).length > 0 && (
+        <div className="card space-y-3">
+          <div className="flex items-center gap-2">
+            <History size={16} className="text-gray-500" />
+            <h3 className="text-sm font-semibold text-gray-700">Historial de Ganaderías</h3>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {(animal?.historico_ganaderias ?? []).map((g, i) => (
+              <div key={i} className="flex items-center justify-between py-2 text-sm">
+                <span className="font-medium text-gray-800">{g.ganaderia}</span>
+                <span className="text-gray-500 text-xs">
+                  {g.fecha_alta ?? "—"}
+                  {" → "}
+                  {g.fecha_baja ?? <span className="text-green-600 font-medium">Actual</span>}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Weight history — only in edit mode */}
       {isEdit && (

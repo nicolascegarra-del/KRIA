@@ -87,7 +87,7 @@ class AnimalDetailSerializer(serializers.ModelSerializer):
             "madre_animal", "madre_anilla", "madre_anio_nacimiento",
             "madre_lote", "madre_lote_externo",
             "granja", "granja_nombre",
-            "fotos", "historico_pesos", "socio_nombre",
+            "fotos", "historico_pesos", "historico_ganaderias", "socio_nombre",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "estado", "created_at", "updated_at"]
