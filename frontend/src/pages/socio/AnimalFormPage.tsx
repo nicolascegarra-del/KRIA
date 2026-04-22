@@ -130,7 +130,7 @@ export default function AnimalFormPage() {
         sexo: animal.sexo,
         variedad: (animal.variedad as any) === "OTRA" ? "SIN_DEFINIR" : animal.variedad,
         fecha_incubacion: animal.fecha_incubacion ?? "",
-        ganaderia_nacimiento: animal.ganaderia_nacimiento_display || animal.ganaderia_nacimiento || "",
+        ganaderia_nacimiento: animal.ganaderia_nacimiento || "",
         padre_anilla: animal.padre_anilla ?? "",
         padre_anio: animal.padre_anio_nacimiento ? String(animal.padre_anio_nacimiento) : "",
         madre_anilla: animal.madre_anilla ?? "",
@@ -218,8 +218,6 @@ export default function AnimalFormPage() {
       granja: data.granja || null,
       ...(isGestionCreate && { socio: socioId }),
     };
-    // Only send ganaderia_nacimiento if not locked (avoids false "changed" detection
-    // when the form shows the display name while the DB stores the original value).
     if (!lockedIfSet(animal?.ganaderia_nacimiento)) {
       payload.ganaderia_nacimiento = data.ganaderia_nacimiento;
     }
@@ -405,13 +403,20 @@ export default function AnimalFormPage() {
                     {animal?.ganaderia_nacimiento_display || animal?.ganaderia_nacimiento}
                   </p>
                 ) : (
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="Nombre de la ganadería de origen"
-                    disabled={effectiveReadonly || isPendingReview}
-                    {...register("ganaderia_nacimiento")}
-                  />
+                  <>
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="Nombre de la ganadería de origen"
+                      disabled={effectiveReadonly || isPendingReview}
+                      {...register("ganaderia_nacimiento")}
+                    />
+                    {isEdit && animal?.ganaderia_nacimiento_display && animal.ganaderia_nacimiento_display !== animal.ganaderia_nacimiento && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        Mapeado a: <span className="font-medium">{animal.ganaderia_nacimiento_display}</span>
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>
