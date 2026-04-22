@@ -24,6 +24,7 @@ interface FormData {
   fecha_incubacion: string;
   ganaderia_nacimiento: string;
   padre_anilla: string;
+  padre_anio: string;
   madre_anilla: string;
 
   granja: string;
@@ -131,6 +132,7 @@ export default function AnimalFormPage() {
         fecha_incubacion: animal.fecha_incubacion ?? "",
         ganaderia_nacimiento: animal.ganaderia_nacimiento_display || animal.ganaderia_nacimiento || "",
         padre_anilla: animal.padre_anilla ?? "",
+        padre_anio: animal.padre_anio_nacimiento ? String(animal.padre_anio_nacimiento) : "",
         madre_anilla: animal.madre_anilla ?? "",
 
         granja: animal.granja ?? "",
@@ -222,6 +224,7 @@ export default function AnimalFormPage() {
     // Padre: send by anilla if provided, otherwise clear
     if (data.padre_anilla) {
       payload.padre_anilla = data.padre_anilla;
+      if (data.padre_anio) payload.padre_anio = parseInt(data.padre_anio, 10);
     } else {
       payload.padre = null;
     }
@@ -417,13 +420,27 @@ export default function AnimalFormPage() {
             <div className="space-y-3">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Padre</label>
-                <input
-                  type="text"
-                  className="input-field font-mono"
-                  placeholder="Nº anilla del padre"
-                  disabled={effectiveReadonly || isPendingReview || lockedIfSet(padreHasValue)}
-                  {...register("padre_anilla")}
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    className="input-field font-mono flex-1"
+                    placeholder="Nº anilla del padre"
+                    disabled={effectiveReadonly || isPendingReview || lockedIfSet(padreHasValue)}
+                    {...register("padre_anilla")}
+                  />
+                  <input
+                    type="number"
+                    className="input-field w-24 text-center"
+                    placeholder="Año"
+                    min={2000}
+                    max={new Date().getFullYear()}
+                    disabled={effectiveReadonly || isPendingReview || lockedIfSet(padreHasValue)}
+                    {...register("padre_anio")}
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  El padre debe ser macho (anilla Ø20). Indica el año si hay varias anillas con ese número.
+                </p>
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-2 flex-wrap">

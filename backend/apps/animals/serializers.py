@@ -123,8 +123,8 @@ class AnimalDetailSerializer(serializers.ModelSerializer):
 
 
 class AnimalWriteSerializer(serializers.ModelSerializer):
-    # Fields for resolving padre/madre by anilla (year embedded in ring number)
     padre_anilla = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    padre_anio = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     madre_anilla = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
@@ -132,34 +132,72 @@ class AnimalWriteSerializer(serializers.ModelSerializer):
         fields = [
             "numero_anilla", "fecha_nacimiento", "sexo", "variedad",
             "fecha_incubacion", "ganaderia_nacimiento",
-            "padre", "padre_anilla",
+            "padre", "padre_anilla", "padre_anio",
             "madre_animal", "madre_anilla",
             "madre_lote", "madre_lote_externo",
             "granja",
             "historico_pesos", "candidato_reproductor",
         ]
 
-    def _resolve_parent(self, anilla, field_label):
-        """Look up an Animal by anilla within the current tenant. Year is embedded in the ring."""
+    def _resolve_parent(self, anilla, field_label, anio=None, must_be_male=False):
+        """
+        Resolve a parent Animal by ring number within the current tenant.
+
+        - If anio is provided, narrows to animals born in that year.
+        - If multiple candidates exist without anio, raises an error requesting the year.
+        - If must_be_male=True, validates that the resolved animal is male (sexo='M').
+        """
         request = self.context.get("request")
         if not request or not hasattr(request, "tenant"):
             raise serializers.ValidationError(
                 {field_label: "No se pudo determinar el tenant para resolver la anilla."}
             )
+
         qs = Animal.objects.filter(numero_anilla=anilla, tenant=request.tenant)
-        animal = qs.first()
-        if animal is None:
+
+        if anio:
+            qs = qs.filter(fecha_nacimiento__year=anio)
+
+        count = qs.count()
+        if count == 0:
+            if anio:
+                raise serializers.ValidationError(
+                    {field_label: f"No se encontró animal con anilla '{anilla}' y año {anio} en esta asociación."}
+                )
             raise serializers.ValidationError(
                 {field_label: f"No se encontró animal con anilla '{anilla}' en esta asociación."}
             )
+
+        if count > 1:
+            years = list(qs.values_list("fecha_nacimiento__year", flat=True).distinct())
+            raise serializers.ValidationError(
+                {field_label: (
+                    f"Existen {count} animales con anilla '{anilla}' de distintos años {sorted(years)}. "
+                    "Indica el año de nacimiento para seleccionar el correcto."
+                )}
+            )
+
+        animal = qs.first()
+
+        if must_be_male and animal.sexo != "M":
+            raise serializers.ValidationError(
+                {field_label: (
+                    f"El animal con anilla '{anilla}' es hembra. "
+                    "El padre debe ser un macho (diámetro 20 mm)."
+                )}
+            )
+
         return animal
 
     def validate(self, data):
         padre_anilla = data.pop("padre_anilla", None)
+        padre_anio = data.pop("padre_anio", None)
         madre_anilla = data.pop("madre_anilla", None)
 
         if padre_anilla:
-            data["padre"] = self._resolve_parent(padre_anilla, "padre_anilla")
+            data["padre"] = self._resolve_parent(
+                padre_anilla, "padre_anilla", anio=padre_anio, must_be_male=True
+            )
         if madre_anilla:
             data["madre_animal"] = self._resolve_parent(madre_anilla, "madre_anilla")
 
