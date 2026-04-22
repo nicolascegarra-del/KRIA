@@ -79,10 +79,7 @@ export default function AnimalFormPage() {
   const effectiveReadonly = readonly || isRechazado;
   // REGISTRADO/MODIFICADO animals: socios can only edit pesajes and fotos, not main fields
   const isPendingReview = !isGestionCreate && isEdit && (animal?.estado === "REGISTRADO" || animal?.estado === "MODIFICADO");
-  // Solo se puede proponer como candidato si el animal está APROBADO (y no es gestión)
-  const canProponerCandidato = isGestionCreate || !isEdit || animal?.estado === "APROBADO";
-
-  // Campos protegidos: bloqueados una vez aprobado el animal si ya tenían valor.
+// Campos protegidos: bloqueados una vez aprobado el animal si ya tenían valor.
   // Añadir datos en un campo vacío siempre está permitido.
   // Para socios: siempre. Para gestión: solo si allow_animal_modifications=false.
   const allowModifications = branding?.allow_animal_modifications !== false;
@@ -528,7 +525,6 @@ export default function AnimalFormPage() {
             </div>
           </div>
 
-          {/* Farm & candidato */}
           {granjasEnabled && (
             <div className="border-t pt-4 space-y-4">
               <div>

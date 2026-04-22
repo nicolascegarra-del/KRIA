@@ -58,10 +58,7 @@ export default function AnimalCard({ animal, showSocio = false }: Props) {
                 ♀ {animal.madre_anilla}
               </span>
             )}
-            {animal.candidato_reproductor && (
-              <span className="text-xs font-medium text-amber-600">★ Candidato</span>
-            )}
-            {animal.granja_nombre && (
+{animal.granja_nombre && (
               <span className="text-xs text-gray-400">🏠 {animal.granja_nombre}</span>
             )}
           </div>

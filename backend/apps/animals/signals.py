@@ -53,6 +53,5 @@ def _only_ganaderia_added(old: Animal, new: Animal) -> bool:
         "numero_anilla", "fecha_nacimiento", "sexo", "variedad",
         "fecha_incubacion", "padre_id", "madre_animal_id",
         "madre_lote_id", "madre_lote_externo", "granja_id",
-        "candidato_reproductor",
     ]
     return all(getattr(old, f) == getattr(new, f) for f in SIGNIFICANT)

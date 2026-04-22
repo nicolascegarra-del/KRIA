@@ -554,38 +554,6 @@ class AnimalPesajeView(APIView):
         return Response(AnimalDetailSerializer(animal).data, status=201)
 
 
-class AnimalReproductorApproveView(APIView):
-    """POST /api/v1/animals/:id/aprobar-reproductor/ — gestión aprueba o deniega candidato."""
-    permission_classes = [IsGestion]
-
-    def post(self, request, pk):
-        try:
-            animal = Animal.objects.get(pk=pk, tenant=request.tenant)
-        except Animal.DoesNotExist:
-            return Response({"detail": "Not found."}, status=404)
-
-        aprobado = request.data.get("aprobado")
-        if aprobado is None:
-            return Response({"detail": "El campo 'aprobado' es obligatorio (true/false)."}, status=400)
-
-        if not isinstance(aprobado, bool):
-            return Response({"detail": "El campo 'aprobado' debe ser un booleano."}, status=400)
-
-        animal.reproductor_aprobado = aprobado
-        if aprobado:
-            animal.candidato_reproductor = True
-        update_fields = ["reproductor_aprobado", "candidato_reproductor"]
-
-        notas = request.data.get("notas_decision", "")
-        if notas:
-            animal.razon_rechazo = notas if not aprobado else ""
-            update_fields.append("razon_rechazo")
-
-        animal.save(update_fields=update_fields)
-        tipo_notif = "REPRODUCTOR_APROBADO" if aprobado else "REPRODUCTOR_DENEGADO"
-        _create_notificacion(request.tenant, animal.socio, tipo_notif, animal)
-        return Response(AnimalDetailSerializer(animal).data)
-
 
 # Motivos de rechazo predefinidos por fase
 MOTIVOS_RECHAZO = {

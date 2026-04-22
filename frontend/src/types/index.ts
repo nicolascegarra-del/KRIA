@@ -100,8 +100,6 @@ export interface Animal {
   fecha_baja: string | null;
   motivo_baja: string | null;
   motivo_baja_nombre: string | null;
-  candidato_reproductor: boolean;
-  reproductor_aprobado: boolean;
   socio: string;
   socio_nombre: string;
   padre: string | null;

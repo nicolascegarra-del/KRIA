@@ -300,14 +300,6 @@
           <span class="chip chip-{{ animal.estado }}">{{ animal.get_estado_display }}</span>
         </div>
       </div>
-      {% if animal.candidato_reproductor %}
-      <div class="data-field">
-        <div class="data-label">Reproductor</div>
-        <div class="data-value">
-          {% if animal.reproductor_aprobado %}Aprobado{% else %}Candidato{% endif %}
-        </div>
-      </div>
-      {% endif %}
     </div>
   </div>
 

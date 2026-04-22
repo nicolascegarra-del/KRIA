@@ -44,8 +44,7 @@ class AnimalListSerializer(serializers.ModelSerializer):
         model = Animal
         fields = [
             "id", "numero_anilla", "fecha_nacimiento", "sexo", "variedad",
-            "estado", "candidato_reproductor", "reproductor_aprobado",
-            "alerta_anilla",
+            "estado", "alerta_anilla",
             "socio_id", "socio_nombre", "granja", "granja_nombre",
             "padre_anilla", "madre_anilla",
             "fotos", "created_at",
@@ -80,8 +79,7 @@ class AnimalDetailSerializer(serializers.ModelSerializer):
         fields = [
             "id", "numero_anilla", "fecha_nacimiento", "sexo", "variedad",
             "fecha_incubacion", "ganaderia_nacimiento", "ganaderia_nacimiento_display", "ganaderia_actual",
-            "estado", "razon_rechazo", "candidato_reproductor", "reproductor_aprobado",
-            "alerta_anilla",
+            "estado", "razon_rechazo", "alerta_anilla",
             "fecha_baja", "motivo_baja", "motivo_baja_nombre",
             "padre", "padre_anilla", "padre_anio_nacimiento",
             "madre_animal", "madre_anilla", "madre_anio_nacimiento",
@@ -136,7 +134,7 @@ class AnimalWriteSerializer(serializers.ModelSerializer):
             "madre_animal", "madre_anilla",
             "madre_lote", "madre_lote_externo",
             "granja",
-            "historico_pesos", "candidato_reproductor",
+            "historico_pesos",
         ]
 
     def _resolve_parent(self, anilla, field_label, anio=None, must_be_male=False):
@@ -226,15 +224,6 @@ class AnimalWriteSerializer(serializers.ModelSerializer):
                 if has_eval:
                     raise serializers.ValidationError(
                         {"variedad": "No puedes cambiar la variedad de un animal ya evaluado."}
-                    )
-
-        # Un animal solo puede proponerse como candidato reproductor si está APROBADO
-        if data.get("candidato_reproductor") is True and self.instance is not None:
-            from core.permissions import get_effective_is_gestion
-            if request is None or not get_effective_is_gestion(request):
-                if self.instance.estado != Animal.Estado.APROBADO:
-                    raise serializers.ValidationError(
-                        {"candidato_reproductor": "Solo puedes proponer como reproductor un animal en estado Aprobado."}
                     )
 
         return data
