@@ -263,16 +263,16 @@ class AnimalDetailView(generics.RetrieveUpdateAPIView):
         from rest_framework.exceptions import PermissionDenied
         is_gestion = get_effective_is_gestion(self.request)
 
+        tenant = self.request.tenant
+        allow_modifications = getattr(tenant, "allow_animal_modifications", True)
+
         if not is_gestion:
             if serializer.instance.estado == Animal.Estado.RECHAZADO:
                 raise PermissionDenied("No puedes editar un animal rechazado. Contacta con la gestión.")
             if serializer.instance.estado in (Animal.Estado.REGISTRADO, Animal.Estado.MODIFICADO):
                 raise PermissionDenied("El animal está pendiente de revisión. Solo puedes añadir pesajes y fotos.")
-
-        # Enforce immutable fields for validated animals.
-        # Applies to socios always, and to gestion when allow_animal_modifications=False.
-        tenant = self.request.tenant
-        allow_modifications = getattr(tenant, "allow_animal_modifications", True)
+        elif not allow_modifications:
+            raise PermissionDenied("La modificación de animales no está habilitada para esta asociación.")
         VALIDATED_STATES = {
             Animal.Estado.APROBADO, Animal.Estado.EVALUADO,
             Animal.Estado.SOCIO_EN_BAJA, Animal.Estado.BAJA,

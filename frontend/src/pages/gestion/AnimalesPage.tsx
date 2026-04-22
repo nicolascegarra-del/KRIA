@@ -8,6 +8,7 @@ import {
 import { censoApi, animalsApi } from "../../api/animals";
 import type { CensoFilters, CensoColumnDef } from "../../api/animals";
 import { apiClient } from "../../api/client";
+import { useTenantStore } from "../../store/tenantStore";
 
 const LS_KEY = "animales_censo_columns_v2";
 const PAGE_SIZE = 50;
@@ -113,6 +114,8 @@ const ESTADOS_NO_ACTIVOS = new Set(["BAJA", "RECHAZADO", "SOCIO_EN_BAJA"]);
 export default function AnimalesPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { branding } = useTenantStore();
+  const allowModifications = branding?.allow_animal_modifications !== false;
   const { data: colMeta } = useQuery({
     queryKey: ["censo-columnas"],
     queryFn: censoApi.getColumnas,
@@ -418,19 +421,21 @@ export default function AnimalesPage() {
                     {/* Acciones */}
                     <td className="px-3 py-2 whitespace-nowrap">
                       <div className="flex items-center gap-1">
-                        {/* Editar */}
-                        {animal.socio_id ? (
-                          <button
-                            title="Editar animal"
-                            onClick={() => navigate(`/socios/${animal.socio_id}/animales/${animal.id}?returnTo=/animales`)}
-                            className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                        ) : (
-                          <span className="p-1.5 text-gray-300" title="Sin propietario asignado">
-                            <Pencil size={14} />
-                          </span>
+                        {/* Editar — solo si la asociación tiene permiso de modificaciones */}
+                        {allowModifications && (
+                          animal.socio_id ? (
+                            <button
+                              title="Editar animal"
+                              onClick={() => navigate(`/socios/${animal.socio_id}/animales/${animal.id}?returnTo=/animales`)}
+                              className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          ) : (
+                            <span className="p-1.5 text-gray-300" title="Sin propietario asignado">
+                              <Pencil size={14} />
+                            </span>
+                          )
                         )}
 
                         {/* Reactivar (solo para no activos) */}

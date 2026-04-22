@@ -74,15 +74,17 @@ export default function AnimalFormPage() {
     enabled: isEdit,
   });
 
+  const allowModifications = branding?.allow_animal_modifications !== false;
+
   // RECHAZADO animals are read-only for socios until admin reactivates
   const isRechazado = !isGestionCreate && animal?.estado === "RECHAZADO";
-  const effectiveReadonly = readonly || isRechazado;
+  // Gestión sin permiso de modificaciones → formulario read-only en edición
+  const gestionBlocked = isGestionCreate && isEdit && !allowModifications;
+  const effectiveReadonly = readonly || isRechazado || gestionBlocked;
   // REGISTRADO/MODIFICADO animals: socios can only edit pesajes and fotos, not main fields
   const isPendingReview = !isGestionCreate && isEdit && (animal?.estado === "REGISTRADO" || animal?.estado === "MODIFICADO");
-// Campos protegidos: bloqueados una vez aprobado el animal si ya tenían valor.
-  // Añadir datos en un campo vacío siempre está permitido.
+  // Campos protegidos: bloqueados una vez aprobado el animal si ya tenían valor.
   // Para socios: siempre. Para gestión: solo si allow_animal_modifications=false.
-  const allowModifications = branding?.allow_animal_modifications !== false;
   const isValidated = isEdit && !!animal &&
     ["APROBADO", "EVALUADO", "SOCIO_EN_BAJA", "BAJA"].includes(animal.estado);
   const gestionCanEdit = isGestionCreate && allowModifications;

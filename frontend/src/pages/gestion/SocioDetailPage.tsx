@@ -36,6 +36,7 @@ export default function SocioDetailPage() {
   const qc = useQueryClient();
   const { branding } = useTenantStore();
   const granjasEnabled = branding?.granjas_enabled !== false;
+  const allowModifications = branding?.allow_animal_modifications !== false;
   const [tab, setTab] = useState<Tab>("animales");
   const [animalesSubTab, setAnimalesSubTab] = useState<"activos" | "no_activos">("activos");
   const [pageActivos, setPageActivos] = useState(1);
@@ -307,14 +308,16 @@ export default function SocioDetailPage() {
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-500">{a.variedad}</span>
                           <AnimalStateChip estado={a.estado} />
-                          <button
-                            onClick={() => navigate(`/socios/${id}/animales/${a.id}`)}
-                            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
-                            title="Ver / Editar"
-                          >
-                            <Pencil size={12} />
-                            Ver/Editar
-                          </button>
+                          {allowModifications && (
+                            <button
+                              onClick={() => navigate(`/socios/${id}/animales/${a.id}`)}
+                              className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
+                              title="Editar animal"
+                            >
+                              <Pencil size={12} />
+                              Editar
+                            </button>
+                          )}
                           <button
                             onClick={() => {
                               setBajaAnimalId(a.id);
@@ -416,14 +419,16 @@ export default function SocioDetailPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-gray-500">{a.variedad}</span>
                         <AnimalStateChip estado={a.estado} />
-                        <button
-                          onClick={() => navigate(`/socios/${id}/animales/${a.id}`)}
-                          className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
-                          title="Ver / Editar"
-                        >
-                          <Pencil size={12} />
-                          Ver/Editar
-                        </button>
+                        {allowModifications && (
+                          <button
+                            onClick={() => navigate(`/socios/${id}/animales/${a.id}`)}
+                            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
+                            title="Editar animal"
+                          >
+                            <Pencil size={12} />
+                            Editar
+                          </button>
+                        )}
                         <button
                           onClick={() => reactivarAnimalMutation.mutate(a.id)}
                           disabled={reactivarAnimalMutation.isPending}
