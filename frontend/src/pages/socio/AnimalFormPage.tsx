@@ -215,11 +215,14 @@ export default function AnimalFormPage() {
       sexo: data.sexo,
       variedad: data.variedad,
       fecha_incubacion: data.fecha_incubacion || null,
-      ganaderia_nacimiento: data.ganaderia_nacimiento,
-
       granja: data.granja || null,
       ...(isGestionCreate && { socio: socioId }),
     };
+    // Only send ganaderia_nacimiento if not locked (avoids false "changed" detection
+    // when the form shows the display name while the DB stores the original value).
+    if (!lockedIfSet(animal?.ganaderia_nacimiento)) {
+      payload.ganaderia_nacimiento = data.ganaderia_nacimiento;
+    }
 
     // Padre: send by anilla if provided, otherwise clear
     if (data.padre_anilla) {
@@ -665,39 +668,44 @@ export default function AnimalFormPage() {
 
       </div>
 
-      {/* Ganadería history — only in edit mode when data exists */}
-      {isEdit && (animal?.historico_ganaderias ?? []).length > 0 && (
-        <div className="card space-y-3">
-          <div className="flex items-center gap-2">
-            <History size={16} className="text-gray-500" />
-            <h3 className="text-sm font-semibold text-gray-700">Historial de Ganaderías</h3>
-          </div>
-          <div className="overflow-x-auto rounded-xl border border-gray-200">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  <th className="px-3 py-2 text-left">Ganadería</th>
-                  <th className="px-3 py-2 text-left whitespace-nowrap">Fecha Alta</th>
-                  <th className="px-3 py-2 text-left whitespace-nowrap">Fecha Baja</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(animal?.historico_ganaderias ?? []).map((g, i) => (
-                  <tr key={i} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                    <td className="px-3 py-2 font-medium text-gray-800">{g.ganaderia}</td>
-                    <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{g.fecha_alta ?? "—"}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {g.fecha_baja
-                        ? <span className="text-gray-500">{g.fecha_baja}</span>
-                        : <span className="text-green-600 font-medium text-xs">Actual</span>}
-                    </td>
+      {/* Ganadería history — always shown in edit mode when there's any ganadería info */}
+      {isEdit && (animal?.historico_ganaderias?.length > 0 || animal?.ganaderia_nacimiento_display || animal?.ganaderia_nacimiento) && (() => {
+        const rows = animal?.historico_ganaderias?.length > 0
+          ? animal.historico_ganaderias
+          : [{ ganaderia: animal?.ganaderia_nacimiento_display || animal?.ganaderia_nacimiento, fecha_alta: null, fecha_baja: null }];
+        return (
+          <div className="card space-y-3">
+            <div className="flex items-center gap-2">
+              <History size={16} className="text-gray-500" />
+              <h3 className="text-sm font-semibold text-gray-700">Historial de Ganaderías</h3>
+            </div>
+            <div className="overflow-x-auto rounded-xl border border-gray-200">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    <th className="px-3 py-2 text-left">Ganadería</th>
+                    <th className="px-3 py-2 text-left whitespace-nowrap">Fecha Alta</th>
+                    <th className="px-3 py-2 text-left whitespace-nowrap">Fecha Baja</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {rows.map((g, i) => (
+                    <tr key={i} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                      <td className="px-3 py-2 font-medium text-gray-800">{g.ganaderia}</td>
+                      <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{g.fecha_alta ?? "—"}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {g.fecha_baja
+                          ? <span className="text-gray-500">{g.fecha_baja}</span>
+                          : <span className="text-green-600 font-medium text-xs">Actual</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Weight history — only in edit mode */}
       {isEdit && (
