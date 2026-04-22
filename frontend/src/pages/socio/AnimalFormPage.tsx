@@ -669,10 +669,10 @@ export default function AnimalFormPage() {
       </div>
 
       {/* Ganadería history — always shown in edit mode when there's any ganadería info */}
-      {isEdit && (animal?.historico_ganaderias?.length > 0 || animal?.ganaderia_nacimiento_display || animal?.ganaderia_nacimiento) && (() => {
-        const rows = animal?.historico_ganaderias?.length > 0
+      {isEdit && animal && (animal.historico_ganaderias.length > 0 || animal.ganaderia_nacimiento_display || animal.ganaderia_nacimiento) && (() => {
+        const rows = animal.historico_ganaderias.length > 0
           ? animal.historico_ganaderias
-          : [{ ganaderia: animal?.ganaderia_nacimiento_display || animal?.ganaderia_nacimiento || "", fecha_alta: null, fecha_baja: null }];
+          : [{ ganaderia: animal.ganaderia_nacimiento_display || animal.ganaderia_nacimiento, fecha_alta: null, fecha_baja: null }];
         return (
           <div className="card space-y-3">
             <div className="flex items-center gap-2">
