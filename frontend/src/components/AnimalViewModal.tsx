@@ -138,7 +138,7 @@ export default function AnimalViewModal({ animalId, onClose }: Props) {
               {(animal.historico_ganaderias?.length > 0 || animal.ganaderia_nacimiento_display || animal.ganaderia_nacimiento) && (() => {
                 const rows = animal.historico_ganaderias?.length > 0
                   ? animal.historico_ganaderias
-                  : [{ ganaderia: animal.ganaderia_nacimiento_display || animal.ganaderia_nacimiento, fecha_alta: null, fecha_baja: null }];
+                  : [{ ganaderia: animal.ganaderia_nacimiento_display || animal.ganaderia_nacimiento || "", fecha_alta: null, fecha_baja: null }];
                 return (
                   <div>
                     <div className="flex items-center gap-1.5 mb-3">
