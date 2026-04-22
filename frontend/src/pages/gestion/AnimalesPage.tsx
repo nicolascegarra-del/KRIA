@@ -1,10 +1,11 @@
 import { useState, useMemo, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   FileText, FileSpreadsheet, ChevronUp, ChevronDown, ChevronsUpDown,
-  Settings2, X, GripVertical,
+  Settings2, X, GripVertical, Pencil, RotateCcw, Check,
 } from "lucide-react";
-import { censoApi } from "../../api/animals";
+import { censoApi, animalsApi } from "../../api/animals";
 import type { CensoFilters, CensoColumnDef } from "../../api/animals";
 import { apiClient } from "../../api/client";
 
@@ -107,7 +108,11 @@ function ColConfigPanel({
   );
 }
 
+const ESTADOS_NO_ACTIVOS = new Set(["BAJA", "RECHAZADO", "SOCIO_EN_BAJA"]);
+
 export default function AnimalesPage() {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
   const { data: colMeta } = useQuery({
     queryKey: ["censo-columnas"],
     queryFn: censoApi.getColumnas,
@@ -192,6 +197,16 @@ export default function AnimalesPage() {
   });
 
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 1;
+
+  const [confirmReactivar, setConfirmReactivar] = useState<string | null>(null);
+
+  const reactivarMutation = useMutation({
+    mutationFn: (id: string) => animalsApi.reactivar(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["censo-animales"] });
+      setConfirmReactivar(null);
+    },
+  });
 
   const SORTABLE = new Set([
     "numero_anilla", "fecha_nacimiento", "sexo", "variedad",
@@ -351,50 +366,108 @@ export default function AnimalesPage() {
                   </span>
                 </th>
               ))}
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white bg-[#051937] whitespace-nowrap w-24">
+                Acciones
+              </th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={activeColDefs.length} className="text-center py-12 text-gray-400">
+                <td colSpan={activeColDefs.length + 1} className="text-center py-12 text-gray-400">
                   Cargando...
                 </td>
               </tr>
             ) : !data?.results.length ? (
               <tr>
-                <td colSpan={activeColDefs.length} className="text-center py-12 text-gray-400">
+                <td colSpan={activeColDefs.length + 1} className="text-center py-12 text-gray-400">
                   No hay animales con los filtros seleccionados.
                 </td>
               </tr>
             ) : (
-              data.results.map((animal, i) => (
-                <tr key={animal.id} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                  {activeColDefs.map((col) => {
-                    const val = animal[col.key] ?? "";
-                    if (col.key === "estado") {
+              data.results.map((animal, i) => {
+                const isNoActivo = ESTADOS_NO_ACTIVOS.has(animal.estado);
+                const isConfirmingReactivar = confirmReactivar === animal.id;
+                return (
+                  <tr key={animal.id} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                    {activeColDefs.map((col) => {
+                      const val = animal[col.key] ?? "";
+                      if (col.key === "estado") {
+                        return (
+                          <td key={col.key} className="px-4 py-2.5 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_COLORS[val] ?? "bg-gray-100 text-gray-600"}`}>
+                              {ESTADO_LABELS[val] ?? val}
+                            </span>
+                          </td>
+                        );
+                      }
+                      if (col.key === "socio_nombre") {
+                        return (
+                          <td key={col.key} className="px-4 py-2.5 whitespace-nowrap">
+                            {val || <span className="text-gray-400 italic">Sin propietario</span>}
+                          </td>
+                        );
+                      }
                       return (
-                        <td key={col.key} className="px-4 py-2.5 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_COLORS[val] ?? "bg-gray-100 text-gray-600"}`}>
-                            {ESTADO_LABELS[val] ?? val}
+                        <td key={col.key} className="px-4 py-2.5 whitespace-nowrap text-gray-700">
+                          {val}
+                        </td>
+                      );
+                    })}
+
+                    {/* Acciones */}
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <div className="flex items-center gap-1">
+                        {/* Editar */}
+                        {animal.socio_id ? (
+                          <button
+                            title="Editar animal"
+                            onClick={() => navigate(`/socios/${animal.socio_id}/animales/${animal.id}?returnTo=/animales`)}
+                            className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                        ) : (
+                          <span className="p-1.5 text-gray-300" title="Sin propietario asignado">
+                            <Pencil size={14} />
                           </span>
-                        </td>
-                      );
-                    }
-                    if (col.key === "socio_nombre") {
-                      return (
-                        <td key={col.key} className="px-4 py-2.5 whitespace-nowrap">
-                          {val || <span className="text-gray-400 italic">Sin propietario</span>}
-                        </td>
-                      );
-                    }
-                    return (
-                      <td key={col.key} className="px-4 py-2.5 whitespace-nowrap text-gray-700">
-                        {val}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))
+                        )}
+
+                        {/* Reactivar (solo para no activos) */}
+                        {isNoActivo && (
+                          isConfirmingReactivar ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                title="Confirmar reactivación"
+                                onClick={() => reactivarMutation.mutate(animal.id)}
+                                disabled={reactivarMutation.isPending}
+                                className="p-1.5 rounded-lg text-green-600 hover:bg-green-50 transition-colors"
+                              >
+                                <Check size={14} />
+                              </button>
+                              <button
+                                title="Cancelar"
+                                onClick={() => setConfirmReactivar(null)}
+                                className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              title="Reactivar animal"
+                              onClick={() => setConfirmReactivar(animal.id)}
+                              className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors"
+                            >
+                              <RotateCcw size={14} />
+                            </button>
+                          )
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

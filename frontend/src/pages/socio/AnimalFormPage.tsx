@@ -286,7 +286,7 @@ export default function AnimalFormPage() {
           {animal && (
             <div className="flex items-center gap-2 mt-1">
               <AnimalStateChip estado={animal.estado} />
-              {!isPendingReview && (animal.estado === "APROBADO" || animal.estado === "EVALUADO") && (
+              {!isPendingReview && !isGestionCreate && (animal.estado === "APROBADO" || animal.estado === "EVALUADO") && (
                 <span className="text-xs text-amber-600 flex items-center gap-1">
                   <Info size={12} />
                   Al guardar, el estado volverá a Añadido

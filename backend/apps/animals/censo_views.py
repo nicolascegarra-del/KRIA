@@ -67,6 +67,7 @@ def _serialize_animal(animal):
 
     return {
         "id":                    str(animal.id),
+        "socio_id":              str(animal.socio_id) if animal.socio_id else "",
         "numero_anilla":         animal.numero_anilla,
         "fecha_nacimiento":      _fmt_date(animal.fecha_nacimiento),
         "sexo":                  animal.get_sexo_display(),
