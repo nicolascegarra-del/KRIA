@@ -761,16 +761,16 @@ class GanaderiasNacimientoView(APIView):
 
         PENDING = [Animal.Estado.REGISTRADO, Animal.Estado.MODIFICADO]
 
-        # Only ganaderías that have at least one pending animal
+        # All animals with a ganadería value, regardless of estado
         rows = (
             Animal.objects
-            .filter(ganaderia_nacimiento__gt="", estado__in=PENDING)
+            .filter(ganaderia_nacimiento__gt="")
             .values("ganaderia_nacimiento")
             .annotate(animal_count=Count("id"))
             .order_by("ganaderia_nacimiento")
         )
 
-        # Detail of each pending animal grouped by ganadería
+        # Only show pending animals in the detail list (keep it manageable)
         animals_qs = (
             Animal.objects
             .filter(ganaderia_nacimiento__gt="", estado__in=PENDING)
@@ -784,8 +784,8 @@ class GanaderiasNacimientoView(APIView):
                 "id": str(animal.id),
                 "numero_anilla": animal.numero_anilla,
                 "estado": animal.estado,
-                "socio_id": str(animal.socio_id),
-                "socio_nombre": animal.socio.nombre_razon_social,
+                "socio_id": str(animal.socio_id) if animal.socio_id else None,
+                "socio_nombre": animal.socio.nombre_razon_social if animal.socio else None,
             })
 
         # Fetch existing mappings

@@ -904,12 +904,12 @@ export default function ValidacionesPage() {
             Ganaderías de Nacimiento
           </h2>
           <span className="text-xs text-gray-400 ml-auto">
-            {ganaderiasData?.length ?? 0} pendientes
+            {ganaderiasData?.length ?? 0} nombres únicos
           </span>
         </div>
         <p className="text-xs text-gray-500 mb-3">
-          Redirige los nombres de ganadería escritos por los socios hacia el
-          socio registrado correspondiente. Desaparecen al aprobar los animales.
+          Redirige los nombres de ganadería (de cualquier animal, incluso los ya aprobados) hacia el
+          socio registrado correspondiente. Afecta a cómo se muestra la ganadería en la ficha del animal.
         </p>
         {loadingGanaderias ? (
           <div className="flex justify-center py-4">
@@ -917,7 +917,7 @@ export default function ValidacionesPage() {
           </div>
         ) : !ganaderiasData?.length ? (
           <p className="text-sm text-gray-400 text-center py-3">
-            No hay ganaderías pendientes de redirigir.
+            No hay ganaderías registradas en ningún animal.
           </p>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -935,7 +935,7 @@ export default function ValidacionesPage() {
                       </span>
                     )}
                     <span className="text-xs text-gray-400">
-                      {g.animal_count} animal{g.animal_count !== 1 ? "es" : ""} pendiente{g.animal_count !== 1 ? "s" : ""}
+                      {g.animal_count} animal{g.animal_count !== 1 ? "es" : ""}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
