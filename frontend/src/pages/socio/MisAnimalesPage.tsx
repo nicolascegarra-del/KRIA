@@ -18,7 +18,7 @@ import type { Animal, AnimalEstado } from "../../types";
 
 type Tab = "activos" | "no_activos";
 
-const ACTIVO_STATES: AnimalEstado[] = ["REGISTRADO", "MODIFICADO", "APROBADO", "EVALUADO"];
+const ACTIVO_STATES: AnimalEstado[] = ["REGISTRADO", "MODIFICADO", "APROBADO", "EVALUADO", "PENDIENTE_CESION"];
 const NO_ACTIVO_STATES: AnimalEstado[] = ["RECHAZADO", "SOCIO_EN_BAJA", "BAJA"];
 
 // ── Columnas ──────────────────────────────────────────────────────────────────

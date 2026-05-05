@@ -16,6 +16,7 @@ const PAGE_SIZE = 50;
 const ESTADO_LABELS: Record<string, string> = {
   REGISTRADO: "Registrado", MODIFICADO: "Modificado", APROBADO: "Aprobado",
   EVALUADO: "Evaluado", RECHAZADO: "Rechazado", SOCIO_EN_BAJA: "Socio en baja", BAJA: "Baja",
+  PENDIENTE_CESION: "Cesión pendiente",
 };
 
 const ESTADO_COLORS: Record<string, string> = {
@@ -26,6 +27,7 @@ const ESTADO_COLORS: Record<string, string> = {
   RECHAZADO: "bg-red-100 text-red-800",
   SOCIO_EN_BAJA: "bg-gray-100 text-gray-600",
   BAJA: "bg-gray-200 text-gray-500",
+  PENDIENTE_CESION: "bg-purple-100 text-purple-800",
 };
 
 interface ColState { key: string; visible: boolean; }
