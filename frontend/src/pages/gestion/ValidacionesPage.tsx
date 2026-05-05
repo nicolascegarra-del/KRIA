@@ -12,7 +12,7 @@ import SuccessToast from "../../components/SuccessToast";
 import {
   CheckCircle2, Loader2, AlertCircle, AlertTriangle,
   Bird, Check, X, ChevronDown, ChevronUp, Link, Link2Off, RefreshCw,
-  ExternalLink, ClipboardEdit, ArrowRight, History, Trash2,
+  ExternalLink, ClipboardEdit, ArrowRight, History, Trash2, GitMerge,
 } from "lucide-react";
 import type { Animal, Conflicto, SolicitudRealta, SolicitudCambioDatos } from "../../types";
 
@@ -314,7 +314,6 @@ export default function ValidacionesPage() {
     mutationFn: (nombre: string) =>
       animalsApi.historicoRevisionAction({ nombre, accion: "eliminar" }),
     onSuccess: (res, nombre) => {
-      // Remove immediately from cache
       qc.setQueryData<HistoricoEntry[]>(["historico-ganaderias-revision"], (old) =>
         (old ?? []).filter((h) => h.nombre !== nombre)
       );
@@ -328,6 +327,21 @@ export default function ValidacionesPage() {
     onError: (err: any) => {
       const detail = err?.response?.data?.detail ?? err?.message ?? "Error al eliminar las entradas.";
       setSuccessMsg(`Error: ${detail}`);
+    },
+  });
+
+  const historicoDeduplicarMutation = useMutation({
+    mutationFn: () => animalsApi.historicoRevisionAction({ accion: "deduplicar" }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["historico-ganaderias-revision"] });
+      setSuccessMsg(
+        res.updated === 0
+          ? "No se encontraron duplicados consecutivos en el histórico."
+          : `Duplicados fusionados en ${res.updated} animal${res.updated !== 1 ? "es" : ""}.`
+      );
+    },
+    onError: (err: any) => {
+      setSuccessMsg(`Error: ${err?.response?.data?.detail ?? err?.message ?? "Error al deduplicar."}`);
     },
   });
 
@@ -1098,14 +1112,25 @@ export default function ValidacionesPage() {
 
       {/* ── Revisión de Ganaderías en Histórico ──────────────────────────── */}
       <div className="card">
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
           <History size={16} className="text-orange-600" />
           <h2 className="text-base font-semibold text-gray-900">
             Revisión de Ganaderías en Histórico
           </h2>
-          <span className="text-xs text-gray-400 ml-auto">
+          <span className="text-xs text-gray-400">
             {(historicoRevisionData ?? []).length} nombres
           </span>
+          <button
+            onClick={() => historicoDeduplicarMutation.mutate()}
+            disabled={historicoDeduplicarMutation.isPending}
+            className="ml-auto btn-secondary text-xs py-1 px-2.5 flex items-center gap-1.5"
+            title="Detectar y fusionar entradas consecutivas con el mismo nombre de ganadería"
+          >
+            {historicoDeduplicarMutation.isPending
+              ? <Loader2 size={12} className="animate-spin" />
+              : <GitMerge size={12} />}
+            Fusionar duplicados
+          </button>
         </div>
         <p className="text-xs text-gray-500 mb-3">
           Solo se muestran los nombres que no coinciden con ningún socio registrado. Mapéalos al socio real o elimínalos si son datos erróneos de la importación.

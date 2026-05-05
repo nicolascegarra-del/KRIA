@@ -1122,16 +1122,45 @@ class HistoricoGanaderiasRevisionView(APIView):
         ]
         return Response(result)
 
+    @staticmethod
+    def _merge_consecutive(historico: list) -> list:
+        """Merge consecutive entries that share the same ganadería name."""
+        if not historico:
+            return historico
+        merged = [dict(historico[0])]
+        for entry in historico[1:]:
+            entry = dict(entry) if isinstance(entry, dict) else {}
+            if entry.get("ganaderia") == merged[-1].get("ganaderia"):
+                merged[-1]["fecha_baja"] = entry.get("fecha_baja")
+            else:
+                merged.append(entry)
+        return merged
+
     def post(self, request):
         from apps.accounts.models import Socio
         tenant = request.tenant
-        nombre = (request.data.get("nombre") or "").strip()
         accion = request.data.get("accion")
 
+        # ── Deduplicar: no requires nombre ───────────────────────────────────
+        if accion == "deduplicar":
+            animals = list(Animal.all_objects.filter(tenant=tenant))
+            updated = 0
+            for animal in animals:
+                historico = animal.historico_ganaderias
+                if not isinstance(historico, list) or len(historico) < 2:
+                    continue
+                merged = self._merge_consecutive(historico)
+                if len(merged) < len(historico):
+                    animal.historico_ganaderias = merged
+                    animal.save(update_fields=["historico_ganaderias"])
+                    updated += 1
+            return Response({"updated": updated})
+
+        nombre = (request.data.get("nombre") or "").strip()
         if not nombre:
             return Response({"detail": "nombre es obligatorio."}, status=400)
         if accion not in ("remap", "eliminar"):
-            return Response({"detail": "accion debe ser 'remap' o 'eliminar'."}, status=400)
+            return Response({"detail": "accion debe ser 'remap', 'eliminar' o 'deduplicar'."}, status=400)
 
         nuevo_nombre = None
         if accion == "remap":
@@ -1139,16 +1168,12 @@ class HistoricoGanaderiasRevisionView(APIView):
             if not socio_id:
                 return Response({"detail": "socio_id es obligatorio para remap."}, status=400)
             try:
-                # Use all_objects to avoid double-tenant filtering from TenantManager
                 socio = Socio.all_objects.get(pk=socio_id, tenant=tenant)
             except Socio.DoesNotExist:
                 return Response({"detail": f"Socio no encontrado (id={socio_id}, tenant={tenant.id})."}, status=404)
             nuevo_nombre = socio.nombre_razon_social
 
-        animals = list(
-            Animal.all_objects
-            .filter(tenant=tenant)
-        )
+        animals = list(Animal.all_objects.filter(tenant=tenant))
 
         updated = 0
         errors = []
@@ -1172,6 +1197,8 @@ class HistoricoGanaderiasRevisionView(APIView):
                         if (entry.get("ganaderia") or "").strip() == nombre:
                             entry["ganaderia"] = nuevo_nombre
                         new_historico.append(entry)
+                    # Merge consecutive duplicates that the remap may have created
+                    new_historico = self._merge_consecutive(new_historico)
                     if (animal.ganaderia_actual or "").strip() == nombre:
                         animal.ganaderia_actual = nuevo_nombre
                         update_fields.append("ganaderia_actual")
