@@ -1100,6 +1100,7 @@ class HistoricoGanaderiasRevisionView(APIView):
         return Response(result)
 
     def post(self, request):
+        from apps.accounts.models import Socio
         tenant = request.tenant
         nombre = (request.data.get("nombre") or "").strip()
         accion = request.data.get("accion")
@@ -1114,53 +1115,64 @@ class HistoricoGanaderiasRevisionView(APIView):
             socio_id = request.data.get("socio_id")
             if not socio_id:
                 return Response({"detail": "socio_id es obligatorio para remap."}, status=400)
-            from apps.accounts.models import Socio
             try:
-                socio = Socio.objects.get(pk=socio_id, tenant=tenant)
+                # Use all_objects to avoid double-tenant filtering from TenantManager
+                socio = Socio.all_objects.get(pk=socio_id, tenant=tenant)
             except Socio.DoesNotExist:
-                return Response({"detail": "Socio no encontrado."}, status=404)
+                return Response({"detail": f"Socio no encontrado (id={socio_id}, tenant={tenant.id})."}, status=404)
             nuevo_nombre = socio.nombre_razon_social
 
         animals = list(
             Animal.all_objects
             .filter(tenant=tenant)
-            .exclude(historico_ganaderias__isnull=True)
         )
 
         updated = 0
+        errors = []
         for animal in animals:
-            historico = list(animal.historico_ganaderias or [])
-            if not any((e.get("ganaderia") or "").strip() == nombre for e in historico):
+            historico = animal.historico_ganaderias
+            if not isinstance(historico, list) or not historico:
+                continue
+            if not any(
+                isinstance(e, dict) and (e.get("ganaderia") or "").strip() == nombre
+                for e in historico
+            ):
                 continue
 
             update_fields = ["historico_ganaderias"]
 
-            if accion == "remap":
-                new_historico = []
-                for entry in historico:
-                    entry = dict(entry)
-                    if (entry.get("ganaderia") or "").strip() == nombre:
-                        entry["ganaderia"] = nuevo_nombre
-                    new_historico.append(entry)
-                if (animal.ganaderia_actual or "").strip() == nombre:
-                    animal.ganaderia_actual = nuevo_nombre
-                    update_fields.append("ganaderia_actual")
-                animal.historico_ganaderias = new_historico
+            try:
+                if accion == "remap":
+                    new_historico = []
+                    for entry in historico:
+                        entry = dict(entry) if isinstance(entry, dict) else {}
+                        if (entry.get("ganaderia") or "").strip() == nombre:
+                            entry["ganaderia"] = nuevo_nombre
+                        new_historico.append(entry)
+                    if (animal.ganaderia_actual or "").strip() == nombre:
+                        animal.ganaderia_actual = nuevo_nombre
+                        update_fields.append("ganaderia_actual")
+                    animal.historico_ganaderias = new_historico
 
-            else:  # eliminar
-                new_historico = [dict(e) for e in historico if (e.get("ganaderia") or "").strip() != nombre]
-                # Restore fecha_baja continuity between surviving entries
-                for i in range(len(new_historico) - 1):
-                    new_historico[i]["fecha_baja"] = new_historico[i + 1].get("fecha_alta")
-                if new_historico:
-                    new_historico[-1]["fecha_baja"] = None
-                # Keep ganaderia_actual in sync if it was the deleted name
-                if (animal.ganaderia_actual or "").strip() == nombre:
-                    animal.ganaderia_actual = new_historico[-1]["ganaderia"] if new_historico else ""
-                    update_fields.append("ganaderia_actual")
-                animal.historico_ganaderias = new_historico
+                else:  # eliminar
+                    new_historico = [
+                        dict(e) for e in historico
+                        if isinstance(e, dict) and (e.get("ganaderia") or "").strip() != nombre
+                    ]
+                    for i in range(len(new_historico) - 1):
+                        new_historico[i]["fecha_baja"] = new_historico[i + 1].get("fecha_alta")
+                    if new_historico:
+                        new_historico[-1]["fecha_baja"] = None
+                    if (animal.ganaderia_actual or "").strip() == nombre:
+                        animal.ganaderia_actual = new_historico[-1]["ganaderia"] if new_historico else ""
+                        update_fields.append("ganaderia_actual")
+                    animal.historico_ganaderias = new_historico
 
-            animal.save(update_fields=update_fields)
-            updated += 1
+                animal.save(update_fields=update_fields)
+                updated += 1
+            except Exception as exc:
+                errors.append(f"Animal {animal.numero_anilla}: {exc}")
 
+        if errors:
+            return Response({"updated": updated, "errors": errors}, status=207)
         return Response({"updated": updated})

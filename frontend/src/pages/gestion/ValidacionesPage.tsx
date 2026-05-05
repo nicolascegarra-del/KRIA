@@ -284,9 +284,17 @@ export default function ValidacionesPage() {
     mutationFn: ({ nombre, socio_id }: { nombre: string; socio_id: string }) =>
       animalsApi.historicoRevisionAction({ nombre, accion: "remap", socio_id }),
     onSuccess: (res, { nombre }) => {
-      qc.invalidateQueries({ queryKey: ["historico-ganaderias-revision"] });
+      qc.refetchQueries({ queryKey: ["historico-ganaderias-revision"] });
       setHistoricoRemapMap((prev) => { const n = { ...prev }; delete n[nombre]; return n; });
-      setSuccessMsg(`Remap aplicado en ${res.updated} animal${res.updated !== 1 ? "es" : ""}.`);
+      if (res.updated === 0) {
+        setSuccessMsg("Remap ejecutado pero no se encontraron animales con ese nombre en el histórico.");
+      } else {
+        setSuccessMsg(`Remap aplicado en ${res.updated} animal${res.updated !== 1 ? "es" : ""}.`);
+      }
+    },
+    onError: (err: any) => {
+      const detail = err?.response?.data?.detail ?? err?.message ?? "Error al aplicar el remap.";
+      setSuccessMsg(`Error: ${detail}`);
     },
   });
 
@@ -294,8 +302,16 @@ export default function ValidacionesPage() {
     mutationFn: (nombre: string) =>
       animalsApi.historicoRevisionAction({ nombre, accion: "eliminar" }),
     onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: ["historico-ganaderias-revision"] });
-      setSuccessMsg(`Entradas eliminadas en ${res.updated} animal${res.updated !== 1 ? "es" : ""}.`);
+      qc.refetchQueries({ queryKey: ["historico-ganaderias-revision"] });
+      if (res.updated === 0) {
+        setSuccessMsg("Eliminar ejecutado pero no se encontraron animales con ese nombre en el histórico.");
+      } else {
+        setSuccessMsg(`Entradas eliminadas en ${res.updated} animal${res.updated !== 1 ? "es" : ""}.`);
+      }
+    },
+    onError: (err: any) => {
+      const detail = err?.response?.data?.detail ?? err?.message ?? "Error al eliminar las entradas.";
+      setSuccessMsg(`Error: ${detail}`);
     },
   });
 
