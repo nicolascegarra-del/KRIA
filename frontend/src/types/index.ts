@@ -72,7 +72,7 @@ export interface Granja {
 }
 
 // ─── Animal ───────────────────────────────────────────────────────────────────
-export type AnimalEstado = "REGISTRADO" | "MODIFICADO" | "APROBADO" | "EVALUADO" | "RECHAZADO" | "SOCIO_EN_BAJA" | "BAJA";
+export type AnimalEstado = "REGISTRADO" | "MODIFICADO" | "APROBADO" | "EVALUADO" | "RECHAZADO" | "SOCIO_EN_BAJA" | "BAJA" | "PENDIENTE_CESION";
 export type AnimalSexo = "M" | "H";
 export type AnimalVariedad = "SALMON" | "PLATA" | "SIN_DEFINIR";
 
@@ -115,6 +115,10 @@ export interface Animal {
   fotos: PhotoEntry[];
   historico_pesos: WeightEntry[];
   historico_ganaderias: GanaderiaEntry[];
+  ganaderia_actual: string;
+  cesion_propuesta: string;
+  cesion_socio_destino: string | null;
+  cesion_socio_destino_nombre: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -324,7 +328,7 @@ export interface SolicitudCambioDatos {
 // ─── Notificacion ─────────────────────────────────────────────────────────────
 export interface Notificacion {
   id: string;
-  tipo: "ANIMAL_APROBADO" | "ANIMAL_RECHAZADO" | "REALTA_APROBADA" | "REALTA_DENEGADA" | "REPRODUCTOR_APROBADO" | "REPRODUCTOR_DENEGADO" | "CAMBIO_DATOS_APROBADO" | "CAMBIO_DATOS_DENEGADO" | "CUOTA_PENDIENTE";
+  tipo: "ANIMAL_APROBADO" | "ANIMAL_RECHAZADO" | "REALTA_APROBADA" | "REALTA_DENEGADA" | "REPRODUCTOR_APROBADO" | "REPRODUCTOR_DENEGADO" | "CAMBIO_DATOS_APROBADO" | "CAMBIO_DATOS_DENEGADO" | "CUOTA_PENDIENTE" | "CESION_RECIBIDA" | "CESION_CEDIDA" | "CESION_RECHAZADA";
   animal_id: string;
   animal_anilla: string;
   mensaje: string;

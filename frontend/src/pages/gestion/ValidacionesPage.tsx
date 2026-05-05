@@ -240,6 +240,36 @@ export default function ValidacionesPage() {
     },
   });
 
+  // ── Cesiones pendientes ───────────────────────────────────────────────────
+  const [cesionDestinoMap, setCesionDestinoMap] = useState<Record<string, string>>({});
+
+  const { data: cesionesPendientes = [], isLoading: loadingCesiones } = useQuery({
+    queryKey: ["cesiones-pendientes"],
+    queryFn: animalsApi.getCesionesPendientes,
+  });
+
+  const confirmarCesionMutation = useMutation({
+    mutationFn: ({ id, socio_destino_id }: { id: string; socio_destino_id: string }) =>
+      animalsApi.confirmarCesion(id, socio_destino_id),
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: ["cesiones-pendientes"] });
+      qc.invalidateQueries({ queryKey: ["animals"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      setCesionDestinoMap((prev) => { const next = { ...prev }; delete next[id]; return next; });
+      setSuccessMsg("Cesión confirmada correctamente.");
+    },
+  });
+
+  const rechazarCesionMutation = useMutation({
+    mutationFn: (id: string) => animalsApi.rechazarCesion(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["cesiones-pendientes"] });
+      qc.invalidateQueries({ queryKey: ["animals"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      setSuccessMsg("Cesión rechazada.");
+    },
+  });
+
   const animals = [
     ...(validacionesData?.results ?? []),
     ...(modificadosData?.results ?? []),
@@ -1014,6 +1044,98 @@ export default function ValidacionesPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Cesiones Pendientes ─────────────────────────────────────────── */}
+      <div className="card space-y-4">
+        <div className="flex items-center gap-2">
+          <ArrowRight size={16} className="text-purple-600" />
+          <h2 className="text-base font-semibold text-gray-900">
+            Cesiones Pendientes
+          </h2>
+          {cesionesPendientes.length > 0 && (
+            <span className="ml-1 bg-purple-100 text-purple-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+              {cesionesPendientes.length}
+            </span>
+          )}
+        </div>
+
+        {loadingCesiones ? (
+          <div className="flex justify-center py-6">
+            <Loader2 size={22} className="animate-spin text-purple-500" />
+          </div>
+        ) : cesionesPendientes.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-4">No hay cesiones pendientes</p>
+        ) : (
+          <div className="space-y-3">
+            {cesionesPendientes.map((cesion) => {
+              const socioDestinoId = cesionDestinoMap[cesion.id] ?? "";
+              return (
+                <div key={cesion.id} className="border border-purple-200 rounded-xl p-4 space-y-3 bg-purple-50/30">
+                  <div className="flex flex-wrap items-start gap-3 justify-between">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-gray-900">{cesion.numero_anilla}</span>
+                        <Bird size={13} className="text-gray-400" />
+                        <span className="text-xs text-gray-500">
+                          {cesion.sexo === "M" ? "♂ Macho" : "♀ Hembra"} · {cesion.variedad}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Cedente: <span className="font-medium text-gray-700">{cesion.socio_cedente_nombre ?? "—"}</span>
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Propuesta: <span className="font-medium italic">"{cesion.cesion_propuesta}"</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      className="input-field text-sm py-1 flex-1 min-w-[200px]"
+                      value={socioDestinoId}
+                      onChange={(e) =>
+                        setCesionDestinoMap((prev) => ({ ...prev, [cesion.id]: e.target.value }))
+                      }
+                    >
+                      <option value="">— Seleccionar socio destino —</option>
+                      {(sociosData?.results ?? []).map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.nombre_razon_social} ({s.numero_socio})
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      onClick={() => {
+                        if (!socioDestinoId) return;
+                        confirmarCesionMutation.mutate({ id: cesion.id, socio_destino_id: socioDestinoId });
+                      }}
+                      disabled={!socioDestinoId || confirmarCesionMutation.isPending}
+                      className="btn-primary text-sm flex items-center gap-1 py-1.5 px-3 bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
+                    >
+                      {confirmarCesionMutation.isPending ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Check size={14} />
+                      )}
+                      Confirmar
+                    </button>
+
+                    <button
+                      onClick={() => rechazarCesionMutation.mutate(cesion.id)}
+                      disabled={rechazarCesionMutation.isPending}
+                      className="btn-secondary text-sm flex items-center gap-1 py-1.5 px-3 text-red-600 hover:bg-red-50"
+                    >
+                      <X size={14} />
+                      Rechazar
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

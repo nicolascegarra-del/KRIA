@@ -7,7 +7,7 @@ import { granjasApi } from "../../api/granjas";
 import { lotesApi } from "../../api/lotes";
 import { useTenantStore } from "../../store/tenantStore";
 import AnimalStateChip from "../../components/AnimalStateChip";
-import { Loader2, ArrowLeft, Info, Camera, X, Scale, Plus, CheckCircle2, Circle, XCircle, AlertCircle, History } from "lucide-react";
+import { Loader2, ArrowLeft, Info, Camera, X, Scale, Plus, CheckCircle2, Circle, XCircle, AlertCircle, History, ArrowRightLeft } from "lucide-react";
 import type { Animal, FotoTipo } from "../../types";
 
 const FOTO_TIPOS: { tipo: FotoTipo; label: string }[] = [
@@ -67,6 +67,11 @@ export default function AnimalFormPage() {
   const [showPesajeForm, setShowPesajeForm] = useState(false);
   const [pesajeFecha, setPesajeFecha] = useState(new Date().toISOString().slice(0, 10));
   const [pesajePeso, setPesajePeso] = useState("");
+
+  // Cesión form state
+  const [showCesionForm, setShowCesionForm] = useState(false);
+  const [cesionPropuesta, setCesionPropuesta] = useState("");
+  const [cesionError, setCesionError] = useState("");
 
   const { data: animal, isLoading } = useQuery({
     queryKey: ["animal", id],
@@ -161,6 +166,20 @@ export default function AnimalFormPage() {
       qc.invalidateQueries({ queryKey: ["animal", id] });
       setShowPesajeForm(false);
       setPesajePeso("");
+    },
+  });
+
+  const cesionMutation = useMutation({
+    mutationFn: (propuesta: string) => animalsApi.iniciarCesion(id!, propuesta),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["animal", id] });
+      qc.invalidateQueries({ queryKey: ["animals"] });
+      setShowCesionForm(false);
+      setCesionPropuesta("");
+      setCesionError("");
+    },
+    onError: (err: any) => {
+      setCesionError(err?.response?.data?.detail ?? "Error al iniciar la cesión.");
     },
   });
 
@@ -709,6 +728,85 @@ export default function AnimalFormPage() {
           </div>
         );
       })()}
+
+      {/* Cesión pendiente — banner informativo */}
+      {isEdit && animal?.estado === "PENDIENTE_CESION" && (
+        <div className="card bg-purple-50 border border-purple-200 space-y-2">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={16} className="text-purple-600" />
+            <h3 className="text-sm font-semibold text-purple-800">Cesión pendiente de validación</h3>
+          </div>
+          <p className="text-sm text-purple-700">
+            Propuesta: <span className="font-medium">{animal.cesion_propuesta}</span>
+          </p>
+          {animal.cesion_socio_destino_nombre && (
+            <p className="text-sm text-purple-700">
+              Socio destino asignado: <span className="font-medium">{animal.cesion_socio_destino_nombre}</span>
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Cesión — disponible cuando el animal está en estado cedible */}
+      {isEdit && animal && ["REGISTRADO", "MODIFICADO", "APROBADO", "EVALUADO"].includes(animal.estado) && (
+        <div className="card space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ArrowRightLeft size={16} className="text-purple-600" />
+              <h3 className="text-sm font-semibold text-gray-700">Ceder animal</h3>
+            </div>
+            {!showCesionForm && (
+              <button
+                onClick={() => setShowCesionForm(true)}
+                className="btn-secondary text-xs py-1.5 px-3"
+              >
+                Iniciar cesión
+              </button>
+            )}
+          </div>
+
+          {showCesionForm && (
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500">
+                Indica a quién cedes este animal. La asociación confirmará el socio receptor.
+              </p>
+              <textarea
+                value={cesionPropuesta}
+                onChange={(e) => setCesionPropuesta(e.target.value)}
+                placeholder="Ej: Para Juan García Martínez / socio nº 045"
+                rows={3}
+                className="input-field text-sm resize-none"
+              />
+              {cesionError && <p className="text-xs text-red-600">{cesionError}</p>}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowCesionForm(false); setCesionPropuesta(""); setCesionError(""); }}
+                  className="btn-secondary text-sm flex-1"
+                  disabled={cesionMutation.isPending}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!cesionPropuesta.trim()) {
+                      setCesionError("Debes indicar a quién cedes el animal.");
+                      return;
+                    }
+                    cesionMutation.mutate(cesionPropuesta.trim());
+                  }}
+                  disabled={cesionMutation.isPending}
+                  className="btn-primary text-sm flex-1 flex items-center justify-center gap-1"
+                >
+                  {cesionMutation.isPending && <Loader2 size={14} className="animate-spin" />}
+                  Enviar cesión
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Weight history — only in edit mode */}
       {isEdit && (

@@ -1,17 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { animalsApi } from "../api/animals";
 import AnimalStateChip from "./AnimalStateChip";
-import { X, Bird, Loader2, Scale, Calendar, TreeDeciduous } from "lucide-react";
+import { X, Bird, Loader2, Scale, Calendar, TreeDeciduous, ArrowRightLeft, AlertCircle } from "lucide-react";
 
 interface Props {
   animalId: string;
   onClose: () => void;
+  canCeder?: boolean;
 }
 
 const SEXO_LABEL: Record<string, string> = { M: "♂ Macho", H: "♀ Hembra" };
 const VARIEDAD_LABEL: Record<string, string> = {
   SALMON: "Salmón", PLATA: "Plata", SIN_DEFINIR: "Sin definir",
 };
+
+const ESTADOS_CEDIBLES = new Set(["REGISTRADO", "MODIFICADO", "APROBADO", "EVALUADO"]);
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -22,13 +26,33 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-export default function AnimalViewModal({ animalId, onClose }: Props) {
+export default function AnimalViewModal({ animalId, onClose, canCeder = false }: Props) {
+  const qc = useQueryClient();
+  const [showCesionForm, setShowCesionForm] = useState(false);
+  const [cesionPropuesta, setCesionPropuesta] = useState("");
+  const [cesionError, setCesionError] = useState("");
+
   const { data: animal, isLoading } = useQuery({
     queryKey: ["animal-detail", animalId],
     queryFn: () => animalsApi.get(animalId),
   });
 
+  const iniciarCesionMutation = useMutation({
+    mutationFn: (propuesta: string) => animalsApi.iniciarCesion(animalId, propuesta),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["animal-detail", animalId] });
+      qc.invalidateQueries({ queryKey: ["animals"] });
+      setShowCesionForm(false);
+      setCesionPropuesta("");
+      setCesionError("");
+    },
+    onError: (err: any) => {
+      setCesionError(err?.response?.data?.detail ?? "Error al iniciar la cesión.");
+    },
+  });
+
   const perfilFoto = animal?.fotos?.find((f) => f.tipo === "PERFIL") ?? animal?.fotos?.[0];
+  const puedeIniciarCesion = canCeder && animal && ESTADOS_CEDIBLES.has(animal.estado);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -67,6 +91,24 @@ export default function AnimalViewModal({ animalId, onClose }: Props) {
             </div>
           ) : animal ? (
             <div className="p-5 space-y-6">
+
+              {/* Banner cesión pendiente */}
+              {animal.estado === "PENDIENTE_CESION" && (
+                <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4 flex gap-3">
+                  <AlertCircle size={18} className="text-purple-600 shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-semibold text-purple-800 mb-1">Cesión pendiente de validación</p>
+                    <p className="text-purple-700">
+                      Propuesta: <span className="font-medium">{animal.cesion_propuesta}</span>
+                    </p>
+                    {animal.cesion_socio_destino_nombre && (
+                      <p className="text-purple-700 mt-0.5">
+                        Socio destino asignado: <span className="font-medium">{animal.cesion_socio_destino_nombre}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Photo + basic info */}
               <div className="flex gap-5">
@@ -224,6 +266,68 @@ export default function AnimalViewModal({ animalId, onClose }: Props) {
                   </div>
                 </div>
               )}
+
+              {/* Cesión section */}
+              {puedeIniciarCesion && (
+                <div className="border border-purple-200 rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-1.5">
+                      <ArrowRightLeft size={14} className="text-purple-600" />
+                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Ceder animal</span>
+                    </div>
+                    {!showCesionForm && (
+                      <button
+                        onClick={() => setShowCesionForm(true)}
+                        className="text-xs text-purple-700 hover:text-purple-900 font-medium underline"
+                      >
+                        Iniciar cesión
+                      </button>
+                    )}
+                  </div>
+
+                  {showCesionForm && (
+                    <div className="space-y-3">
+                      <p className="text-xs text-gray-500">
+                        Indica a quién cedes este animal. La asociación confirmará el socio receptor.
+                      </p>
+                      <textarea
+                        value={cesionPropuesta}
+                        onChange={(e) => setCesionPropuesta(e.target.value)}
+                        placeholder="Ej: Para Juan García Martínez / socio nº 045"
+                        rows={3}
+                        className="w-full text-sm border border-gray-300 rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-purple-400"
+                      />
+                      {cesionError && (
+                        <p className="text-xs text-red-600">{cesionError}</p>
+                      )}
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={() => { setShowCesionForm(false); setCesionPropuesta(""); setCesionError(""); }}
+                          className="btn-secondary text-xs"
+                          disabled={iniciarCesionMutation.isPending}
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (!cesionPropuesta.trim()) {
+                              setCesionError("Debes indicar a quién cedes el animal.");
+                              return;
+                            }
+                            iniciarCesionMutation.mutate(cesionPropuesta.trim());
+                          }}
+                          disabled={iniciarCesionMutation.isPending}
+                          className="btn-primary text-xs bg-purple-600 hover:bg-purple-700 flex items-center gap-1"
+                        >
+                          {iniciarCesionMutation.isPending && <Loader2 size={12} className="animate-spin" />}
+                          Enviar cesión
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
             </div>
           ) : null}
         </div>

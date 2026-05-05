@@ -14,6 +14,10 @@ from .views import (
     AnimalSolicitarRealtaView,
     GanaderiasNacimientoView,
     LotesExternosView,
+    CesionesPendientesView,
+    IniciarCesionView,
+    ConfirmarCesionView,
+    RechazarCesionView,
 )
 from .censo_views import CensoColumnasView, CensoExportView, CensoListView
 
@@ -26,13 +30,17 @@ urlpatterns = [
     path("motivos-rechazo/", AnimalMotivosRechazoView.as_view(), name="animals-motivos-rechazo"),
     path("ganaderias-nacimiento/", GanaderiasNacimientoView.as_view(), name="animals-ganaderias-nacimiento"),
     path("lotes-externos/", LotesExternosView.as_view(), name="animals-lotes-externos"),
+    path("cesiones-pendientes/", CesionesPendientesView.as_view(), name="animals-cesiones-pendientes"),
     path("<uuid:pk>/", AnimalDetailView.as_view(), name="animals-detail"),
     path("<uuid:pk>/approve/", AnimalApproveView.as_view(), name="animals-approve"),
     path("<uuid:pk>/reject/", AnimalRejectView.as_view(), name="animals-reject"),
     path("<uuid:pk>/genealogy/", AnimalGenealogyView.as_view(), name="animals-genealogy"),
     path("<uuid:pk>/foto/", AnimalFotoUploadView.as_view(), name="animals-foto"),
     path("<uuid:pk>/pesaje/", AnimalPesajeView.as_view(), name="animals-pesaje"),
-path("<uuid:pk>/solicitar-realta/", AnimalSolicitarRealtaView.as_view(), name="animals-solicitar-realta"),
+    path("<uuid:pk>/solicitar-realta/", AnimalSolicitarRealtaView.as_view(), name="animals-solicitar-realta"),
     path("<uuid:pk>/dar-baja/", AnimalDarBajaView.as_view(), name="animals-dar-baja"),
     path("<uuid:pk>/reactivar/", AnimalReactivarView.as_view(), name="animals-reactivar"),
+    path("<uuid:pk>/iniciar-cesion/", IniciarCesionView.as_view(), name="animals-iniciar-cesion"),
+    path("<uuid:pk>/confirmar-cesion/", ConfirmarCesionView.as_view(), name="animals-confirmar-cesion"),
+    path("<uuid:pk>/rechazar-cesion/", RechazarCesionView.as_view(), name="animals-rechazar-cesion"),
 ]

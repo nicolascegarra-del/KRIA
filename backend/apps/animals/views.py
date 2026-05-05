@@ -79,6 +79,9 @@ def _create_notificacion(tenant, socio, tipo, animal):
             "REALTA_DENEGADA": f"La solicitud de re-alta de tu animal {anilla} ha sido denegada.",
             "REPRODUCTOR_APROBADO": f"Tu animal {anilla} ha sido aprobado como reproductor.",
             "REPRODUCTOR_DENEGADO": f"Tu animal {anilla} no ha sido aprobado como reproductor.",
+            "CESION_RECIBIDA": f"Se te ha cedido el animal {anilla}.",
+            "CESION_CEDIDA": f"Tu animal {anilla} ha sido cedido correctamente.",
+            "CESION_RECHAZADA": f"La cesión de tu animal {anilla} ha sido rechazada.",
         }
         mensaje = mensajes.get(tipo, "")
         Notificacion.objects.create(
@@ -111,7 +114,7 @@ def _update_alerta_anilla(animal):
         animal.save(update_fields=["alerta_anilla"])
 
 
-ESTADOS_ACTIVOS = ["REGISTRADO", "MODIFICADO", "APROBADO", "EVALUADO"]
+ESTADOS_ACTIVOS = ["REGISTRADO", "MODIFICADO", "APROBADO", "EVALUADO", "PENDIENTE_CESION"]
 ESTADOS_NO_ACTIVOS = ["BAJA", "RECHAZADO", "SOCIO_EN_BAJA"]
 
 
@@ -265,6 +268,9 @@ class AnimalDetailView(generics.RetrieveUpdateAPIView):
 
         tenant = self.request.tenant
         allow_modifications = getattr(tenant, "allow_animal_modifications", True)
+
+        if serializer.instance.estado == Animal.Estado.PENDIENTE_CESION:
+            raise PermissionDenied("El animal tiene una cesión pendiente de validación. No se puede modificar.")
 
         if not is_gestion:
             if serializer.instance.estado == Animal.Estado.RECHAZADO:
@@ -901,3 +907,165 @@ class LotesExternosView(APIView):
             "lote_real": str(mapping.lote_real_id) if mapping.lote_real_id else None,
             "lote_nombre": mapping.lote_real.nombre if mapping.lote_real else None,
         })
+
+
+# ── Cesión de animal ───────────────────────────────────────────────────────────
+
+ESTADOS_CEDIBLES = {
+    Animal.Estado.REGISTRADO,
+    Animal.Estado.MODIFICADO,
+    Animal.Estado.APROBADO,
+    Animal.Estado.EVALUADO,
+}
+
+
+class CesionesPendientesView(APIView):
+    """GET /api/v1/animals/cesiones-pendientes/ — lista animales en PENDIENTE_CESION."""
+    permission_classes = [IsGestion]
+
+    def get(self, request):
+        from apps.accounts.models import Socio
+        animals = (
+            Animal.objects
+            .filter(estado=Animal.Estado.PENDIENTE_CESION)
+            .select_related("socio", "cesion_socio_destino")
+            .order_by("updated_at")
+        )
+        result = []
+        for a in animals:
+            result.append({
+                "id": str(a.id),
+                "numero_anilla": a.numero_anilla,
+                "fecha_nacimiento": a.fecha_nacimiento.isoformat() if a.fecha_nacimiento else None,
+                "sexo": a.sexo,
+                "variedad": a.variedad,
+                "socio_cedente_id": str(a.socio_id) if a.socio_id else None,
+                "socio_cedente_nombre": a.socio.nombre_razon_social if a.socio else None,
+                "cesion_propuesta": a.cesion_propuesta,
+                "cesion_socio_destino_id": str(a.cesion_socio_destino_id) if a.cesion_socio_destino_id else None,
+                "cesion_socio_destino_nombre": a.cesion_socio_destino.nombre_razon_social if a.cesion_socio_destino else None,
+            })
+        return Response(result)
+
+
+class IniciarCesionView(APIView):
+    """POST /api/v1/animals/:id/iniciar-cesion/ — socio o gestión inicia una cesión."""
+    permission_classes = [IsSocioOrGestion]
+
+    def post(self, request, pk):
+        try:
+            animal = Animal.objects.get(pk=pk, tenant=request.tenant)
+        except Animal.DoesNotExist:
+            return Response({"detail": "Not found."}, status=404)
+
+        is_gestion = get_effective_is_gestion(request)
+
+        # Socios solo pueden ceder sus propios animales
+        if not is_gestion:
+            try:
+                if animal.socio != request.user.socio:
+                    return Response({"detail": "No tienes permiso para ceder este animal."}, status=403)
+            except Exception:
+                return Response({"detail": "No tienes permiso para ceder este animal."}, status=403)
+
+        if animal.estado not in ESTADOS_CEDIBLES:
+            return Response(
+                {"detail": f"No se puede ceder un animal en estado {animal.estado}."},
+                status=400,
+            )
+
+        cesion_propuesta = request.data.get("cesion_propuesta", "").strip()
+        if not cesion_propuesta:
+            return Response({"detail": "cesion_propuesta es obligatorio."}, status=400)
+
+        animal.cesion_propuesta = cesion_propuesta
+        animal.cesion_estado_previo = animal.estado
+        animal.cesion_socio_destino = None
+        animal.estado = Animal.Estado.PENDIENTE_CESION
+        animal.save(update_fields=["cesion_propuesta", "cesion_estado_previo", "cesion_socio_destino", "estado"])
+
+        return Response(AnimalDetailSerializer(animal).data)
+
+
+class ConfirmarCesionView(APIView):
+    """POST /api/v1/animals/:id/confirmar-cesion/ — gestión confirma la cesión asignando socio destino."""
+    permission_classes = [IsGestion]
+
+    def post(self, request, pk):
+        from datetime import date
+        from apps.accounts.models import Socio
+
+        try:
+            animal = Animal.objects.get(pk=pk, tenant=request.tenant)
+        except Animal.DoesNotExist:
+            return Response({"detail": "Not found."}, status=404)
+
+        if animal.estado != Animal.Estado.PENDIENTE_CESION:
+            return Response({"detail": "El animal no está en estado de cesión pendiente."}, status=400)
+
+        socio_destino_id = request.data.get("socio_destino_id")
+        if not socio_destino_id:
+            return Response({"detail": "socio_destino_id es obligatorio."}, status=400)
+
+        try:
+            socio_destino = Socio.objects.get(pk=socio_destino_id, tenant=request.tenant)
+        except Socio.DoesNotExist:
+            return Response({"detail": "Socio destino no encontrado."}, status=404)
+
+        socio_cedente = animal.socio
+        hoy = date.today().isoformat()
+
+        # Cerrar entrada actual en histórico y abrir nueva
+        historico = list(animal.historico_ganaderias or [])
+        if historico:
+            historico[-1]["fecha_baja"] = hoy
+        historico.append({
+            "ganaderia": socio_destino.nombre_razon_social,
+            "fecha_alta": hoy,
+            "fecha_baja": None,
+        })
+
+        animal.historico_ganaderias = historico
+        animal.ganaderia_actual = socio_destino.nombre_razon_social
+        animal.socio = socio_destino
+        animal.estado = Animal.Estado.APROBADO
+        animal.cesion_propuesta = ""
+        animal.cesion_socio_destino = None
+        animal.cesion_estado_previo = ""
+        animal.save(update_fields=[
+            "historico_ganaderias", "ganaderia_actual", "socio",
+            "estado", "cesion_propuesta", "cesion_socio_destino", "cesion_estado_previo",
+        ])
+
+        # Notificación al receptor
+        _create_notificacion(request.tenant, socio_destino, "CESION_RECIBIDA", animal)
+        # Notificación al cedente
+        _create_notificacion(request.tenant, socio_cedente, "CESION_CEDIDA", animal)
+
+        return Response(AnimalDetailSerializer(animal).data)
+
+
+class RechazarCesionView(APIView):
+    """POST /api/v1/animals/:id/rechazar-cesion/ — gestión rechaza la cesión y devuelve el animal al estado previo."""
+    permission_classes = [IsGestion]
+
+    def post(self, request, pk):
+        try:
+            animal = Animal.objects.get(pk=pk, tenant=request.tenant)
+        except Animal.DoesNotExist:
+            return Response({"detail": "Not found."}, status=404)
+
+        if animal.estado != Animal.Estado.PENDIENTE_CESION:
+            return Response({"detail": "El animal no está en estado de cesión pendiente."}, status=400)
+
+        estado_previo = animal.cesion_estado_previo or Animal.Estado.APROBADO
+        animal.estado = estado_previo
+        animal.cesion_propuesta = ""
+        animal.cesion_socio_destino = None
+        animal.cesion_estado_previo = ""
+        animal.save(update_fields=["estado", "cesion_propuesta", "cesion_socio_destino", "cesion_estado_previo"])
+
+        # Notificación al cedente
+        _create_notificacion(request.tenant, animal.socio, "CESION_RECHAZADA", animal)
+
+        return Response(AnimalDetailSerializer(animal).data)

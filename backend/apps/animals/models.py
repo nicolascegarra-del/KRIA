@@ -43,6 +43,7 @@ class Animal(UUIDModel):
         RECHAZADO = "RECHAZADO", "Rechazado"
         SOCIO_EN_BAJA = "SOCIO_EN_BAJA", "Socio en baja"
         BAJA = "BAJA", "Baja"
+        PENDIENTE_CESION = "PENDIENTE_CESION", "Pendiente de cesión"
 
     class Sexo(models.TextChoices):
         MACHO = "M", "Macho"
@@ -129,6 +130,16 @@ class Animal(UUIDModel):
     fecha_incubacion = models.DateField(null=True, blank=True)
     ganaderia_nacimiento = models.CharField(max_length=200, blank=True, default="")
     ganaderia_actual = models.CharField(max_length=200, blank=True, default="")
+
+    # Cesión
+    cesion_propuesta = models.CharField(max_length=300, blank=True, default="")
+    cesion_socio_destino = models.ForeignKey(
+        "accounts.Socio",
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="cesiones_destino",
+    )
+    cesion_estado_previo = models.CharField(max_length=20, blank=True, default="")
 
     # Farm
     granja = models.ForeignKey(

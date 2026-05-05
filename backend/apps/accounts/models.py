@@ -198,6 +198,9 @@ class Notificacion(UUIDModel):
         CAMBIO_DATOS_APROBADO = "CAMBIO_DATOS_APROBADO", "Cambio de datos aprobado"
         CAMBIO_DATOS_DENEGADO = "CAMBIO_DATOS_DENEGADO", "Cambio de datos denegado"
         CUOTA_PENDIENTE = "CUOTA_PENDIENTE", "Cuota anual pendiente"
+        CESION_RECIBIDA = "CESION_RECIBIDA", "Animal recibido por cesión"
+        CESION_CEDIDA = "CESION_CEDIDA", "Animal cedido"
+        CESION_RECHAZADA = "CESION_RECHAZADA", "Cesión rechazada"
 
     tenant = models.ForeignKey(
         "tenants.Tenant",

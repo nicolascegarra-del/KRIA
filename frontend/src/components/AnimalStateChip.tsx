@@ -7,8 +7,9 @@ const STATE_CONFIG: Record<AnimalEstado, { label: string; classes: string }> = {
   APROBADO:   { label: "Aprobado",    classes: "bg-green-800 text-white" },
   EVALUADO:   { label: "Evaluado",    classes: "bg-yellow-500 text-yellow-900" },
   RECHAZADO:  { label: "Rechazado",   classes: "bg-red-700 text-white" },
-  SOCIO_EN_BAJA: { label: "Socio en Baja", classes: "bg-gray-500 text-white" },
-  BAJA:       { label: "Baja",        classes: "bg-slate-700 text-white" },
+  SOCIO_EN_BAJA:    { label: "Socio en Baja",    classes: "bg-gray-500 text-white" },
+  BAJA:             { label: "Baja",             classes: "bg-slate-700 text-white" },
+  PENDIENTE_CESION: { label: "Cesión pendiente", classes: "bg-purple-600 text-white" },
 };
 
 export default function AnimalStateChip({ estado }: { estado: AnimalEstado }) {

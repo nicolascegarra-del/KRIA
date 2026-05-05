@@ -120,6 +120,37 @@ export const animalsApi = {
     const { data } = await apiClient.post("/animals/lotes-externos/", { descripcion, lote_real });
     return data;
   },
+
+  getCesionesPendientes: async () => {
+    const { data } = await apiClient.get("/animals/cesiones-pendientes/");
+    return data as {
+      id: string;
+      numero_anilla: string;
+      fecha_nacimiento: string | null;
+      sexo: string;
+      variedad: string;
+      socio_cedente_id: string | null;
+      socio_cedente_nombre: string | null;
+      cesion_propuesta: string;
+      cesion_socio_destino_id: string | null;
+      cesion_socio_destino_nombre: string | null;
+    }[];
+  },
+
+  iniciarCesion: async (id: string, cesion_propuesta: string) => {
+    const { data } = await apiClient.post(`/animals/${id}/iniciar-cesion/`, { cesion_propuesta });
+    return data as import("../types").Animal;
+  },
+
+  confirmarCesion: async (id: string, socio_destino_id: string) => {
+    const { data } = await apiClient.post(`/animals/${id}/confirmar-cesion/`, { socio_destino_id });
+    return data as import("../types").Animal;
+  },
+
+  rechazarCesion: async (id: string) => {
+    const { data } = await apiClient.post(`/animals/${id}/rechazar-cesion/`);
+    return data as import("../types").Animal;
+  },
 };
 
 // ── Censo (módulo Animales) ───────────────────────────────────────────────────

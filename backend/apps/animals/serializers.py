@@ -74,6 +74,10 @@ class AnimalDetailSerializer(serializers.ModelSerializer):
     fotos = serializers.SerializerMethodField()
     ganaderia_nacimiento_display = serializers.SerializerMethodField()
 
+    cesion_socio_destino_nombre = serializers.CharField(
+        source="cesion_socio_destino.nombre_razon_social", read_only=True, allow_null=True
+    )
+
     class Meta:
         model = Animal
         fields = [
@@ -86,6 +90,7 @@ class AnimalDetailSerializer(serializers.ModelSerializer):
             "madre_lote", "madre_lote_externo",
             "granja", "granja_nombre",
             "fotos", "historico_pesos", "historico_ganaderias", "socio_nombre",
+            "cesion_propuesta", "cesion_socio_destino", "cesion_socio_destino_nombre",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "estado", "created_at", "updated_at"]
