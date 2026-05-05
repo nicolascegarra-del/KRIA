@@ -821,7 +821,7 @@ class GanaderiasNacimientoView(APIView):
         socio_real = None
         if socio_real_id:
             try:
-                socio_real = Socio.objects.get(pk=socio_real_id, tenant=tenant)
+                socio_real = Socio.all_objects.get(pk=socio_real_id, tenant=tenant)
             except Socio.DoesNotExist:
                 return Response({"detail": "Socio no encontrado."}, status=404)
 

@@ -201,6 +201,9 @@ export default function ValidacionesPage() {
       qc.invalidateQueries({ queryKey: ["animals"] });
       setSuccessMsg("Redirección guardada.");
     },
+    onError: (err: any) => {
+      setSuccessMsg(`Error al guardar: ${err?.response?.data?.detail ?? err?.message ?? "error desconocido"}`);
+    },
   });
 
   const ganaderiaAceptarMutation = useMutation({
@@ -985,6 +988,16 @@ export default function ValidacionesPage() {
                     )}
                     {!isDirty && g.socio_real && (
                       <>
+                        <button
+                          onClick={() =>
+                            ganaderiaMapMutation.mutate({ nombre: g.ganaderia_nombre, socio: g.socio_real })
+                          }
+                          disabled={ganaderiaMapMutation.isPending}
+                          className="btn-primary text-sm py-1 px-3"
+                          title="Re-aplicar: sobrescribir el nombre en todos los animales"
+                        >
+                          Aplicar
+                        </button>
                         <button
                           onClick={() => navigate(`/socios/${g.socio_real}`)}
                           className="text-blue-500 hover:text-blue-700 p-1"
