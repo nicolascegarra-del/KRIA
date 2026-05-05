@@ -274,17 +274,25 @@ export default function ValidacionesPage() {
   const [historicoFilter, setHistoricoFilter] = useState("");
   const [historicoRemapMap, setHistoricoRemapMap] = useState<Record<string, string>>({});
   const [historicoConfirmDelete, setHistoricoConfirmDelete] = useState<Record<string, boolean>>({});
+  const [showKnownSocios, setShowKnownSocios] = useState(false);
 
   const { data: historicoRevisionData, isLoading: loadingHistoricoRevision } = useQuery({
     queryKey: ["historico-ganaderias-revision"],
     queryFn: animalsApi.getHistoricoRevision,
   });
 
+  type HistoricoEntry = { nombre: string; animal_count: number; is_known_socio: boolean };
+
   const historicoRemapMutation = useMutation({
     mutationFn: ({ nombre, socio_id }: { nombre: string; socio_id: string }) =>
       animalsApi.historicoRevisionAction({ nombre, accion: "remap", socio_id }),
     onSuccess: (res, { nombre }) => {
-      qc.refetchQueries({ queryKey: ["historico-ganaderias-revision"] });
+      // Remove immediately from cache so it disappears without waiting for refetch
+      qc.setQueryData<HistoricoEntry[]>(["historico-ganaderias-revision"], (old) =>
+        (old ?? []).filter((h) => h.nombre !== nombre)
+      );
+      // Background refetch to get accurate counts for the new name
+      qc.invalidateQueries({ queryKey: ["historico-ganaderias-revision"] });
       setHistoricoRemapMap((prev) => { const n = { ...prev }; delete n[nombre]; return n; });
       if (res.updated === 0) {
         setSuccessMsg("Remap ejecutado pero no se encontraron animales con ese nombre en el histórico.");
@@ -301,8 +309,12 @@ export default function ValidacionesPage() {
   const historicoEliminarMutation = useMutation({
     mutationFn: (nombre: string) =>
       animalsApi.historicoRevisionAction({ nombre, accion: "eliminar" }),
-    onSuccess: (res) => {
-      qc.refetchQueries({ queryKey: ["historico-ganaderias-revision"] });
+    onSuccess: (res, nombre) => {
+      // Remove immediately from cache
+      qc.setQueryData<HistoricoEntry[]>(["historico-ganaderias-revision"], (old) =>
+        (old ?? []).filter((h) => h.nombre !== nombre)
+      );
+      qc.invalidateQueries({ queryKey: ["historico-ganaderias-revision"] });
       if (res.updated === 0) {
         setSuccessMsg("Eliminar ejecutado pero no se encontraron animales con ese nombre en el histórico.");
       } else {
@@ -1101,47 +1113,81 @@ export default function ValidacionesPage() {
             Revisión de Ganaderías en Histórico
           </h2>
           <span className="text-xs text-gray-400 ml-auto">
-            {historicoRevisionData?.length ?? 0} nombres únicos
+            {(historicoRevisionData ?? []).filter((h) => !h.is_known_socio).length} pendientes
+            {" · "}
+            {(historicoRevisionData ?? []).length} total
           </span>
         </div>
         <p className="text-xs text-gray-500 mb-3">
-          Nombres encontrados en el historial de ganaderías de todos los animales. Mapea un nombre incorrecto al socio real, o elimina las entradas si son datos erróneos de la importación.
+          Solo se muestran los nombres que no coinciden con ningún socio registrado. Mapéalos al socio real o elimínalos si son datos erróneos de la importación.
         </p>
-        <input
-          type="text"
-          className="input-field text-sm mb-3"
-          placeholder="Filtrar por nombre…"
-          value={historicoFilter}
-          onChange={(e) => setHistoricoFilter(e.target.value)}
-        />
-        {loadingHistoricoRevision ? (
-          <div className="flex justify-center py-4">
-            <Loader2 size={20} className="animate-spin text-orange-600" />
-          </div>
-        ) : !historicoRevisionData?.length ? (
-          <p className="text-sm text-gray-400 text-center py-3">No hay datos en el histórico de ganaderías.</p>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {historicoRevisionData
-              .filter((h) =>
-                !historicoFilter ||
-                h.nombre.toLowerCase().includes(historicoFilter.toLowerCase())
-              )
-              .map((h) => {
+        <div className="flex gap-2 mb-3 flex-wrap">
+          <input
+            type="text"
+            className="input-field text-sm flex-1 min-w-[180px]"
+            placeholder="Filtrar por nombre…"
+            value={historicoFilter}
+            onChange={(e) => setHistoricoFilter(e.target.value)}
+          />
+          <button
+            onClick={() => setShowKnownSocios((v) => !v)}
+            className={`btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 ${showKnownSocios ? "bg-orange-50 text-orange-700 border-orange-200" : ""}`}
+          >
+            {showKnownSocios ? "Ocultar socios conocidos" : "Ver todos"}
+          </button>
+        </div>
+        {(() => {
+          if (loadingHistoricoRevision) {
+            return (
+              <div className="flex justify-center py-4">
+                <Loader2 size={20} className="animate-spin text-orange-600" />
+              </div>
+            );
+          }
+          const all = historicoRevisionData ?? [];
+          const filtered = all
+            .filter((h) => showKnownSocios || !h.is_known_socio)
+            .filter((h) =>
+              !historicoFilter ||
+              h.nombre.toLowerCase().includes(historicoFilter.toLowerCase())
+            );
+          if (all.length === 0) {
+            return <p className="text-sm text-gray-400 text-center py-3">No hay datos en el histórico de ganaderías.</p>;
+          }
+          if (filtered.length === 0) {
+            return (
+              <div className="text-center py-6">
+                <CheckCircle2 size={32} className="text-green-500 mx-auto mb-2" />
+                <p className="text-sm text-gray-500 font-medium">
+                  {!showKnownSocios
+                    ? "Todos los nombres del histórico corresponden a socios registrados."
+                    : "No hay nombres que coincidan con el filtro."}
+                </p>
+              </div>
+            );
+          }
+          return (
+            <div className="divide-y divide-gray-100">
+              {filtered.map((h) => {
                 const isConfirming = !!historicoConfirmDelete[h.nombre];
                 const selectedSocioId = historicoRemapMap[h.nombre] ?? "";
                 return (
                   <div key={h.nombre} className="py-3 flex flex-wrap items-start gap-3">
-                    {/* Name + count */}
                     <div className="flex-1 min-w-0">
-                      <span className="text-sm font-semibold text-gray-900 font-mono block break-all">
-                        {h.nombre}
-                      </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-gray-900 font-mono break-all">
+                          {h.nombre}
+                        </span>
+                        {h.is_known_socio && (
+                          <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium shrink-0">
+                            Socio conocido
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs text-gray-400">
                         {h.animal_count} aparición{h.animal_count !== 1 ? "es" : ""}
                       </span>
                     </div>
-                    {/* Actions */}
                     <div className="flex items-center gap-2 flex-wrap shrink-0">
                       <select
                         className="input-field text-sm py-1 min-w-[180px]"
@@ -1223,8 +1269,9 @@ export default function ValidacionesPage() {
                   </div>
                 );
               })}
-          </div>
-        )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* ── Cesiones Pendientes ─────────────────────────────────────────── */}

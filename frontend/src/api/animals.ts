@@ -154,7 +154,7 @@ export const animalsApi = {
 
   getHistoricoRevision: async () => {
     const { data } = await apiClient.get("/animals/historico-ganaderias-revision/");
-    return data as { nombre: string; animal_count: number }[];
+    return data as { nombre: string; animal_count: number; is_known_socio: boolean }[];
   },
 
   historicoRevisionAction: async (params: { nombre: string; accion: "remap" | "eliminar"; socio_id?: string }) => {

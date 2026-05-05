@@ -1085,16 +1085,31 @@ class HistoricoGanaderiasRevisionView(APIView):
     permission_classes = [IsGestion]
 
     def get(self, request):
+        from apps.accounts.models import Socio
         tenant = request.tenant
         rows = Animal.all_objects.filter(tenant=tenant).values_list("historico_ganaderias", flat=True)
         counts: dict = {}
         for historico in rows:
             for entry in (historico or []):
+                if not isinstance(entry, dict):
+                    continue
                 nombre = (entry.get("ganaderia") or "").strip()
                 if nombre:
                     counts[nombre] = counts.get(nombre, 0) + 1
+
+        # Mark names that exactly match a registered socio's nombre_razon_social
+        known_names = set(
+            Socio.all_objects
+            .filter(tenant=tenant)
+            .values_list("nombre_razon_social", flat=True)
+        )
+
         result = [
-            {"nombre": n, "animal_count": c}
+            {
+                "nombre": n,
+                "animal_count": c,
+                "is_known_socio": n in known_names,
+            }
             for n, c in sorted(counts.items(), key=lambda x: -x[1])
         ]
         return Response(result)
