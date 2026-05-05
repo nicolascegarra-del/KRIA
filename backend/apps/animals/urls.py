@@ -18,6 +18,7 @@ from .views import (
     IniciarCesionView,
     ConfirmarCesionView,
     RechazarCesionView,
+    HistoricoGanaderiasRevisionView,
 )
 from .censo_views import CensoColumnasView, CensoExportView, CensoListView
 
@@ -31,6 +32,7 @@ urlpatterns = [
     path("ganaderias-nacimiento/", GanaderiasNacimientoView.as_view(), name="animals-ganaderias-nacimiento"),
     path("lotes-externos/", LotesExternosView.as_view(), name="animals-lotes-externos"),
     path("cesiones-pendientes/", CesionesPendientesView.as_view(), name="animals-cesiones-pendientes"),
+    path("historico-ganaderias-revision/", HistoricoGanaderiasRevisionView.as_view(), name="animals-historico-ganaderias-revision"),
     path("<uuid:pk>/", AnimalDetailView.as_view(), name="animals-detail"),
     path("<uuid:pk>/approve/", AnimalApproveView.as_view(), name="animals-approve"),
     path("<uuid:pk>/reject/", AnimalRejectView.as_view(), name="animals-reject"),

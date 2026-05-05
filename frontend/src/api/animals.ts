@@ -151,6 +151,16 @@ export const animalsApi = {
     const { data } = await apiClient.post(`/animals/${id}/rechazar-cesion/`);
     return data as import("../types").Animal;
   },
+
+  getHistoricoRevision: async () => {
+    const { data } = await apiClient.get("/animals/historico-ganaderias-revision/");
+    return data as { nombre: string; animal_count: number }[];
+  },
+
+  historicoRevisionAction: async (params: { nombre: string; accion: "remap" | "eliminar"; socio_id?: string }) => {
+    const { data } = await apiClient.post("/animals/historico-ganaderias-revision/", params);
+    return data as { updated: number };
+  },
 };
 
 // ── Censo (módulo Animales) ───────────────────────────────────────────────────

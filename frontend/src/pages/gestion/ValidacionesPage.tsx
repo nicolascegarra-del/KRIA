@@ -12,7 +12,7 @@ import SuccessToast from "../../components/SuccessToast";
 import {
   CheckCircle2, Loader2, AlertCircle, AlertTriangle,
   Bird, Check, X, ChevronDown, ChevronUp, Link, Link2Off, RefreshCw,
-  ExternalLink, ClipboardEdit, ArrowRight,
+  ExternalLink, ClipboardEdit, ArrowRight, History, Trash2,
 } from "lucide-react";
 import type { Animal, Conflicto, SolicitudRealta, SolicitudCambioDatos } from "../../types";
 
@@ -267,6 +267,35 @@ export default function ValidacionesPage() {
       qc.invalidateQueries({ queryKey: ["animals"] });
       qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
       setSuccessMsg("Cesión rechazada.");
+    },
+  });
+
+  // ── Revisión de ganaderías en histórico ──────────────────────────────────
+  const [historicoFilter, setHistoricoFilter] = useState("");
+  const [historicoRemapMap, setHistoricoRemapMap] = useState<Record<string, string>>({});
+  const [historicoConfirmDelete, setHistoricoConfirmDelete] = useState<Record<string, boolean>>({});
+
+  const { data: historicoRevisionData, isLoading: loadingHistoricoRevision } = useQuery({
+    queryKey: ["historico-ganaderias-revision"],
+    queryFn: animalsApi.getHistoricoRevision,
+  });
+
+  const historicoRemapMutation = useMutation({
+    mutationFn: ({ nombre, socio_id }: { nombre: string; socio_id: string }) =>
+      animalsApi.historicoRevisionAction({ nombre, accion: "remap", socio_id }),
+    onSuccess: (res, { nombre }) => {
+      qc.invalidateQueries({ queryKey: ["historico-ganaderias-revision"] });
+      setHistoricoRemapMap((prev) => { const n = { ...prev }; delete n[nombre]; return n; });
+      setSuccessMsg(`Remap aplicado en ${res.updated} animal${res.updated !== 1 ? "es" : ""}.`);
+    },
+  });
+
+  const historicoEliminarMutation = useMutation({
+    mutationFn: (nombre: string) =>
+      animalsApi.historicoRevisionAction({ nombre, accion: "eliminar" }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["historico-ganaderias-revision"] });
+      setSuccessMsg(`Entradas eliminadas en ${res.updated} animal${res.updated !== 1 ? "es" : ""}.`);
     },
   });
 
@@ -1044,6 +1073,140 @@ export default function ValidacionesPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Revisión de Ganaderías en Histórico ──────────────────────────── */}
+      <div className="card">
+        <div className="flex items-center gap-2 mb-1">
+          <History size={16} className="text-orange-600" />
+          <h2 className="text-base font-semibold text-gray-900">
+            Revisión de Ganaderías en Histórico
+          </h2>
+          <span className="text-xs text-gray-400 ml-auto">
+            {historicoRevisionData?.length ?? 0} nombres únicos
+          </span>
+        </div>
+        <p className="text-xs text-gray-500 mb-3">
+          Nombres encontrados en el historial de ganaderías de todos los animales. Mapea un nombre incorrecto al socio real, o elimina las entradas si son datos erróneos de la importación.
+        </p>
+        <input
+          type="text"
+          className="input-field text-sm mb-3"
+          placeholder="Filtrar por nombre…"
+          value={historicoFilter}
+          onChange={(e) => setHistoricoFilter(e.target.value)}
+        />
+        {loadingHistoricoRevision ? (
+          <div className="flex justify-center py-4">
+            <Loader2 size={20} className="animate-spin text-orange-600" />
+          </div>
+        ) : !historicoRevisionData?.length ? (
+          <p className="text-sm text-gray-400 text-center py-3">No hay datos en el histórico de ganaderías.</p>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {historicoRevisionData
+              .filter((h) =>
+                !historicoFilter ||
+                h.nombre.toLowerCase().includes(historicoFilter.toLowerCase())
+              )
+              .map((h) => {
+                const isConfirming = !!historicoConfirmDelete[h.nombre];
+                const selectedSocioId = historicoRemapMap[h.nombre] ?? "";
+                return (
+                  <div key={h.nombre} className="py-3 flex flex-wrap items-start gap-3">
+                    {/* Name + count */}
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-semibold text-gray-900 font-mono block break-all">
+                        {h.nombre}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {h.animal_count} aparición{h.animal_count !== 1 ? "es" : ""}
+                      </span>
+                    </div>
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 flex-wrap shrink-0">
+                      <select
+                        className="input-field text-sm py-1 min-w-[180px]"
+                        value={selectedSocioId}
+                        onChange={(e) =>
+                          setHistoricoRemapMap((prev) => ({ ...prev, [h.nombre]: e.target.value }))
+                        }
+                        disabled={historicoRemapMutation.isPending}
+                      >
+                        <option value="">— Seleccionar socio —</option>
+                        {(sociosData?.results ?? []).map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.nombre_razon_social}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => {
+                          if (!selectedSocioId) return;
+                          historicoRemapMutation.mutate({ nombre: h.nombre, socio_id: selectedSocioId });
+                        }}
+                        disabled={!selectedSocioId || historicoRemapMutation.isPending}
+                        className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        {historicoRemapMutation.isPending ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          <Link size={12} />
+                        )}
+                        Remap
+                      </button>
+                      {!isConfirming ? (
+                        <button
+                          onClick={() =>
+                            setHistoricoConfirmDelete((prev) => ({ ...prev, [h.nombre]: true }))
+                          }
+                          className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 size={12} />
+                          Eliminar
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-red-600 font-semibold">¿Seguro?</span>
+                          <button
+                            onClick={() => {
+                              historicoEliminarMutation.mutate(h.nombre);
+                              setHistoricoConfirmDelete((prev) => {
+                                const n = { ...prev };
+                                delete n[h.nombre];
+                                return n;
+                              });
+                            }}
+                            disabled={historicoEliminarMutation.isPending}
+                            className="btn-danger text-xs py-1 px-2.5 flex items-center gap-1"
+                          >
+                            {historicoEliminarMutation.isPending ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <Check size={12} />
+                            )}
+                            Sí
+                          </button>
+                          <button
+                            onClick={() =>
+                              setHistoricoConfirmDelete((prev) => {
+                                const n = { ...prev };
+                                delete n[h.nombre];
+                                return n;
+                              })
+                            }
+                            className="btn-secondary text-xs py-1 px-2.5"
+                          >
+                            No
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         )}
       </div>

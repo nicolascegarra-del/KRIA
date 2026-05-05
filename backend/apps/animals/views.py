@@ -1069,3 +1069,98 @@ class RechazarCesionView(APIView):
         _create_notificacion(request.tenant, animal.socio, "CESION_RECHAZADA", animal)
 
         return Response(AnimalDetailSerializer(animal).data)
+
+
+# ── Revisión de ganaderías en histórico ───────────────────────────────────────
+
+class HistoricoGanaderiasRevisionView(APIView):
+    """
+    GET  /animals/historico-ganaderias-revision/
+         Unique ganadería names found in historico_ganaderias across all animals + count.
+    POST /animals/historico-ganaderias-revision/
+         { nombre, accion: "remap"|"eliminar", socio_id? }
+         remap   → replace every occurrence of that name with the socio's real name
+         eliminar → remove those entries and fix adjacent fecha_baja/fecha_alta continuity
+    """
+    permission_classes = [IsGestion]
+
+    def get(self, request):
+        tenant = request.tenant
+        rows = Animal.all_objects.filter(tenant=tenant).values_list("historico_ganaderias", flat=True)
+        counts: dict = {}
+        for historico in rows:
+            for entry in (historico or []):
+                nombre = (entry.get("ganaderia") or "").strip()
+                if nombre:
+                    counts[nombre] = counts.get(nombre, 0) + 1
+        result = [
+            {"nombre": n, "animal_count": c}
+            for n, c in sorted(counts.items(), key=lambda x: -x[1])
+        ]
+        return Response(result)
+
+    def post(self, request):
+        tenant = request.tenant
+        nombre = (request.data.get("nombre") or "").strip()
+        accion = request.data.get("accion")
+
+        if not nombre:
+            return Response({"detail": "nombre es obligatorio."}, status=400)
+        if accion not in ("remap", "eliminar"):
+            return Response({"detail": "accion debe ser 'remap' o 'eliminar'."}, status=400)
+
+        nuevo_nombre = None
+        if accion == "remap":
+            socio_id = request.data.get("socio_id")
+            if not socio_id:
+                return Response({"detail": "socio_id es obligatorio para remap."}, status=400)
+            from apps.accounts.models import Socio
+            try:
+                socio = Socio.objects.get(pk=socio_id, tenant=tenant)
+            except Socio.DoesNotExist:
+                return Response({"detail": "Socio no encontrado."}, status=404)
+            nuevo_nombre = socio.nombre_razon_social
+
+        animals = list(
+            Animal.all_objects
+            .filter(tenant=tenant)
+            .exclude(historico_ganaderias__isnull=True)
+        )
+
+        updated = 0
+        for animal in animals:
+            historico = list(animal.historico_ganaderias or [])
+            if not any((e.get("ganaderia") or "").strip() == nombre for e in historico):
+                continue
+
+            update_fields = ["historico_ganaderias"]
+
+            if accion == "remap":
+                new_historico = []
+                for entry in historico:
+                    entry = dict(entry)
+                    if (entry.get("ganaderia") or "").strip() == nombre:
+                        entry["ganaderia"] = nuevo_nombre
+                    new_historico.append(entry)
+                if (animal.ganaderia_actual or "").strip() == nombre:
+                    animal.ganaderia_actual = nuevo_nombre
+                    update_fields.append("ganaderia_actual")
+                animal.historico_ganaderias = new_historico
+
+            else:  # eliminar
+                new_historico = [dict(e) for e in historico if (e.get("ganaderia") or "").strip() != nombre]
+                # Restore fecha_baja continuity between surviving entries
+                for i in range(len(new_historico) - 1):
+                    new_historico[i]["fecha_baja"] = new_historico[i + 1].get("fecha_alta")
+                if new_historico:
+                    new_historico[-1]["fecha_baja"] = None
+                # Keep ganaderia_actual in sync if it was the deleted name
+                if (animal.ganaderia_actual or "").strip() == nombre:
+                    animal.ganaderia_actual = new_historico[-1]["ganaderia"] if new_historico else ""
+                    update_fields.append("ganaderia_actual")
+                animal.historico_ganaderias = new_historico
+
+            animal.save(update_fields=update_fields)
+            updated += 1
+
+        return Response({"updated": updated})
