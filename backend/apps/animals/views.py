@@ -830,11 +830,22 @@ class GanaderiasNacimientoView(APIView):
             ganaderia_nombre=ganaderia_nombre,
             defaults={"socio_real": socio_real},
         )
+
+        # Overwrite the field directly on all affected animals so the display
+        # never relies on the lookup table.
+        updated_count = 0
+        if socio_real:
+            nombre_correcto = socio_real.nombre_razon_social
+            updated_count = Animal.objects.filter(
+                ganaderia_nacimiento=ganaderia_nombre,
+            ).update(ganaderia_nacimiento=nombre_correcto)
+
         return Response({
             "id": str(mapping.id),
             "ganaderia_nombre": mapping.ganaderia_nombre,
             "socio_real": str(mapping.socio_real_id) if mapping.socio_real_id else None,
             "socio_nombre": mapping.socio_real.nombre_razon_social if mapping.socio_real else None,
+            "updated_animals": updated_count,
         })
 
 
