@@ -196,10 +196,11 @@ export default function ValidacionesPage() {
   const ganaderiaMapMutation = useMutation({
     mutationFn: ({ nombre, socio }: { nombre: string; socio: string | null }) =>
       animalsApi.saveGanaderiaMap(nombre, socio),
-    onSuccess: () => {
+    onSuccess: (_data, { nombre }) => {
+      setGanaderiaSocioLocal((prev) => { const n = { ...prev }; delete n[nombre]; return n; });
       qc.invalidateQueries({ queryKey: ["ganaderias-nacimiento"] });
       qc.invalidateQueries({ queryKey: ["animals"] });
-      setSuccessMsg("Redirección guardada.");
+      setSuccessMsg("Redirección aplicada correctamente.");
     },
     onError: (err: any) => {
       setSuccessMsg(`Error al guardar: ${err?.response?.data?.detail ?? err?.message ?? "error desconocido"}`);
@@ -912,8 +913,8 @@ export default function ValidacionesPage() {
           </span>
         </div>
         <p className="text-xs text-gray-500 mb-3">
-          Redirige los nombres de ganadería (de cualquier animal, incluso los ya aprobados) hacia el
-          socio registrado correspondiente. Afecta a cómo se muestra la ganadería en la ficha del animal.
+          Solo aparecen nombres que no coinciden con ningún socio registrado. Al seleccionar el socio correcto
+          y guardar, se sobrescribe el nombre en todos los animales afectados y la entrada desaparece.
         </p>
         {loadingGanaderias ? (
           <div className="flex justify-center py-4">
@@ -921,27 +922,22 @@ export default function ValidacionesPage() {
           </div>
         ) : !ganaderiasData?.length ? (
           <p className="text-sm text-gray-400 text-center py-3">
-            No hay ganaderías registradas en ningún animal.
+            Todos los nombres de ganadería coinciden con socios registrados.
           </p>
         ) : (
           <div className="divide-y divide-gray-100">
             {ganaderiasData.map((g) => {
               const localVal = ganaderiaSocioLocal[g.ganaderia_nombre];
-              const currentVal = localVal !== undefined ? localVal : (g.socio_real ?? "");
-              const isDirty = localVal !== undefined && localVal !== (g.socio_real ?? "");
+              const currentVal = localVal ?? "";
+              const isDirty = !!localVal;
               return (
               <div key={g.ganaderia_nombre} className="py-3 space-y-2">
                 {/* Nombre de ganadería + selector de redirección */}
                 <div className="flex items-start gap-3 flex-wrap">
                   <div className="flex-1 min-w-0">
                     <span className="text-sm font-semibold text-gray-900 block">
-                      {g.socio_nombre ?? g.ganaderia_nombre}
+                      {g.ganaderia_nombre}
                     </span>
-                    {g.socio_nombre && (
-                      <span className="text-xs text-gray-400 block">
-                        escrito como: {g.ganaderia_nombre}
-                      </span>
-                    )}
                     <span className="text-xs text-gray-400">
                       {g.animal_count} animal{g.animal_count !== 1 ? "es" : ""}
                     </span>
@@ -968,55 +964,13 @@ export default function ValidacionesPage() {
                     {isDirty && (
                       <button
                         onClick={() =>
-                          ganaderiaMapMutation.mutate(
-                            { nombre: g.ganaderia_nombre, socio: localVal || null },
-                            {
-                              onSuccess: () =>
-                                setGanaderiaSocioLocal((prev) => {
-                                  const n = { ...prev };
-                                  delete n[g.ganaderia_nombre];
-                                  return n;
-                                }),
-                            }
-                          )
+                          ganaderiaMapMutation.mutate({ nombre: g.ganaderia_nombre, socio: localVal || null })
                         }
                         disabled={ganaderiaMapMutation.isPending}
                         className="btn-primary text-sm py-1 px-3"
                       >
                         Guardar
                       </button>
-                    )}
-                    {!isDirty && g.socio_real && (
-                      <>
-                        <button
-                          onClick={() =>
-                            ganaderiaMapMutation.mutate({ nombre: g.ganaderia_nombre, socio: g.socio_real })
-                          }
-                          disabled={ganaderiaMapMutation.isPending}
-                          className="btn-primary text-sm py-1 px-3"
-                          title="Re-aplicar: sobrescribir el nombre en todos los animales"
-                        >
-                          Aplicar
-                        </button>
-                        <button
-                          onClick={() => navigate(`/socios/${g.socio_real}`)}
-                          className="text-blue-500 hover:text-blue-700 p-1"
-                          title="Ver ficha del socio redirigido"
-                        >
-                          <ExternalLink size={14} />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setGanaderiaSocioLocal((prev) => ({ ...prev, [g.ganaderia_nombre]: "" }));
-                            ganaderiaMapMutation.mutate({ nombre: g.ganaderia_nombre, socio: null });
-                          }}
-                          disabled={ganaderiaMapMutation.isPending}
-                          className="text-gray-400 hover:text-red-500 p-1"
-                          title="Quitar redirección"
-                        >
-                          <Link2Off size={14} />
-                        </button>
-                      </>
                     )}
                   </div>
                 </div>

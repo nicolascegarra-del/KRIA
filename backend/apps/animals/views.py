@@ -757,11 +757,15 @@ class GanaderiasNacimientoView(APIView):
 
     def get(self, request):
         from django.db.models import Count
+        from apps.accounts.models import Socio
         tenant = request.tenant
 
-        PENDING = [Animal.Estado.REGISTRADO, Animal.Estado.MODIFICADO]
+        # Names that already match a registered socio — these are correct and hidden.
+        known_names = set(
+            Socio.all_objects.filter(tenant=tenant).values_list("nombre_razon_social", flat=True)
+        )
 
-        # All animals with a ganadería value, regardless of estado
+        # All unique ganaderia_nacimiento values across all animals.
         rows = (
             Animal.objects
             .filter(ganaderia_nacimiento__gt="")
@@ -770,7 +774,8 @@ class GanaderiasNacimientoView(APIView):
             .order_by("ganaderia_nacimiento")
         )
 
-        # Only show pending animals in the detail list (keep it manageable)
+        # Pending animals per ganadería for context in the UI.
+        PENDING = [Animal.Estado.REGISTRADO, Animal.Estado.MODIFICADO]
         animals_qs = (
             Animal.objects
             .filter(ganaderia_nacimiento__gt="", estado__in=PENDING)
@@ -788,22 +793,17 @@ class GanaderiasNacimientoView(APIView):
                 "socio_nombre": animal.socio.nombre_razon_social if animal.socio else None,
             })
 
-        # Fetch existing mappings
-        maps = {
-            m.ganaderia_nombre: m
-            for m in GanaderiaNacimientoMap.objects.filter(tenant=tenant).select_related("socio_real")
-        }
-
         result = []
         for row in rows:
             nombre = row["ganaderia_nacimiento"]
-            mapping = maps.get(nombre)
+            if nombre in known_names:
+                continue  # Already correct — skip
             result.append({
                 "ganaderia_nombre": nombre,
                 "animal_count": row["animal_count"],
-                "map_id": str(mapping.id) if mapping else None,
-                "socio_real": str(mapping.socio_real_id) if mapping and mapping.socio_real_id else None,
-                "socio_nombre": mapping.socio_real.nombre_razon_social if mapping and mapping.socio_real else None,
+                "map_id": None,
+                "socio_real": None,
+                "socio_nombre": None,
                 "animals": animals_by_ganaderia.get(nombre, []),
             })
 
