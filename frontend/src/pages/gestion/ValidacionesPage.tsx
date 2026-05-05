@@ -279,14 +279,13 @@ export default function ValidacionesPage() {
   const [historicoFilter, setHistoricoFilter] = useState("");
   const [historicoRemapMap, setHistoricoRemapMap] = useState<Record<string, string>>({});
   const [historicoConfirmDelete, setHistoricoConfirmDelete] = useState<Record<string, boolean>>({});
-  const [showKnownSocios, setShowKnownSocios] = useState(false);
 
   const { data: historicoRevisionData, isLoading: loadingHistoricoRevision } = useQuery({
     queryKey: ["historico-ganaderias-revision"],
     queryFn: animalsApi.getHistoricoRevision,
   });
 
-  type HistoricoEntry = { nombre: string; animal_count: number; is_known_socio: boolean };
+  type HistoricoEntry = { nombre: string; animal_count: number };
 
   const historicoRemapMutation = useMutation({
     mutationFn: ({ nombre, socio_id }: { nombre: string; socio_id: string }) =>
@@ -1105,29 +1104,19 @@ export default function ValidacionesPage() {
             Revisión de Ganaderías en Histórico
           </h2>
           <span className="text-xs text-gray-400 ml-auto">
-            {(historicoRevisionData ?? []).filter((h) => !h.is_known_socio).length} pendientes
-            {" · "}
-            {(historicoRevisionData ?? []).length} total
+            {(historicoRevisionData ?? []).length} nombres
           </span>
         </div>
         <p className="text-xs text-gray-500 mb-3">
           Solo se muestran los nombres que no coinciden con ningún socio registrado. Mapéalos al socio real o elimínalos si son datos erróneos de la importación.
         </p>
-        <div className="flex gap-2 mb-3 flex-wrap">
-          <input
-            type="text"
-            className="input-field text-sm flex-1 min-w-[180px]"
-            placeholder="Filtrar por nombre…"
-            value={historicoFilter}
-            onChange={(e) => setHistoricoFilter(e.target.value)}
-          />
-          <button
-            onClick={() => setShowKnownSocios((v) => !v)}
-            className={`btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 ${showKnownSocios ? "bg-orange-50 text-orange-700 border-orange-200" : ""}`}
-          >
-            {showKnownSocios ? "Ocultar socios conocidos" : "Ver todos"}
-          </button>
-        </div>
+        <input
+          type="text"
+          className="input-field text-sm w-full mb-3"
+          placeholder="Filtrar por nombre…"
+          value={historicoFilter}
+          onChange={(e) => setHistoricoFilter(e.target.value)}
+        />
         {(() => {
           if (loadingHistoricoRevision) {
             return (
@@ -1137,26 +1126,21 @@ export default function ValidacionesPage() {
             );
           }
           const all = historicoRevisionData ?? [];
-          const filtered = all
-            .filter((h) => showKnownSocios || !h.is_known_socio)
-            .filter((h) =>
-              !historicoFilter ||
-              h.nombre.toLowerCase().includes(historicoFilter.toLowerCase())
-            );
+          const filtered = all.filter((h) =>
+            !historicoFilter || h.nombre.toLowerCase().includes(historicoFilter.toLowerCase())
+          );
           if (all.length === 0) {
-            return <p className="text-sm text-gray-400 text-center py-3">No hay datos en el histórico de ganaderías.</p>;
-          }
-          if (filtered.length === 0) {
             return (
               <div className="text-center py-6">
                 <CheckCircle2 size={32} className="text-green-500 mx-auto mb-2" />
                 <p className="text-sm text-gray-500 font-medium">
-                  {!showKnownSocios
-                    ? "Todos los nombres del histórico corresponden a socios registrados."
-                    : "No hay nombres que coincidan con el filtro."}
+                  Todos los nombres del histórico corresponden a socios registrados.
                 </p>
               </div>
             );
+          }
+          if (filtered.length === 0) {
+            return <p className="text-sm text-gray-400 text-center py-3">No hay nombres que coincidan con el filtro.</p>;
           }
           return (
             <div className="divide-y divide-gray-100">
@@ -1166,16 +1150,9 @@ export default function ValidacionesPage() {
                 return (
                   <div key={h.nombre} className="py-3 flex flex-wrap items-start gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold text-gray-900 font-mono break-all">
-                          {h.nombre}
-                        </span>
-                        {h.is_known_socio && (
-                          <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium shrink-0">
-                            Socio conocido
-                          </span>
-                        )}
-                      </div>
+                      <span className="text-sm font-semibold text-gray-900 font-mono break-all block">
+                        {h.nombre}
+                      </span>
                       <span className="text-xs text-gray-400">
                         {h.animal_count} aparición{h.animal_count !== 1 ? "es" : ""}
                       </span>

@@ -1108,7 +1108,7 @@ class HistoricoGanaderiasRevisionView(APIView):
                 if nombre:
                     counts[nombre] = counts.get(nombre, 0) + 1
 
-        # Mark names that exactly match a registered socio's nombre_razon_social
+        # Only return names that do NOT match any registered socio — those are the ones to fix.
         known_names = set(
             Socio.all_objects
             .filter(tenant=tenant)
@@ -1116,12 +1116,9 @@ class HistoricoGanaderiasRevisionView(APIView):
         )
 
         result = [
-            {
-                "nombre": n,
-                "animal_count": c,
-                "is_known_socio": n in known_names,
-            }
+            {"nombre": n, "animal_count": c}
             for n, c in sorted(counts.items(), key=lambda x: -x[1])
+            if n not in known_names
         ]
         return Response(result)
 
