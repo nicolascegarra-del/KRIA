@@ -922,7 +922,11 @@ export default function ValidacionesPage() {
           </p>
         ) : (
           <div className="divide-y divide-gray-100">
-            {ganaderiasData.map((g) => (
+            {ganaderiasData.map((g) => {
+              const localVal = ganaderiaSocioLocal[g.ganaderia_nombre];
+              const currentVal = localVal !== undefined ? localVal : (g.socio_real ?? "");
+              const isDirty = localVal !== undefined && localVal !== (g.socio_real ?? "");
+              return (
               <div key={g.ganaderia_nombre} className="py-3 space-y-2">
                 {/* Nombre de ganadería + selector de redirección */}
                 <div className="flex items-start gap-3 flex-wrap">
@@ -942,7 +946,7 @@ export default function ValidacionesPage() {
                   <div className="flex items-center gap-2 shrink-0 flex-wrap">
                     <select
                       className="input-field text-sm py-1 min-w-[180px]"
-                      value={ganaderiaSocioLocal[g.ganaderia_nombre] ?? g.socio_real ?? ""}
+                      value={currentVal}
                       onChange={(e) =>
                         setGanaderiaSocioLocal((prev) => ({
                           ...prev,
@@ -958,52 +962,49 @@ export default function ValidacionesPage() {
                         </option>
                       ))}
                     </select>
-                    {(() => {
-                      const localVal = ganaderiaSocioLocal[g.ganaderia_nombre];
-                      const isDirty = localVal !== undefined && localVal !== (g.socio_real ?? "");
-                      return isDirty ? (
+                    {isDirty && (
+                      <button
+                        onClick={() =>
+                          ganaderiaMapMutation.mutate(
+                            { nombre: g.ganaderia_nombre, socio: localVal || null },
+                            {
+                              onSuccess: () =>
+                                setGanaderiaSocioLocal((prev) => {
+                                  const n = { ...prev };
+                                  delete n[g.ganaderia_nombre];
+                                  return n;
+                                }),
+                            }
+                          )
+                        }
+                        disabled={ganaderiaMapMutation.isPending}
+                        className="btn-primary text-sm py-1 px-3"
+                      >
+                        Guardar
+                      </button>
+                    )}
+                    {!isDirty && g.socio_real && (
+                      <>
+                        <button
+                          onClick={() => navigate(`/socios/${g.socio_real}`)}
+                          className="text-blue-500 hover:text-blue-700 p-1"
+                          title="Ver ficha del socio redirigido"
+                        >
+                          <ExternalLink size={14} />
+                        </button>
                         <button
                           onClick={() => {
-                            ganaderiaMapMutation.mutate(
-                              { nombre: g.ganaderia_nombre, socio: localVal || null },
-                              {
-                                onSuccess: () =>
-                                  setGanaderiaSocioLocal((prev) => {
-                                    const n = { ...prev };
-                                    delete n[g.ganaderia_nombre];
-                                    return n;
-                                  }),
-                              }
-                            );
+                            setGanaderiaSocioLocal((prev) => ({ ...prev, [g.ganaderia_nombre]: "" }));
+                            ganaderiaMapMutation.mutate({ nombre: g.ganaderia_nombre, socio: null });
                           }}
                           disabled={ganaderiaMapMutation.isPending}
-                          className="btn-primary text-sm py-1 px-3"
+                          className="text-gray-400 hover:text-red-500 p-1"
+                          title="Quitar redirección"
                         >
-                          Guardar
+                          <Link2Off size={14} />
                         </button>
-                      ) : g.socio_real ? (
-                        <>
-                          <button
-                            onClick={() => navigate(`/socios/${g.socio_real}`)}
-                            className="text-blue-500 hover:text-blue-700 p-1"
-                            title="Ver ficha del socio redirigido"
-                          >
-                            <ExternalLink size={14} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setGanaderiaSocioLocal((prev) => ({ ...prev, [g.ganaderia_nombre]: "" }));
-                              ganaderiaMapMutation.mutate({ nombre: g.ganaderia_nombre, socio: null });
-                            }}
-                            disabled={ganaderiaMapMutation.isPending}
-                            className="text-gray-400 hover:text-red-500 p-1"
-                            title="Quitar redirección"
-                          >
-                            <Link2Off size={14} />
-                          </button>
-                        </>
-                      ) : null;
-                    })()}
+                      </>
+                    )}
                   </div>
                 </div>
                 {/* Animales pendientes con esta ganadería */}
@@ -1043,7 +1044,8 @@ export default function ValidacionesPage() {
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
